@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { PEDIDOS, ETAPAS, dataBR } from "@/lib/mock-data";
+import { ETAPAS, dataBR } from "@/lib/mock-data";
+import { usePedidos } from "@/hooks/use-pedidos";
 
 export const Route = createFileRoute("/agenda")({
   component: AgendaPage,
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/agenda")({
 });
 
 function AgendaPage() {
+  const { data: PEDIDOS = [] } = usePedidos();
   const hoje = new Date();
   const ano = hoje.getFullYear();
   const mes = hoje.getMonth();
