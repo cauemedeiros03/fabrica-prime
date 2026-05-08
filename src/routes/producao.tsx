@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { PEDIDOS, ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
+import { usePedidos, useUpdatePedidoEtapa } from "@/hooks/use-pedidos";
 import { useState, type DragEvent } from "react";
 import { GripVertical, Calendar as CalIcon } from "lucide-react";
 
@@ -10,14 +11,15 @@ export const Route = createFileRoute("/producao")({
 });
 
 function ProducaoPage() {
-  const [pedidos, setPedidos] = useState(PEDIDOS);
+  const { data: pedidos = [] } = usePedidos();
+  const updateEtapa = useUpdatePedidoEtapa();
   const [arrastando, setArrastando] = useState<string | null>(null);
 
   const onDragStart = (id: string) => setArrastando(id);
   const onDrop = (e: DragEvent, etapa: StatusEtapa) => {
     e.preventDefault();
     if (!arrastando) return;
-    setPedidos((prev) => prev.map((p) => (p.id === arrastando ? { ...p, etapa } : p)));
+    updateEtapa.mutate({ id: arrastando, etapa });
     setArrastando(null);
   };
 

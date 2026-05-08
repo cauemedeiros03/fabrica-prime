@@ -1,12 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import {
-  PEDIDOS,
-  RECEITA_MENSAL,
-  ETAPAS,
-  moeda,
-  dataBR,
-} from "@/lib/mock-data";
+import { RECEITA_MENSAL, ETAPAS, moeda, dataBR } from "@/lib/mock-data";
+import { usePedidos } from "@/hooks/use-pedidos";
 import {
   TrendingUp,
   Package,
@@ -83,6 +78,7 @@ function Stat({
 }
 
 function PainelPage() {
+  const { data: PEDIDOS = [] } = usePedidos();
   const emProducao = PEDIDOS.filter(
     (p) => !["entregue", "pronto-entrega"].includes(p.etapa),
   );

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { PEDIDOS, RECEITA_MENSAL, moeda, dataBR } from "@/lib/mock-data";
+import { RECEITA_MENSAL, moeda, dataBR } from "@/lib/mock-data";
+import { usePedidos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
@@ -10,6 +11,7 @@ export const Route = createFileRoute("/financeiro")({
 });
 
 function FinanceiroPage() {
+  const { data: PEDIDOS = [] } = usePedidos();
   const recebido = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
   const aReceber = PEDIDOS.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
   const faturado = recebido + aReceber;

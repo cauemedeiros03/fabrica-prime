@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { PEDIDOS, ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
+import { usePedidos } from "@/hooks/use-pedidos";
 import { Filter, Download, Search } from "lucide-react";
 import { useState } from "react";
 
@@ -19,8 +20,9 @@ const PRIORIDADE_COR: Record<string, string> = {
 function PedidosPage() {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "atrasados" | "semana" | "pagamento">("todos");
+  const { data: pedidos = [], isLoading } = usePedidos();
 
-  const filtrados = PEDIDOS.filter((p) => {
+  const filtrados = pedidos.filter((p) => {
     const matchQ = [p.cliente, p.produto, p.numero, p.tipo, p.cidade]
       .join(" ")
       .toLowerCase()
@@ -36,7 +38,7 @@ function PedidosPage() {
   });
 
   return (
-    <AppShell title="Pedidos" subtitle={`${filtrados.length} pedidos encontrados`}>
+    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`}>
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

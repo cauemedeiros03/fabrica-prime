@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { PEDIDOS, moeda } from "@/lib/mock-data";
+import { moeda } from "@/lib/mock-data";
+import { usePedidos } from "@/hooks/use-pedidos";
 import { Phone, MapPin, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/clientes")({
@@ -9,6 +10,7 @@ export const Route = createFileRoute("/clientes")({
 });
 
 function ClientesPage() {
+  const { data: PEDIDOS = [] } = usePedidos();
   const map = new Map<string, { cliente: string; telefone: string; cidade: string; pedidos: number; total: number }>();
   PEDIDOS.forEach((p) => {
     const cur = map.get(p.cliente) ?? { cliente: p.cliente, telefone: p.telefone, cidade: p.cidade, pedidos: 0, total: 0 };
