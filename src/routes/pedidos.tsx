@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
-import { usePedidos } from "@/hooks/use-pedidos";
-import { Filter, Download, Search } from "lucide-react";
+import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { Filter, Download, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/pedidos")({
   component: PedidosPage,
@@ -17,16 +19,19 @@ const PRIORIDADE_COR: Record<string, string> = {
   urgente: "bg-destructive/15 text-destructive",
 };
 
+type EditState = (NovoPedidoInput & { id: string }) | null;
+
 function PedidosPage() {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "atrasados" | "semana" | "pagamento">("todos");
   const { data: pedidos = [], isLoading } = usePedidos();
+  const del = useDeletePedido();
+  const [edit, setEdit] = useState<EditState>(null);
+  const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
 
   const filtrados = pedidos.filter((p) => {
     const matchQ = [p.cliente, p.produto, p.numero, p.tipo, p.cidade]
-      .join(" ")
-      .toLowerCase()
-      .includes(q.toLowerCase());
+      .join(" ").toLowerCase().includes(q.toLowerCase());
     if (!matchQ) return false;
     if (filtro === "atrasados") return new Date(p.entrega) < new Date() && p.etapa !== "entregue";
     if (filtro === "semana") {
@@ -36,6 +41,37 @@ function PedidosPage() {
     if (filtro === "pagamento") return p.valorPago < p.valorTotal;
     return true;
   });
+
+  const editar = (p: (typeof pedidos)[number]) => {
+    setEdit({
+      id: p.id,
+      cliente_nome: p.cliente,
+      telefone: p.telefone,
+      cidade: p.cidade,
+      email: (p as unknown as { email?: string }).email ?? "",
+      produto: p.produto,
+      tipo: p.tipo,
+      material: p.material,
+      cor: p.cor,
+      observacoes: (p as unknown as { observacoes?: string }).observacoes ?? "",
+      entrega: p.entrega ? new Date(p.entrega).toISOString().slice(0, 10) : "",
+      prioridade: p.prioridade,
+      etapa: p.etapa,
+      valor_total: p.valorTotal,
+      valor_pago: p.valorPago,
+    });
+  };
+
+  const apagar = async () => {
+    if (!confirmar) return;
+    try {
+      await del.mutateAsync(confirmar.id);
+      toast.success(`Pedido ${confirmar.numero} removido`);
+    } catch (e: unknown) {
+      toast.error("Erro ao remover", { description: e instanceof Error ? e.message : "" });
+    }
+    setConfirmar(null);
+  };
 
   return (
     <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`}>
@@ -87,9 +123,20 @@ function PedidosPage() {
                 <th className="text-right font-medium px-5 py-3">Valor</th>
                 <th className="text-right font-medium px-5 py-3">Pago</th>
                 <th className="text-left font-medium px-5 py-3">Entrega</th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y">
+              {isLoading && (
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">
+                  <Loader2 className="inline size-4 animate-spin mr-2" /> Carregando pedidos…
+                </td></tr>
+              )}
+              {!isLoading && filtrados.length === 0 && (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">
+                  Nenhum pedido encontrado. Crie seu primeiro pedido pelo botão "Novo pedido".
+                </td></tr>
+              )}
               {filtrados.map((p) => {
                 const etapa = ETAPAS.find((e) => e.id === p.etapa)!;
                 const atrasado = new Date(p.entrega) < new Date() && p.etapa !== "entregue";
@@ -127,6 +174,16 @@ function PedidosPage() {
                     <td className={`px-5 py-3.5 text-sm tabular-nums ${atrasado ? "text-destructive font-medium" : ""}`}>
                       {dataBR(p.entrega)}
                     </td>
+                    <td className="px-3 py-3.5">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => editar(p)} className="size-8 grid place-items-center rounded-md hover:bg-accent" title="Editar">
+                          <Pencil className="size-3.5" />
+                        </button>
+                        <button onClick={() => setConfirmar({ id: p.id, numero: p.numero })} className="size-8 grid place-items-center rounded-md hover:bg-destructive/10 text-destructive" title="Remover">
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -134,6 +191,23 @@ function PedidosPage() {
           </table>
         </div>
       </div>
+
+      <NovoPedidoDialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} initial={edit} />
+
+      {confirmar && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4" onClick={() => setConfirmar(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-card border p-6 shadow-[var(--shadow-elevated)]">
+            <h3 className="font-semibold tracking-tight">Remover pedido {confirmar.numero}?</h3>
+            <p className="text-sm text-muted-foreground mt-1">Essa ação não pode ser desfeita. Pagamentos e histórico de etapas também serão apagados.</p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setConfirmar(null)} className="h-9 px-4 rounded-lg border text-sm hover:bg-accent">Cancelar</button>
+              <button onClick={apagar} disabled={del.isPending} className="h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60">
+                {del.isPending && <Loader2 className="size-4 animate-spin" />} Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
