@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { RECEITA_MENSAL, ETAPAS, moeda, dataBR } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
+import { usePagamentos } from "@/hooks/use-pagamentos";
 import {
   TrendingUp,
   Package,
@@ -10,6 +12,7 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -70,24 +73,91 @@ function Stat({
           ) : (
             <ArrowDownRight className="size-3.5" />
           )}
-          {delta} <span className="text-muted-foreground">vs mês anterior</span>
+          {delta} <span className="text-muted-foreground">vs período anterior</span>
         </div>
       )}
     </div>
   );
 }
 
+type Periodo = "7d" | "30d" | "12m";
+
+function aggregate(pagamentos: { valor: number; pago_em: string }[], periodo: Periodo) {
+  const now = new Date();
+  if (periodo === "7d") {
+    const buckets: { label: string; receita: number; key: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      buckets.push({
+        key,
+        label: d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+        receita: 0,
+      });
+    }
+    pagamentos.forEach((p) => {
+      const k = String(p.pago_em).slice(0, 10);
+      const b = buckets.find((x) => x.key === k);
+      if (b) b.receita += Number(p.valor);
+    });
+    return buckets.map(({ label, receita }) => ({ mes: label, receita }));
+  }
+  if (periodo === "30d") {
+    const buckets: { label: string; receita: number; start: number; end: number }[] = [];
+    for (let i = 4; i >= 0; i--) {
+      const end = new Date(now);
+      end.setDate(end.getDate() - i * 7);
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      buckets.push({
+        label: `${start.getDate()}/${start.getMonth() + 1}`,
+        receita: 0,
+        start: +new Date(start.toDateString()),
+        end: +new Date(end.toDateString()) + 86400000,
+      });
+    }
+    pagamentos.forEach((p) => {
+      const t = +new Date(p.pago_em);
+      const b = buckets.find((x) => t >= x.start && t < x.end);
+      if (b) b.receita += Number(p.valor);
+    });
+    return buckets.map(({ label, receita }) => ({ mes: label, receita }));
+  }
+  // 12m
+  const buckets: { label: string; receita: number; key: string }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+      receita: 0,
+    });
+  }
+  pagamentos.forEach((p) => {
+    const d = new Date(p.pago_em);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.find((x) => x.key === k);
+    if (b) b.receita += Number(p.valor);
+  });
+  return buckets.map(({ label, receita }) => ({ mes: label, receita }));
+}
+
 function PainelPage() {
-  const { data: PEDIDOS = [] } = usePedidos();
-  const emProducao = PEDIDOS.filter(
-    (p) => !["entregue", "pronto-entrega"].includes(p.etapa),
-  );
-  const atrasados = PEDIDOS.filter(
-    (p) => new Date(p.entrega) < new Date() && p.etapa !== "entregue",
-  );
+  const { data: PEDIDOS = [], isLoading: lp } = usePedidos();
+  const { data: PAGAMENTOS = [], isLoading: lpg } = usePagamentos();
+  const [periodo, setPeriodo] = useState<Periodo>("12m");
+  const isLoading = lp || lpg;
+
+  const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
+  const atrasados = PEDIDOS.filter((p) => new Date(p.entrega) < new Date() && p.etapa !== "entregue");
   const concluidos = PEDIDOS.filter((p) => p.etapa === "entregue");
   const receitaTotal = PEDIDOS.reduce((s, p) => s + p.valorTotal, 0);
-  const aReceber = PEDIDOS.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
+  const recebidoTotal = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
+  const aReceber = receitaTotal - recebidoTotal;
+
+  const chartData = useMemo(() => aggregate(PAGAMENTOS, periodo), [PAGAMENTOS, periodo]);
+  const receitaPeriodo = chartData.reduce((s, x) => s + x.receita, 0);
 
   const etapasAgg = ETAPAS.map((e) => ({
     nome: e.label.split(" ")[0],
@@ -100,35 +170,33 @@ function PainelPage() {
     .slice(0, 5);
 
   return (
-    <AppShell
-      title="Painel geral"
-      subtitle="Visão completa da sua produção e finanças"
-    >
+    <AppShell title="Painel geral" subtitle="Visão completa da sua produção e finanças">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} delta="+12%" positivo />
-        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} delta="-1" positivo />
-        <Stat label="Entregues no mês" valor={`${concluidos.length}`} icon={CheckCircle2} delta="+8%" positivo />
-        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} delta="+R$ 12.4k" positivo />
+        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} />
+        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} />
+        <Stat label="Entregues" valor={`${concluidos.length}`} icon={CheckCircle2} />
+        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <div className="lg:col-span-2 rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <p className="text-sm text-muted-foreground">Receita</p>
-              <p className="text-2xl font-semibold tracking-tight">
-                {moeda(receitaTotal)}
+              <p className="text-sm text-muted-foreground">
+                Receita {periodo === "7d" ? "(últimos 7 dias)" : periodo === "30d" ? "(últimas 5 semanas)" : "(últimos 12 meses)"}
               </p>
+              <p className="text-2xl font-semibold tracking-tight">{moeda(receitaPeriodo)}</p>
               <p className="text-xs text-success inline-flex items-center gap-1 mt-1">
-                <TrendingUp className="size-3.5" /> +18,2% últimos 7 meses
+                <TrendingUp className="size-3.5" /> {PAGAMENTOS.length} pagamento(s) recebidos
               </p>
             </div>
             <div className="flex gap-1 text-xs">
-              {["7d", "30d", "12m"].map((p, i) => (
+              {(["7d", "30d", "12m"] as const).map((p) => (
                 <button
                   key={p}
-                  className={`px-2.5 py-1 rounded-md ${
-                    i === 2 ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60"
+                  onClick={() => setPeriodo(p)}
+                  className={`px-2.5 py-1 rounded-md transition ${
+                    periodo === p ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60"
                   }`}
                 >
                   {p}
@@ -136,9 +204,14 @@ function PainelPage() {
               ))}
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-64 relative">
+            {isLoading && (
+              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+                <Loader2 className="size-5 animate-spin" />
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={RECEITA_MENSAL} margin={{ left: -12, right: 8, top: 8 }}>
+              <AreaChart data={chartData} margin={{ left: -12, right: 8, top: 8 }}>
                 <defs>
                   <linearGradient id="gReceita" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
@@ -163,6 +236,8 @@ function PainelPage() {
                   stroke="var(--color-primary)"
                   strokeWidth={2.5}
                   fill="url(#gReceita)"
+                  isAnimationActive
+                  animationDuration={500}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -201,14 +276,21 @@ function PainelPage() {
               <p className="font-semibold tracking-tight">Próximas entregas</p>
               <p className="text-xs text-muted-foreground">Ordenado por urgência</p>
             </div>
-            <button className="text-xs text-primary hover:underline">Ver todos</button>
+            <Link to="/entregas" className="text-xs text-primary hover:underline">Ver todos</Link>
           </div>
           <div className="divide-y">
+            {proximas.length === 0 && (
+              <div className="px-5 py-10 text-sm text-muted-foreground text-center">Nenhuma entrega agendada.</div>
+            )}
             {proximas.map((p) => {
               const atrasado = new Date(p.entrega) < new Date();
               const etapa = ETAPAS.find((e) => e.id === p.etapa)!;
               return (
-                <div key={p.id} className="flex items-center gap-4 px-5 py-3 hover:bg-accent/40 transition">
+                <Link
+                  to="/entregas"
+                  key={p.id}
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-accent/40 transition"
+                >
                   <div
                     className="size-10 rounded-lg grid place-items-center text-xs font-semibold"
                     style={{ backgroundColor: `color-mix(in oklab, ${etapa.cor} 18%, transparent)`, color: etapa.cor }}
@@ -217,9 +299,7 @@ function PainelPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{p.produto}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {p.cliente} · {p.cidade}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{p.cliente} · {p.cidade}</p>
                   </div>
                   <div className="hidden sm:block">
                     <span
@@ -232,7 +312,7 @@ function PainelPage() {
                   <div className={`text-xs font-medium tabular-nums ${atrasado ? "text-destructive" : "text-foreground"}`}>
                     {dataBR(p.entrega)}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -240,10 +320,10 @@ function PainelPage() {
 
         <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
           <p className="font-semibold tracking-tight">Resumo financeiro</p>
-          <p className="text-xs text-muted-foreground mb-4">Mês atual</p>
+          <p className="text-xs text-muted-foreground mb-4">Acumulado real</p>
 
           {[
-            { l: "Recebido", v: PEDIDOS.reduce((s, p) => s + p.valorPago, 0), c: "success" },
+            { l: "Recebido", v: recebidoTotal, c: "success" },
             { l: "A receber", v: aReceber, c: "warning" },
             { l: "Total faturado", v: receitaTotal, c: "info" },
           ].map((row) => (
@@ -255,7 +335,7 @@ function PainelPage() {
               <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full bg-${row.c}`}
-                  style={{ width: `${Math.min(100, (row.v / receitaTotal) * 100)}%` }}
+                  style={{ width: `${receitaTotal ? Math.min(100, (row.v / receitaTotal) * 100) : 0}%` }}
                 />
               </div>
             </div>
