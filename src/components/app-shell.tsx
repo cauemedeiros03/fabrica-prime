@@ -4,6 +4,7 @@ import { AppSidebar } from "./app-sidebar";
 import { AppHeader } from "./app-header";
 import { NovoPedidoDialog } from "./novo-pedido-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import { Loader2 } from "lucide-react";
 
 export function AppShell({
@@ -18,6 +19,7 @@ export function AppShell({
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [novoPedido, setNovoPedido] = useState(false);
+  useRealtimeSync();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });

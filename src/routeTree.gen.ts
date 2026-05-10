@@ -13,6 +13,7 @@ import { Route as ProducaoRouteImport } from './routes/producao'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as EntregasRouteImport } from './routes/entregas'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendaRouteImport } from './routes/agenda'
@@ -36,6 +37,11 @@ const LoginRoute = LoginRouteImport.update({
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntregasRoute = EntregasRouteImport.update({
+  id: '/entregas',
+  path: '/entregas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientesRoute = ClientesRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRoute
+  '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRoute
+  '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRoute
+  '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/clientes'
+    | '/entregas'
     | '/financeiro'
     | '/login'
     | '/pedidos'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/clientes'
+    | '/entregas'
     | '/financeiro'
     | '/login'
     | '/pedidos'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/cadastro'
     | '/clientes'
+    | '/entregas'
     | '/financeiro'
     | '/login'
     | '/pedidos'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
   ClientesRoute: typeof ClientesRoute
+  EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
   PedidosRoute: typeof PedidosRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entregas': {
+      id: '/entregas'
+      path: '/entregas'
+      fullPath: '/entregas'
+      preLoaderRoute: typeof EntregasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clientes': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
   ClientesRoute: ClientesRoute,
+  EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
   PedidosRoute: PedidosRoute,
