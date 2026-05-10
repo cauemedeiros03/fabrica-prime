@@ -9,12 +9,14 @@ import {
   Settings,
   Hammer,
   Sparkles,
+  Truck,
 } from "lucide-react";
 
 const nav = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/producao", label: "Produção", icon: KanbanSquare },
+  { to: "/entregas", label: "Entregas", icon: Truck },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/agenda", label: "Agenda", icon: Calendar },
   { to: "/clientes", label: "Clientes", icon: Users },

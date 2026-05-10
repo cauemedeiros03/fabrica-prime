@@ -1,9 +1,11 @@
-import { Search, Bell, Plus, Moon, Sun, LogOut } from "lucide-react";
+import { Plus, Moon, Sun, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { GlobalSearch } from "./global-search";
+import { NotificationsPanel } from "./notifications-panel";
 
 export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; subtitle?: string; onNovoPedido?: () => void }) {
   const [dark, setDark] = useState(false);
@@ -30,13 +32,7 @@ export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; su
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <div className="relative hidden md:block">
-          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            placeholder="Buscar pedido, cliente, produto…"
-            className="w-72 h-9 pl-9 pr-3 rounded-lg border bg-card text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/30 transition"
-          />
-        </div>
+        <GlobalSearch />
 
         <button
           onClick={() => setDark((v) => !v)}
@@ -46,10 +42,7 @@ export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; su
           {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
         </button>
 
-        <button className="size-9 grid place-items-center rounded-lg border hover:bg-accent transition relative">
-          <Bell className="size-4" />
-          <span className="absolute top-2 right-2 size-1.5 rounded-full bg-destructive" />
-        </button>
+        <NotificationsPanel />
 
         <button
           onClick={onNovoPedido}
