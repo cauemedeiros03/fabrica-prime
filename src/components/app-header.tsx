@@ -1,4 +1,4 @@
-import { Plus, Moon, Sun, LogOut } from "lucide-react";
+import { Plus, Moon, Sun, LogOut, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,17 @@ import { toast } from "sonner";
 import { GlobalSearch } from "./global-search";
 import { NotificationsPanel } from "./notifications-panel";
 
-export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; subtitle?: string; onNovoPedido?: () => void }) {
+export function AppHeader({
+  title,
+  subtitle,
+  onNovoPedido,
+  onOpenNav,
+}: {
+  title: string;
+  subtitle?: string;
+  onNovoPedido?: () => void;
+  onOpenNav?: () => void;
+}) {
   const [dark, setDark] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -25,7 +35,16 @@ export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; su
   };
 
   return (
-    <header className="h-16 border-b bg-background/80 backdrop-blur-md sticky top-0 z-30 flex items-center gap-4 px-6">
+    <header className="h-16 border-b bg-background/80 backdrop-blur-md sticky top-0 z-30 flex items-center gap-3 px-4 lg:px-6">
+      {onOpenNav && (
+        <button
+          onClick={onOpenNav}
+          className="lg:hidden size-9 grid place-items-center rounded-lg border hover:bg-accent transition shrink-0"
+          aria-label="Abrir menu"
+        >
+          <Menu className="size-4" />
+        </button>
+      )}
       <div className="min-w-0">
         <h1 className="text-base font-semibold tracking-tight truncate">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
@@ -49,7 +68,7 @@ export function AppHeader({ title, subtitle, onNovoPedido }: { title: string; su
           className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-[var(--shadow-glow)]"
         >
           <Plus className="size-4" />
-          Novo pedido
+          <span className="hidden sm:inline">Novo pedido</span>
         </button>
 
         <button
