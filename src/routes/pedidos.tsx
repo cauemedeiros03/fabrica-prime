@@ -174,7 +174,7 @@ function PedidosPage() {
                     <td className={`px-5 py-3.5 text-sm tabular-nums ${atrasado ? "text-destructive font-medium" : ""}`}>
                       {dataBR(p.entrega)}
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td className="px-3 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <button onClick={() => editar(p)} className="size-8 grid place-items-center rounded-md hover:bg-accent" title="Editar">
                           <Pencil className="size-3.5" />
