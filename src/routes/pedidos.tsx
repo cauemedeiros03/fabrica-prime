@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
 import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { EtapaSelect } from "@/components/etapa-select";
 import { Filter, Download, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
