@@ -13,22 +13,30 @@ export const Route = createFileRoute("/producao")({
 });
 
 function ProducaoPage() {
-  const { data: pedidos = [] } = usePedidos();
+  const { data: pedidos = [], isLoading } = usePedidos();
   const updateEtapa = useUpdatePedidoEtapa();
+  const navigate = useNavigate();
   const [arrastando, setArrastando] = useState<string | null>(null);
 
   const onDragStart = (id: string) => setArrastando(id);
-  const onDrop = (e: DragEvent, etapa: StatusEtapa) => {
+  const onDrop = async (e: DragEvent, etapa: StatusEtapa) => {
     e.preventDefault();
     if (!arrastando) return;
-    updateEtapa.mutate({ id: arrastando, etapa });
+    const pedido = pedidos.find((p) => p.id === arrastando);
     setArrastando(null);
+    if (!pedido || pedido.etapa === etapa) return;
+    try {
+      await updateEtapa.mutateAsync({ id: pedido.id, etapa });
+      toast.success(`${pedido.numero} → ${ETAPAS.find((x) => x.id === etapa)?.label}`);
+    } catch (err) {
+      toast.error("Erro ao mover pedido", { description: err instanceof Error ? err.message : "" });
+    }
   };
 
   return (
     <AppShell
       title="Fluxo de produção"
-      subtitle="Arraste os pedidos entre as etapas para atualizar o status"
+      subtitle={isLoading ? "Carregando…" : "Arraste os cards entre as etapas ou use o seletor para atualizar"}
     >
       <div className="overflow-x-auto -mx-6 lg:-mx-8 px-6 lg:px-8 pb-2">
         <div className="flex gap-4 min-w-max">
