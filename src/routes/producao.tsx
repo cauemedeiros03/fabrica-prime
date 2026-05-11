@@ -66,7 +66,8 @@ function ProducaoPage() {
                         key={p.id}
                         draggable
                         onDragStart={() => onDragStart(p.id)}
-                        className="group rounded-xl bg-card border p-3 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] cursor-grab active:cursor-grabbing transition"
+                        onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                        className="group rounded-xl bg-card border p-3 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] cursor-pointer transition"
                       >
                         <div className="flex items-start gap-2">
                           <GripVertical className="size-3.5 text-muted-foreground/60 mt-0.5 opacity-0 group-hover:opacity-100 transition" />
