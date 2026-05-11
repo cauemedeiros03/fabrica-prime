@@ -60,11 +60,77 @@ export function usePedidos() {
 export function useUpdatePedidoEtapa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, etapa }: { id: string; etapa: StatusEtapa }) => {
+    mutationFn: async ({ id, etapa, observacao }: { id: string; etapa: StatusEtapa; observacao?: string }) => {
+      const { data: atual } = await supabase
+        .from("pedidos")
+        .select("etapa")
+        .eq("id", id)
+        .single();
+      const anterior = (atual?.etapa as StatusEtapa | undefined) ?? null;
+      if (anterior === etapa) return;
       const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id);
       if (error) throw error;
+      const { data: u } = await supabase.auth.getUser();
+      await supabase.from("etapas_pedido").insert({
+        pedido_id: id,
+        etapa_anterior: anterior,
+        etapa_nova: etapa,
+        autor_id: u.user?.id ?? null,
+        observacao: observacao ?? null,
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["etapas_pedido", vars.id] });
+    },
+  });
+}
+
+export function useEtapasHistorico(pedidoId: string | undefined) {
+  return useQuery({
+    queryKey: ["etapas_pedido", pedidoId],
+    enabled: !!pedidoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("etapas_pedido")
+        .select("id, etapa_anterior, etapa_nova, observacao, created_at, autor_id")
+        .eq("pedido_id", pedidoId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function usePagamentosPedido(pedidoId: string | undefined) {
+  return useQuery({
+    queryKey: ["pagamentos", pedidoId],
+    enabled: !!pedidoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("id, valor, forma, pago_em, observacao, created_at")
+        .eq("pedido_id", pedidoId!)
+        .order("pago_em", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function usePedido(id: string | undefined) {
+  return useQuery({
+    queryKey: ["pedido", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email)")
+        .eq("id", id!)
+        .single();
+      if (error) throw error;
+      return mapRow(data as unknown as Row);
+    },
   });
 }
 
