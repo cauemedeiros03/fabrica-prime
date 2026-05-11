@@ -27,6 +27,7 @@ function PedidosPage() {
   const [filtro, setFiltro] = useState<"todos" | "atrasados" | "semana" | "pagamento">("todos");
   const { data: pedidos = [], isLoading } = usePedidos();
   const del = useDeletePedido();
+  const navigate = useNavigate();
   const [edit, setEdit] = useState<EditState>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
 
