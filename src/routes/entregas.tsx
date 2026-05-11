@@ -41,7 +41,11 @@ function EntregasPage() {
   const atrasadas = lista.filter((p) => +new Date(p.entrega) < Date.now()).length;
 
   return (
-    <AppShell title="Entregas" subtitle={`${lista.length} entrega(s) · ${atrasadas} atrasada(s)`}>
+    <AppShell
+      title="Entregas"
+      subtitle={`${lista.length} entrega(s) · ${atrasadas} atrasada(s)`}
+      breadcrumbs={[{ label: "Entregas" }]}
+    >
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm">
           {[
