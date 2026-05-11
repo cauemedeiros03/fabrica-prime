@@ -6,7 +6,7 @@ import { NovoPedidoDialog } from "./novo-pedido-dialog";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import { Loader2, Menu, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 export function AppShell({
   title,
