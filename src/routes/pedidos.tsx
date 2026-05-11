@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
 import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { EtapaSelect } from "@/components/etapa-select";
 import { Filter, Download, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ function PedidosPage() {
   const [filtro, setFiltro] = useState<"todos" | "atrasados" | "semana" | "pagamento">("todos");
   const { data: pedidos = [], isLoading } = usePedidos();
   const del = useDeletePedido();
+  const navigate = useNavigate();
   const [edit, setEdit] = useState<EditState>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
 
@@ -74,7 +76,7 @@ function PedidosPage() {
   };
 
   return (
-    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`}>
+    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`} breadcrumbs={[{ label: "Pedidos" }]}>
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -138,11 +140,14 @@ function PedidosPage() {
                 </td></tr>
               )}
               {filtrados.map((p) => {
-                const etapa = ETAPAS.find((e) => e.id === p.etapa)!;
                 const atrasado = new Date(p.entrega) < new Date() && p.etapa !== "entregue";
                 const pct = (p.valorPago / p.valorTotal) * 100;
                 return (
-                  <tr key={p.id} className="hover:bg-accent/40 transition">
+                  <tr
+                    key={p.id}
+                    onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                    className="hover:bg-accent/40 transition cursor-pointer"
+                  >
                     <td className="px-5 py-3.5">
                       <div className="font-medium">{p.numero}</div>
                       <div className="text-xs text-muted-foreground">{p.produto}</div>
@@ -152,12 +157,7 @@ function PedidosPage() {
                       <div className="text-xs text-muted-foreground">{p.cidade}</div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span
-                        className="text-[11px] font-medium px-2 py-1 rounded-full"
-                        style={{ backgroundColor: `color-mix(in oklab, ${etapa.cor} 14%, transparent)`, color: etapa.cor }}
-                      >
-                        {etapa.label}
-                      </span>
+                      <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} variant="badge" />
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
@@ -174,7 +174,7 @@ function PedidosPage() {
                     <td className={`px-5 py-3.5 text-sm tabular-nums ${atrasado ? "text-destructive font-medium" : ""}`}>
                       {dataBR(p.entrega)}
                     </td>
-                    <td className="px-3 py-3.5">
+                    <td className="px-3 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <button onClick={() => editar(p)} className="size-8 grid place-items-center rounded-md hover:bg-accent" title="Editar">
                           <Pencil className="size-3.5" />

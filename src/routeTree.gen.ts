@@ -18,6 +18,7 @@ import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
 
 const ProducaoRoute = ProducaoRouteImport.update({
   id: '/producao',
@@ -64,6 +65,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidosPedidoIdRoute = PedidosPedidoIdRouteImport.update({
+  id: '/$pedidoId',
+  path: '/$pedidoId',
+  getParentRoute: () => PedidosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,8 +79,9 @@ export interface FileRoutesByFullPath {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,8 +91,9 @@ export interface FileRoutesByTo {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,8 +104,9 @@ export interface FileRoutesById {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/pedidos': typeof PedidosRoute
+  '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/pedidos/$pedidoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/pedidos/$pedidoId'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/pedidos/$pedidoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -143,7 +155,7 @@ export interface RootRouteChildren {
   EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
-  PedidosRoute: typeof PedidosRoute
+  PedidosRoute: typeof PedidosRouteWithChildren
   ProducaoRoute: typeof ProducaoRoute
 }
 
@@ -212,8 +224,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedidos/$pedidoId': {
+      id: '/pedidos/$pedidoId'
+      path: '/$pedidoId'
+      fullPath: '/pedidos/$pedidoId'
+      preLoaderRoute: typeof PedidosPedidoIdRouteImport
+      parentRoute: typeof PedidosRoute
+    }
   }
 }
+
+interface PedidosRouteChildren {
+  PedidosPedidoIdRoute: typeof PedidosPedidoIdRoute
+}
+
+const PedidosRouteChildren: PedidosRouteChildren = {
+  PedidosPedidoIdRoute: PedidosPedidoIdRoute,
+}
+
+const PedidosRouteWithChildren =
+  PedidosRoute._addFileChildren(PedidosRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -223,7 +253,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
-  PedidosRoute: PedidosRoute,
+  PedidosRoute: PedidosRouteWithChildren,
   ProducaoRoute: ProducaoRoute,
 }
 export const routeTree = rootRouteImport

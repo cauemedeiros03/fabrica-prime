@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { usePedidos } from "@/hooks/use-pedidos";
@@ -41,7 +41,11 @@ function EntregasPage() {
   const atrasadas = lista.filter((p) => +new Date(p.entrega) < Date.now()).length;
 
   return (
-    <AppShell title="Entregas" subtitle={`${lista.length} entrega(s) · ${atrasadas} atrasada(s)`}>
+    <AppShell
+      title="Entregas"
+      subtitle={`${lista.length} entrega(s) · ${atrasadas} atrasada(s)`}
+      breadcrumbs={[{ label: "Entregas" }]}
+    >
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm">
           {[
@@ -87,32 +91,38 @@ function EntregasPage() {
             const e = ETAPAS.find((x) => x.id === p.etapa)!;
             const atrasado = +new Date(p.entrega) < Date.now();
             return (
-              <li key={p.id} className="px-5 py-4 flex items-center gap-4 hover:bg-accent/40 transition">
-                <div
-                  className="size-11 rounded-xl grid place-items-center text-xs font-semibold shrink-0"
-                  style={{ backgroundColor: `color-mix(in oklab, ${e.cor} 18%, transparent)`, color: e.cor }}
+              <li key={p.id}>
+                <Link
+                  to="/pedidos/$pedidoId"
+                  params={{ pedidoId: p.id }}
+                  className="px-5 py-4 flex items-center gap-4 hover:bg-accent/40 transition"
                 >
-                  {p.numero.replace("#", "")}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{p.produto}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {p.cliente} · <MapPin className="inline size-3" /> {p.cidade || "—"}
-                  </p>
-                </div>
-                <span
-                  className="hidden md:inline text-[11px] font-medium px-2 py-1 rounded-full"
-                  style={{ backgroundColor: `color-mix(in oklab, ${e.cor} 14%, transparent)`, color: e.cor }}
-                >
-                  {e.label}
-                </span>
-                <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
-                  {PRIORIDADE_LABEL[p.prioridade]}
-                </span>
-                <div className={`text-sm tabular-nums inline-flex items-center gap-1 ${atrasado ? "text-destructive font-medium" : ""}`}>
-                  {atrasado ? <AlertTriangle className="size-3.5" /> : <Calendar className="size-3.5" />}
-                  {dataBR(p.entrega)}
-                </div>
+                  <div
+                    className="size-11 rounded-xl grid place-items-center text-xs font-semibold shrink-0"
+                    style={{ backgroundColor: `color-mix(in oklab, ${e.cor} 18%, transparent)`, color: e.cor }}
+                  >
+                    {p.numero.replace("#", "")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{p.produto}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {p.cliente} · <MapPin className="inline size-3" /> {p.cidade || "—"}
+                    </p>
+                  </div>
+                  <span
+                    className="hidden md:inline text-[11px] font-medium px-2 py-1 rounded-full"
+                    style={{ backgroundColor: `color-mix(in oklab, ${e.cor} 14%, transparent)`, color: e.cor }}
+                  >
+                    {e.label}
+                  </span>
+                  <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
+                    {PRIORIDADE_LABEL[p.prioridade]}
+                  </span>
+                  <div className={`text-sm tabular-nums inline-flex items-center gap-1 ${atrasado ? "text-destructive font-medium" : ""}`}>
+                    {atrasado ? <AlertTriangle className="size-3.5" /> : <Calendar className="size-3.5" />}
+                    {dataBR(p.entrega)}
+                  </div>
+                </Link>
               </li>
             );
           })}

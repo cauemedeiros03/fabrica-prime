@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos, useUpdatePedidoEtapa } from "@/hooks/use-pedidos";
+import { EtapaSelect } from "@/components/etapa-select";
 import { useState, type DragEvent } from "react";
 import { GripVertical, Calendar as CalIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/producao")({
   component: ProducaoPage,
@@ -11,22 +13,31 @@ export const Route = createFileRoute("/producao")({
 });
 
 function ProducaoPage() {
-  const { data: pedidos = [] } = usePedidos();
+  const { data: pedidos = [], isLoading } = usePedidos();
   const updateEtapa = useUpdatePedidoEtapa();
+  const navigate = useNavigate();
   const [arrastando, setArrastando] = useState<string | null>(null);
 
   const onDragStart = (id: string) => setArrastando(id);
-  const onDrop = (e: DragEvent, etapa: StatusEtapa) => {
+  const onDrop = async (e: DragEvent, etapa: StatusEtapa) => {
     e.preventDefault();
     if (!arrastando) return;
-    updateEtapa.mutate({ id: arrastando, etapa });
+    const pedido = pedidos.find((p) => p.id === arrastando);
     setArrastando(null);
+    if (!pedido || pedido.etapa === etapa) return;
+    try {
+      await updateEtapa.mutateAsync({ id: pedido.id, etapa });
+      toast.success(`${pedido.numero} → ${ETAPAS.find((x) => x.id === etapa)?.label}`);
+    } catch (err) {
+      toast.error("Erro ao mover pedido", { description: err instanceof Error ? err.message : "" });
+    }
   };
 
   return (
     <AppShell
       title="Fluxo de produção"
-      subtitle="Arraste os pedidos entre as etapas para atualizar o status"
+      subtitle={isLoading ? "Carregando…" : "Arraste os cards entre as etapas ou use o seletor para atualizar"}
+      breadcrumbs={[{ label: "Produção" }]}
     >
       <div className="overflow-x-auto -mx-6 lg:-mx-8 px-6 lg:px-8 pb-2">
         <div className="flex gap-4 min-w-max">
@@ -56,7 +67,8 @@ function ProducaoPage() {
                         key={p.id}
                         draggable
                         onDragStart={() => onDragStart(p.id)}
-                        className="group rounded-xl bg-card border p-3 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] cursor-grab active:cursor-grabbing transition"
+                        onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                        className="group rounded-xl bg-card border p-3 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] cursor-pointer transition"
                       >
                         <div className="flex items-start gap-2">
                           <GripVertical className="size-3.5 text-muted-foreground/60 mt-0.5 opacity-0 group-hover:opacity-100 transition" />
@@ -90,6 +102,9 @@ function ProducaoPage() {
                               <span className="text-[10px] text-muted-foreground truncate max-w-[110px]">
                                 {p.material}
                               </span>
+                            </div>
+                            <div className="mt-2.5 pt-2.5 border-t" onClick={(e) => e.stopPropagation()}>
+                              <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} variant="badge" className="w-full [&>select]:w-full" />
                             </div>
                           </div>
                         </div>
