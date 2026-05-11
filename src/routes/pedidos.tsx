@@ -76,7 +76,7 @@ function PedidosPage() {
   };
 
   return (
-    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`}>
+    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`} breadcrumbs={[{ label: "Pedidos" }]}>
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
