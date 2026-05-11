@@ -140,11 +140,14 @@ function PedidosPage() {
                 </td></tr>
               )}
               {filtrados.map((p) => {
-                const etapa = ETAPAS.find((e) => e.id === p.etapa)!;
                 const atrasado = new Date(p.entrega) < new Date() && p.etapa !== "entregue";
                 const pct = (p.valorPago / p.valorTotal) * 100;
                 return (
-                  <tr key={p.id} className="hover:bg-accent/40 transition">
+                  <tr
+                    key={p.id}
+                    onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                    className="hover:bg-accent/40 transition cursor-pointer"
+                  >
                     <td className="px-5 py-3.5">
                       <div className="font-medium">{p.numero}</div>
                       <div className="text-xs text-muted-foreground">{p.produto}</div>
@@ -154,12 +157,7 @@ function PedidosPage() {
                       <div className="text-xs text-muted-foreground">{p.cidade}</div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span
-                        className="text-[11px] font-medium px-2 py-1 rounded-full"
-                        style={{ backgroundColor: `color-mix(in oklab, ${etapa.cor} 14%, transparent)`, color: etapa.cor }}
-                      >
-                        {etapa.label}
-                      </span>
+                      <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} variant="badge" />
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
