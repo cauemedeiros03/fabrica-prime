@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos, useUpdatePedidoEtapa } from "@/hooks/use-pedidos";
+import { EtapaSelect } from "@/components/etapa-select";
 import { useState, type DragEvent } from "react";
 import { GripVertical, Calendar as CalIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/producao")({
   component: ProducaoPage,
