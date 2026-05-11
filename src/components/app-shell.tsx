@@ -83,5 +83,3 @@ export function AppShell({
     </div>
   );
 }
-
-export { Menu };
