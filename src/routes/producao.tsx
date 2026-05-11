@@ -102,6 +102,9 @@ function ProducaoPage() {
                                 {p.material}
                               </span>
                             </div>
+                            <div className="mt-2.5 pt-2.5 border-t" onClick={(e) => e.stopPropagation()}>
+                              <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} variant="badge" className="w-full [&>select]:w-full" />
+                            </div>
                           </div>
                         </div>
                       </div>
