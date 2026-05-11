@@ -37,6 +37,7 @@ function ProducaoPage() {
     <AppShell
       title="Fluxo de produção"
       subtitle={isLoading ? "Carregando…" : "Arraste os cards entre as etapas ou use o seletor para atualizar"}
+      breadcrumbs={[{ label: "Produção" }]}
     >
       <div className="overflow-x-auto -mx-6 lg:-mx-8 px-6 lg:px-8 pb-2">
         <div className="flex gap-4 min-w-max">
