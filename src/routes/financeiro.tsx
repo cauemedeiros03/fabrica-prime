@@ -22,7 +22,14 @@ function FinanceiroPage() {
   const pendentes = PEDIDOS.filter((p) => p.valorPago < p.valorTotal);
 
   return (
-    <AppShell title="Financeiro" subtitle="Controle completo de receitas e recebíveis">
+    <AppShell title="Financeiro" subtitle={filtro === "pendentes" ? `${pendentes.length} pagamentos pendentes` : "Controle completo de receitas e recebíveis"}>
+      {filtro === "pendentes" && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border bg-accent/30 px-3 py-2 text-sm">
+          <Clock className="size-4 text-warning-foreground" />
+          <span>Filtro ativo:</span>
+          <span className="font-medium">Pagamentos pendentes</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { l: "Recebido", v: recebido, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
