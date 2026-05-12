@@ -262,14 +262,15 @@ function PainelPage() {
         <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
           <p className="text-sm text-muted-foreground">Pedidos por etapa</p>
           <p className="text-2xl font-semibold tracking-tight">{PEDIDOS.length}</p>
-          <p className="text-xs text-muted-foreground mb-3">distribuição atual</p>
-          <div className="h-56">
+          <p className="text-xs text-muted-foreground mb-3">Clique em uma etapa para filtrar</p>
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={etapasAgg} margin={{ left: -20, right: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="nome" stroke="var(--color-muted-foreground)" fontSize={10} tickLine={false} axisLine={false} interval={0} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
+                  cursor={{ fill: "var(--color-accent)", opacity: 0.4 }}
                   contentStyle={{
                     background: "var(--color-card)",
                     border: "1px solid var(--color-border)",
@@ -277,9 +278,27 @@ function PainelPage() {
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="qtd" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="qtd"
+                  fill="var(--color-primary)"
+                  radius={[6, 6, 0, 0]}
+                  className="cursor-pointer"
+                  onClick={(d: { id?: string }) => d?.id && navigate({ to: "/pedidos", search: { etapa: d.id } })}
+                />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {etapasAgg.map((e) => (
+              <Link
+                key={e.id}
+                to="/pedidos"
+                search={{ etapa: e.id }}
+                className="text-[11px] px-2 py-1 rounded-full bg-muted hover:bg-accent transition"
+              >
+                {e.nome} <span className="text-muted-foreground">·{e.qtd}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
