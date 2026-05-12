@@ -174,6 +174,7 @@ function PainelPage() {
   const receitaPeriodo = chartData.reduce((s, x) => s + x.receita, 0);
 
   const etapasAgg = ETAPAS.map((e) => ({
+    id: e.id,
     nome: e.label.split(" ")[0],
     qtd: PEDIDOS.filter((p) => p.etapa === e.id).length,
   }));
