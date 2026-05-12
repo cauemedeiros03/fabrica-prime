@@ -46,15 +46,19 @@ function Stat({
   delta,
   icon: Icon,
   positivo,
+  to,
+  search,
 }: {
   label: string;
   valor: string;
   delta?: string;
   icon: React.ComponentType<{ className?: string }>;
   positivo?: boolean;
+  to?: string;
+  search?: Record<string, string>;
 }) {
-  return (
-    <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition">
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{label}</p>
         <div className="size-8 grid place-items-center rounded-lg bg-primary/10 text-primary">
@@ -76,8 +80,18 @@ function Stat({
           {delta} <span className="text-muted-foreground">vs período anterior</span>
         </div>
       )}
-    </div>
+    </>
   );
+  const cls =
+    "block text-left rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:border-primary/40 transition cursor-pointer";
+  if (to) {
+    return (
+      <Link to={to} search={search ?? {}} className={cls}>
+        {content}
+      </Link>
+    );
+  }
+  return <div className={cls}>{content}</div>;
 }
 
 type Periodo = "7d" | "30d" | "12m";
