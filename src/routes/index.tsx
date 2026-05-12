@@ -186,10 +186,10 @@ function PainelPage() {
   return (
     <AppShell title="Painel geral" subtitle="Visão completa da sua produção e finanças">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} />
-        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} />
-        <Stat label="Entregues" valor={`${concluidos.length}`} icon={CheckCircle2} />
-        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} />
+        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} to="/pedidos" search={{ filtro: "em-producao" }} />
+        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} to="/pedidos" search={{ filtro: "atrasados" }} />
+        <Stat label="Entregues" valor={`${concluidos.length}`} icon={CheckCircle2} to="/pedidos" search={{ filtro: "entregues" }} />
+        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} to="/financeiro" search={{ filtro: "pendentes" }} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
