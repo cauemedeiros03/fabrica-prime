@@ -1,16 +1,31 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
 import { EtapaSelect } from "@/components/etapa-select";
-import { Filter, Download, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Filter, Download, Search, Pencil, Trash2, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+type FiltroChave = "todos" | "atrasados" | "semana" | "pagamento" | "em-producao" | "entregues";
+
+const FILTRO_LABEL: Record<FiltroChave, string> = {
+  todos: "Todos",
+  atrasados: "Atrasados",
+  semana: "Esta semana",
+  pagamento: "Pagamento pendente",
+  "em-producao": "Em produção",
+  entregues: "Entregues",
+};
 
 export const Route = createFileRoute("/pedidos")({
   component: PedidosPage,
   head: () => ({ meta: [{ title: "Pedidos · Marcena" }] }),
+  validateSearch: (s: Record<string, unknown>): { filtro?: FiltroChave; etapa?: StatusEtapa } => ({
+    filtro: (s.filtro as FiltroChave) || undefined,
+    etapa: (s.etapa as StatusEtapa) || undefined,
+  }),
 });
 
 const PRIORIDADE_COR: Record<string, string> = {
@@ -23,19 +38,28 @@ const PRIORIDADE_COR: Record<string, string> = {
 type EditState = (NovoPedidoInput & { id: string }) | null;
 
 function PedidosPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [filtro, setFiltro] = useState<"todos" | "atrasados" | "semana" | "pagamento">("todos");
+  const filtro: FiltroChave = search.filtro ?? "todos";
+  const etapaFiltro = search.etapa;
   const { data: pedidos = [], isLoading } = usePedidos();
   const del = useDeletePedido();
-  const navigate = useNavigate();
   const [edit, setEdit] = useState<EditState>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
+
+  const setFiltro = (f: FiltroChave) =>
+    navigate({ to: "/pedidos", search: { filtro: f === "todos" ? undefined : f, etapa: undefined } });
+  const limparFiltro = () => navigate({ to: "/pedidos", search: {} });
 
   const filtrados = pedidos.filter((p) => {
     const matchQ = [p.cliente, p.produto, p.numero, p.tipo, p.cidade]
       .join(" ").toLowerCase().includes(q.toLowerCase());
     if (!matchQ) return false;
+    if (etapaFiltro) return p.etapa === etapaFiltro;
     if (filtro === "atrasados") return new Date(p.entrega) < new Date() && p.etapa !== "entregue";
+    if (filtro === "em-producao") return !["entregue", "pronto-entrega"].includes(p.etapa);
+    if (filtro === "entregues") return p.etapa === "entregue";
     if (filtro === "semana") {
       const d = +new Date(p.entrega) - +new Date();
       return d > 0 && d < 1000 * 60 * 60 * 24 * 7;
@@ -43,6 +67,12 @@ function PedidosPage() {
     if (filtro === "pagamento") return p.valorPago < p.valorTotal;
     return true;
   });
+
+  const filtroAtivoLabel = etapaFiltro
+    ? ETAPAS.find((e) => e.id === etapaFiltro)?.label
+    : filtro !== "todos"
+      ? FILTRO_LABEL[filtro]
+      : null;
 
   const editar = (p: (typeof pedidos)[number]) => {
     setEdit({
@@ -75,8 +105,24 @@ function PedidosPage() {
     setConfirmar(null);
   };
 
+  const subtitle = isLoading
+    ? "Carregando…"
+    : filtroAtivoLabel
+      ? `${filtrados.length} pedido(s) · filtro: ${filtroAtivoLabel}`
+      : `${filtrados.length} pedidos encontrados`;
+
   return (
-    <AppShell title="Pedidos" subtitle={isLoading ? "Carregando…" : `${filtrados.length} pedidos encontrados`} breadcrumbs={[{ label: "Pedidos" }]}>
+    <AppShell title="Pedidos" subtitle={subtitle} breadcrumbs={[{ label: "Pedidos" }, ...(filtroAtivoLabel ? [{ label: filtroAtivoLabel }] : [])]}>
+      {filtroAtivoLabel && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border bg-accent/30 px-3 py-2 text-sm">
+          <Filter className="size-4 text-primary" />
+          <span>Filtro ativo:</span>
+          <span className="font-medium">{filtroAtivoLabel}</span>
+          <button onClick={limparFiltro} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <X className="size-3.5" /> Limpar filtro
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -87,27 +133,19 @@ function PedidosPage() {
             className="w-full h-10 pl-9 pr-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
           />
         </div>
-        <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm">
-          {[
-            { k: "todos", l: "Todos" },
-            { k: "atrasados", l: "Atrasados" },
-            { k: "semana", l: "Esta semana" },
-            { k: "pagamento", l: "Pagamento pendente" },
-          ].map((f) => (
+        <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm flex-wrap">
+          {(["todos", "em-producao", "atrasados", "entregues", "semana", "pagamento"] as FiltroChave[]).map((k) => (
             <button
-              key={f.k}
-              onClick={() => setFiltro(f.k as never)}
+              key={k}
+              onClick={() => setFiltro(k)}
               className={`px-3 py-1.5 rounded-md transition ${
-                filtro === f.k ? "bg-card shadow-[var(--shadow-soft)] font-medium" : "text-muted-foreground hover:text-foreground"
+                !etapaFiltro && filtro === k ? "bg-card shadow-[var(--shadow-soft)] font-medium" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {f.l}
+              {FILTRO_LABEL[k]}
             </button>
           ))}
         </div>
-        <button className="h-10 px-3 inline-flex items-center gap-2 rounded-lg border text-sm hover:bg-accent">
-          <Filter className="size-4" /> Filtros
-        </button>
         <button className="h-10 px-3 inline-flex items-center gap-2 rounded-lg border text-sm hover:bg-accent">
           <Download className="size-4" /> Exportar
         </button>
@@ -136,7 +174,8 @@ function PedidosPage() {
               )}
               {!isLoading && filtrados.length === 0 && (
                 <tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">
-                  Nenhum pedido encontrado. Crie seu primeiro pedido pelo botão "Novo pedido".
+                  Nenhum pedido encontrado{filtroAtivoLabel ? ` para o filtro "${filtroAtivoLabel}"` : ""}.{" "}
+                  {filtroAtivoLabel && <Link to="/pedidos" search={{}} className="text-primary hover:underline">Limpar filtro</Link>}
                 </td></tr>
               )}
               {filtrados.map((p) => {
