@@ -8,9 +8,13 @@ import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 export const Route = createFileRoute("/financeiro")({
   component: FinanceiroPage,
   head: () => ({ meta: [{ title: "Financeiro · Marcena" }] }),
+  validateSearch: (s: Record<string, unknown>): { filtro?: "pendentes" } => ({
+    filtro: s.filtro === "pendentes" ? "pendentes" : undefined,
+  }),
 });
 
 function FinanceiroPage() {
+  const { filtro } = Route.useSearch();
   const { data: PEDIDOS = [] } = usePedidos();
   const recebido = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
   const aReceber = PEDIDOS.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
