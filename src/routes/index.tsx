@@ -161,6 +161,7 @@ function PainelPage() {
   const { data: PEDIDOS = [], isLoading: lp } = usePedidos();
   const { data: PAGAMENTOS = [], isLoading: lpg } = usePagamentos();
   const [periodo, setPeriodo] = useState<Periodo>("12m");
+  const navigate = useNavigate();
   const isLoading = lp || lpg;
 
   const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
