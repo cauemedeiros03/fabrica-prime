@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -10,6 +10,10 @@ import {
   Hammer,
   Sparkles,
   Truck,
+  Factory,
+  AlertTriangle,
+  Clock,
+  CalendarClock,
 } from "lucide-react";
 
 const nav = [
@@ -22,8 +26,16 @@ const nav = [
   { to: "/clientes", label: "Clientes", icon: Users },
 ];
 
+const atalhos = [
+  { to: "/pedidos", search: { filtro: "em-producao" }, label: "Em produção", icon: Factory, key: "em-producao" },
+  { to: "/pedidos", search: { filtro: "atrasados" }, label: "Atrasados", icon: AlertTriangle, key: "atrasados" },
+  { to: "/financeiro", search: { filtro: "pendentes" }, label: "Pagamentos pendentes", icon: Clock, key: "pendentes" },
+  { to: "/entregas", search: {}, label: "Próximas entregas", icon: CalendarClock, key: "entregas" },
+] as const;
+
 export function AppSidebar() {
   const { pathname } = useLocation();
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, string> });
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
@@ -37,17 +49,18 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
         <p className="px-2 pt-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Espaço de trabalho
         </p>
         {nav.map((item) => {
-          const active = pathname === item.to;
+          const active = pathname === item.to && !search?.filtro && !search?.etapa;
           const Icon = item.icon;
           return (
             <Link
               key={item.to}
               to={item.to}
+              search={{}}
               className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
@@ -56,6 +69,30 @@ export function AppSidebar() {
             >
               <Icon className="size-4" />
               {item.label}
+            </Link>
+          );
+        })}
+
+        <p className="px-2 pt-5 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Acesso rápido
+        </p>
+        {atalhos.map((a) => {
+          const Icon = a.icon;
+          const filtroAlvo = (a.search as { filtro?: string }).filtro;
+          const active = pathname === a.to && search?.filtro === filtroAlvo;
+          return (
+            <Link
+              key={a.key}
+              to={a.to}
+              search={a.search}
+              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                active
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+              }`}
+            >
+              <Icon className="size-4" />
+              {a.label}
             </Link>
           );
         })}

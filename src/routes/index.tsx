@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR } from "@/lib/mock-data";
@@ -46,15 +46,19 @@ function Stat({
   delta,
   icon: Icon,
   positivo,
+  to,
+  search,
 }: {
   label: string;
   valor: string;
   delta?: string;
   icon: React.ComponentType<{ className?: string }>;
   positivo?: boolean;
+  to?: string;
+  search?: Record<string, string>;
 }) {
-  return (
-    <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition">
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{label}</p>
         <div className="size-8 grid place-items-center rounded-lg bg-primary/10 text-primary">
@@ -76,8 +80,18 @@ function Stat({
           {delta} <span className="text-muted-foreground">vs período anterior</span>
         </div>
       )}
-    </div>
+    </>
   );
+  const cls =
+    "block text-left rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5 hover:border-primary/40 transition cursor-pointer";
+  if (to) {
+    return (
+      <Link to={to} search={search ?? {}} className={cls}>
+        {content}
+      </Link>
+    );
+  }
+  return <div className={cls}>{content}</div>;
 }
 
 type Periodo = "7d" | "30d" | "12m";
@@ -147,6 +161,7 @@ function PainelPage() {
   const { data: PEDIDOS = [], isLoading: lp } = usePedidos();
   const { data: PAGAMENTOS = [], isLoading: lpg } = usePagamentos();
   const [periodo, setPeriodo] = useState<Periodo>("12m");
+  const navigate = useNavigate();
   const isLoading = lp || lpg;
 
   const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
@@ -160,6 +175,7 @@ function PainelPage() {
   const receitaPeriodo = chartData.reduce((s, x) => s + x.receita, 0);
 
   const etapasAgg = ETAPAS.map((e) => ({
+    id: e.id,
     nome: e.label.split(" ")[0],
     qtd: PEDIDOS.filter((p) => p.etapa === e.id).length,
   }));
@@ -172,10 +188,10 @@ function PainelPage() {
   return (
     <AppShell title="Painel geral" subtitle="Visão completa da sua produção e finanças">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} />
-        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} />
-        <Stat label="Entregues" valor={`${concluidos.length}`} icon={CheckCircle2} />
-        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} />
+        <Stat label="Em produção" valor={`${emProducao.length} pedidos`} icon={Package} to="/pedidos" search={{ filtro: "em-producao" }} />
+        <Stat label="Atrasados" valor={`${atrasados.length}`} icon={AlertTriangle} to="/pedidos" search={{ filtro: "atrasados" }} />
+        <Stat label="Entregues" valor={`${concluidos.length}`} icon={CheckCircle2} to="/pedidos" search={{ filtro: "entregues" }} />
+        <Stat label="A receber" valor={moeda(aReceber)} icon={Clock} to="/financeiro" search={{ filtro: "pendentes" }} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
@@ -247,14 +263,15 @@ function PainelPage() {
         <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
           <p className="text-sm text-muted-foreground">Pedidos por etapa</p>
           <p className="text-2xl font-semibold tracking-tight">{PEDIDOS.length}</p>
-          <p className="text-xs text-muted-foreground mb-3">distribuição atual</p>
-          <div className="h-56">
+          <p className="text-xs text-muted-foreground mb-3">Clique em uma etapa para filtrar</p>
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={etapasAgg} margin={{ left: -20, right: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="nome" stroke="var(--color-muted-foreground)" fontSize={10} tickLine={false} axisLine={false} interval={0} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
+                  cursor={{ fill: "var(--color-accent)", opacity: 0.4 }}
                   contentStyle={{
                     background: "var(--color-card)",
                     border: "1px solid var(--color-border)",
@@ -262,9 +279,27 @@ function PainelPage() {
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="qtd" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
+                <Bar
+                  dataKey="qtd"
+                  fill="var(--color-primary)"
+                  radius={[6, 6, 0, 0]}
+                  className="cursor-pointer"
+                  onClick={(d: { id?: string }) => d?.id && navigate({ to: "/pedidos", search: { etapa: d.id } })}
+                />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {etapasAgg.map((e) => (
+              <Link
+                key={e.id}
+                to="/pedidos"
+                search={{ etapa: e.id }}
+                className="text-[11px] px-2 py-1 rounded-full bg-muted hover:bg-accent transition"
+              >
+                {e.nome} <span className="text-muted-foreground">·{e.qtd}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
