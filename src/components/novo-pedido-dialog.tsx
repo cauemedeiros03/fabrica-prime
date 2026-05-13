@@ -198,7 +198,7 @@ export function NovoPedidoDialog({
       <ClienteDialog
         open={!!novoCliente}
         onOpenChange={(v) => !v && setNovoCliente(null)}
-        initial={novoCliente ? { id: "__new__", nome: novoCliente } : null}
+        defaultName={novoCliente ?? ""}
         onCreated={(id) => {
           setForm((s) => ({ ...s, cliente_id: id, cliente_nome: novoCliente ?? s.cliente_nome }));
           setNovoCliente(null);
