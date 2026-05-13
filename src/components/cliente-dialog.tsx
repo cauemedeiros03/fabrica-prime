@@ -13,11 +13,13 @@ export function ClienteDialog({
   open,
   onOpenChange,
   initial,
+  defaultName,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: EditState;
+  defaultName?: string;
   onCreated?: (id: string) => void;
 }) {
   const isEdit = !!initial;
@@ -28,8 +30,8 @@ export function ClienteDialog({
   const [form, setForm] = useState<ClienteInput>(empty);
 
   useEffect(() => {
-    if (open) setForm(initial ?? empty);
-  }, [open, initial]);
+    if (open) setForm(initial ?? { ...empty, nome: defaultName ?? "" });
+  }, [open, initial, defaultName]);
 
   const set = <K extends keyof ClienteInput>(k: K, v: ClienteInput[K]) =>
     setForm((s) => ({ ...s, [k]: v }));
