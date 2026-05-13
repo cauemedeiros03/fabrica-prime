@@ -22,6 +22,7 @@ export function NovoPedidoDialog({
   const update = useUpdatePedido();
 
   const empty: NovoPedidoInput = {
+    cliente_id: undefined,
     cliente_nome: "",
     telefone: "",
     email: "",
@@ -38,6 +39,7 @@ export function NovoPedidoDialog({
     valor_pago: 0,
   };
   const [form, setForm] = useState<NovoPedidoInput>(empty);
+  const [novoCliente, setNovoCliente] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) setForm(initial ?? empty);
