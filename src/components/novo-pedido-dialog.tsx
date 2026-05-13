@@ -194,6 +194,17 @@ export function NovoPedidoDialog({
           </div>
         </form>
       </div>
+
+      <ClienteDialog
+        open={!!novoCliente}
+        onOpenChange={(v) => !v && setNovoCliente(null)}
+        initial={novoCliente ? { id: "__new__", nome: novoCliente } : null}
+        onCreated={(id) => {
+          setForm((s) => ({ ...s, cliente_id: id, cliente_nome: novoCliente ?? s.cliente_nome }));
+          setNovoCliente(null);
+          toast.success("Cliente vinculado ao pedido");
+        }}
+      />
     </div>
   );
 }
