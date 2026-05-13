@@ -3,6 +3,8 @@ import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
+import { ClienteDialog } from "@/components/cliente-dialog";
 
 type EditState = (NovoPedidoInput & { id: string }) | null;
 
@@ -20,6 +22,7 @@ export function NovoPedidoDialog({
   const update = useUpdatePedido();
 
   const empty: NovoPedidoInput = {
+    cliente_id: undefined,
     cliente_nome: "",
     telefone: "",
     email: "",
@@ -36,6 +39,7 @@ export function NovoPedidoDialog({
     valor_pago: 0,
   };
   const [form, setForm] = useState<NovoPedidoInput>(empty);
+  const [novoCliente, setNovoCliente] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) setForm(initial ?? empty);
@@ -91,10 +95,47 @@ export function NovoPedidoDialog({
 
         <form onSubmit={onSubmit} className="px-6 py-5 space-y-6 max-h-[75vh] overflow-y-auto">
           <Section title="Cliente">
-            <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} disabled={isEdit} />
-            <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} disabled={isEdit} />
-            <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} disabled={isEdit} />
-            <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} disabled={isEdit} />
+            {isEdit ? (
+              <>
+                <Field label="Nome do cliente" value={form.cliente_nome} onChange={() => {}} disabled />
+                <Field label="Telefone" value={form.telefone || ""} onChange={() => {}} disabled />
+                <Field label="E-mail" type="email" value={form.email || ""} onChange={() => {}} disabled />
+                <Field label="Cidade" value={form.cidade || ""} onChange={() => {}} disabled />
+              </>
+            ) : (
+              <div className="md:col-span-2 space-y-3">
+                <ClienteAutocomplete
+                  value={form.cliente_id}
+                  onSelect={(c) =>
+                    setForm((s) => ({
+                      ...s,
+                      cliente_id: c?.id,
+                      cliente_nome: c?.nome ?? "",
+                      telefone: c?.telefone ?? "",
+                      email: c?.email ?? "",
+                      cidade: c?.cidade ?? "",
+                    }))
+                  }
+                  onCreateNew={(nome) => setNovoCliente(nome)}
+                />
+                {form.cliente_id ? (
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                    <p><span className="font-medium text-foreground">{form.cliente_nome}</span></p>
+                    <p>{[form.telefone, form.email, form.cidade].filter(Boolean).join(" · ") || "Sem dados de contato"}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} />
+                    <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} />
+                    <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
+                    <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
+                    <p className="md:col-span-2 text-[11px] text-muted-foreground">
+                      Dica: busque acima para reusar um cliente existente e evitar duplicatas.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </Section>
 
           <Section title="Produto">
@@ -153,6 +194,17 @@ export function NovoPedidoDialog({
           </div>
         </form>
       </div>
+
+      <ClienteDialog
+        open={!!novoCliente}
+        onOpenChange={(v) => !v && setNovoCliente(null)}
+        defaultName={novoCliente ?? ""}
+        onCreated={(id) => {
+          setForm((s) => ({ ...s, cliente_id: id, cliente_nome: novoCliente ?? s.cliente_nome }));
+          setNovoCliente(null);
+          toast.success("Cliente vinculado ao pedido");
+        }}
+      />
     </div>
   );
 }

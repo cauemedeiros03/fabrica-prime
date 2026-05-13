@@ -19,6 +19,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
+import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 
 const ProducaoRoute = ProducaoRouteImport.update({
   id: '/producao',
@@ -70,29 +71,36 @@ const PedidosPedidoIdRoute = PedidosPedidoIdRouteImport.update({
   path: '/$pedidoId',
   getParentRoute: () => PedidosRoute,
 } as any)
+const ClientesClienteIdRoute = ClientesClienteIdRouteImport.update({
+  id: '/$clienteId',
+  path: '/$clienteId',
+  getParentRoute: () => ClientesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRoutesById {
@@ -100,12 +108,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/cadastro': typeof CadastroRoute
-  '/clientes': typeof ClientesRoute
+  '/clientes': typeof ClientesRouteWithChildren
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pedidos'
     | '/producao'
+    | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
   fileRoutesById: FileRoutesById
 }
@@ -151,7 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   CadastroRoute: typeof CadastroRoute
-  ClientesRoute: typeof ClientesRoute
+  ClientesRoute: typeof ClientesRouteWithChildren
   EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
@@ -231,8 +243,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PedidosPedidoIdRouteImport
       parentRoute: typeof PedidosRoute
     }
+    '/clientes/$clienteId': {
+      id: '/clientes/$clienteId'
+      path: '/$clienteId'
+      fullPath: '/clientes/$clienteId'
+      preLoaderRoute: typeof ClientesClienteIdRouteImport
+      parentRoute: typeof ClientesRoute
+    }
   }
 }
+
+interface ClientesRouteChildren {
+  ClientesClienteIdRoute: typeof ClientesClienteIdRoute
+}
+
+const ClientesRouteChildren: ClientesRouteChildren = {
+  ClientesClienteIdRoute: ClientesClienteIdRoute,
+}
+
+const ClientesRouteWithChildren = ClientesRoute._addFileChildren(
+  ClientesRouteChildren,
+)
 
 interface PedidosRouteChildren {
   PedidosPedidoIdRoute: typeof PedidosPedidoIdRoute
@@ -249,7 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   CadastroRoute: CadastroRoute,
-  ClientesRoute: ClientesRoute,
+  ClientesRoute: ClientesRouteWithChildren,
   EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
@@ -259,13 +290,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
