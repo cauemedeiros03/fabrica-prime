@@ -3,6 +3,8 @@ import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
+import { ClienteDialog } from "@/components/cliente-dialog";
 
 type EditState = (NovoPedidoInput & { id: string }) | null;
 
