@@ -1,13 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { EtapaSelect } from "@/components/etapa-select";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { AddPagamentoDialog } from "@/components/add-pagamento-dialog";
 import {
   usePedido,
   useEtapasHistorico,
   usePagamentosPedido,
   useDeletePedido,
+  useDuplicatePedido,
+  useReagendarEntrega,
   type NovoPedidoInput,
 } from "@/hooks/use-pedidos";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
@@ -23,6 +26,9 @@ import {
   AlertTriangle,
   ClipboardList,
   History,
+  Copy,
+  Plus,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,12 +39,16 @@ export const Route = createFileRoute("/pedidos/$pedidoId")({
 
 function PedidoDetalhePage() {
   const { pedidoId } = Route.useParams();
+  const navigate = useNavigate();
   const { data: p, isLoading } = usePedido(pedidoId);
   const { data: historico = [] } = useEtapasHistorico(pedidoId);
   const { data: pagamentos = [] } = usePagamentosPedido(pedidoId);
   const del = useDeletePedido();
+  const dup = useDuplicatePedido();
+  const reagendar = useReagendarEntrega();
   const [edit, setEdit] = useState<(NovoPedidoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState(false);
+  const [pagamentoOpen, setPagamentoOpen] = useState(false);
 
   if (isLoading || !p) {
     return (
