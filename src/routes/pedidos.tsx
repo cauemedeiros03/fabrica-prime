@@ -45,6 +45,7 @@ function PedidosPage() {
   const etapaFiltro = search.etapa;
   const { data: pedidos = [], isLoading } = usePedidos();
   const del = useDeletePedido();
+  const dup = useDuplicatePedido();
   const [edit, setEdit] = useState<EditState>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
 
