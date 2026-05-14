@@ -119,13 +119,34 @@ function PedidoDetalhePage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} />
+          <button
+            onClick={() => setPagamentoOpen(true)}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+          >
+            <Plus className="size-4" /> Pagamento
+          </button>
           <button
             onClick={editar}
             className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border bg-card text-sm hover:bg-accent"
           >
             <Pencil className="size-4" /> Editar
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const novoId = await dup.mutateAsync(p.id);
+                toast.success("Pedido duplicado");
+                navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: novoId } });
+              } catch (e) {
+                toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+              }
+            }}
+            disabled={dup.isPending}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border bg-card text-sm hover:bg-accent disabled:opacity-60"
+          >
+            {dup.isPending ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />} Duplicar
           </button>
           <button
             onClick={() => setConfirmar(true)}
