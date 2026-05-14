@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, type StatusEtapa } from "@/lib/mock-data";
-import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { usePedidos, useDeletePedido, useDuplicatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
 import { EtapaSelect } from "@/components/etapa-select";
-import { Filter, Download, Search, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Filter, Download, Search, Pencil, Trash2, Loader2, X, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
