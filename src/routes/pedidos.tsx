@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, type StatusEtapa } from "@/lib/mock-data";
-import { usePedidos, useDeletePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { usePedidos, useDeletePedido, useDuplicatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
 import { EtapaSelect } from "@/components/etapa-select";
-import { Filter, Download, Search, Pencil, Trash2, Loader2, X } from "lucide-react";
+import { Filter, Download, Search, Pencil, Trash2, Loader2, X, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -45,6 +45,7 @@ function PedidosPage() {
   const etapaFiltro = search.etapa;
   const { data: pedidos = [], isLoading } = usePedidos();
   const del = useDeletePedido();
+  const dup = useDuplicatePedido();
   const [edit, setEdit] = useState<EditState>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
 
@@ -156,24 +157,22 @@ function PedidosPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
               <tr>
-                <th className="text-left font-medium px-5 py-3">Pedido</th>
-                <th className="text-left font-medium px-5 py-3">Cliente</th>
-                <th className="text-left font-medium px-5 py-3">Etapa</th>
-                <th className="text-left font-medium px-5 py-3">Prioridade</th>
-                <th className="text-right font-medium px-5 py-3">Valor</th>
-                <th className="text-right font-medium px-5 py-3">Pago</th>
-                <th className="text-left font-medium px-5 py-3">Entrega</th>
-                <th className="px-5 py-3" />
+                <th className="text-left font-medium pl-5 pr-4 py-3 min-w-[320px]">Produto</th>
+                <th className="text-left font-medium px-4 py-3">Cliente</th>
+                <th className="text-left font-medium px-4 py-3">Etapa</th>
+                <th className="text-right font-medium px-4 py-3">Financeiro</th>
+                <th className="text-left font-medium px-4 py-3">Entrega</th>
+                <th className="px-3 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y">
               {isLoading && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">
+                <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">
                   <Loader2 className="inline size-4 animate-spin mr-2" /> Carregando pedidos…
                 </td></tr>
               )}
               {!isLoading && filtrados.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-muted-foreground text-sm">
+                <tr><td colSpan={6} className="px-5 py-12 text-center text-muted-foreground text-sm">
                   Nenhum pedido encontrado{filtroAtivoLabel ? ` para o filtro "${filtroAtivoLabel}"` : ""}.{" "}
                   {filtroAtivoLabel && <Link to="/pedidos" search={{}} className="text-primary hover:underline">Limpar filtro</Link>}
                 </td></tr>
@@ -181,42 +180,74 @@ function PedidosPage() {
               {filtrados.map((p) => {
                 const atrasado = new Date(p.entrega) < new Date() && p.etapa !== "entregue";
                 const pct = (p.valorPago / p.valorTotal) * 100;
+                const prioCor: Record<string, string> = {
+                  baixa: "bg-muted-foreground/30",
+                  media: "bg-info",
+                  alta: "bg-warning",
+                  urgente: "bg-destructive",
+                };
                 return (
                   <tr
                     key={p.id}
                     onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
                     className="hover:bg-accent/40 transition cursor-pointer"
                   >
-                    <td className="px-5 py-3.5">
-                      <div className="font-medium">{p.numero}</div>
-                      <div className="text-xs text-muted-foreground">{p.produto}</div>
+                    <td className="pl-0 pr-4 py-3.5">
+                      <div className="flex items-stretch gap-3">
+                        <span
+                          className={`w-1 rounded-r-full ${prioCor[p.prioridade]}`}
+                          title={`Prioridade: ${PRIORIDADE_LABEL[p.prioridade]}`}
+                        />
+                        <div className="min-w-0 flex-1 py-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium truncate">{p.produto}</span>
+                            <span className="text-[11px] text-muted-foreground tabular-nums">{p.numero}</span>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
+                              {PRIORIDADE_LABEL[p.prioridade]}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate mt-0.5">
+                            {[p.tipo, p.material, p.cor].filter(Boolean).join(" · ") || "—"}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div>{p.cliente}</div>
-                      <div className="text-xs text-muted-foreground">{p.cidade}</div>
+                    <td className="px-4 py-3.5">
+                      <div className="font-medium truncate max-w-[180px]">{p.cliente}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[180px]">{p.cidade || p.telefone}</div>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} variant="badge" />
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
-                        {PRIORIDADE_LABEL[p.prioridade]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right tabular-nums font-medium">{moeda(p.valorTotal)}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="tabular-nums text-xs text-muted-foreground">{moeda(p.valorPago)}</div>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="tabular-nums font-medium">{moeda(p.valorTotal)}</div>
+                      <div className="text-[11px] text-muted-foreground tabular-nums">{moeda(p.valorPago)} pago</div>
                       <div className="mt-1 h-1 w-24 ml-auto rounded-full bg-muted overflow-hidden">
                         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                       </div>
                     </td>
-                    <td className={`px-5 py-3.5 text-sm tabular-nums ${atrasado ? "text-destructive font-medium" : ""}`}>
+                    <td className={`px-4 py-3.5 text-sm tabular-nums ${atrasado ? "text-destructive font-medium" : ""}`}>
                       {dataBR(p.entrega)}
                     </td>
                     <td className="px-3 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <button onClick={() => editar(p)} className="size-8 grid place-items-center rounded-md hover:bg-accent" title="Editar">
                           <Pencil className="size-3.5" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const id = await dup.mutateAsync(p.id);
+                              toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                              navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                            } catch (e) {
+                              toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                            }
+                          }}
+                          className="size-8 grid place-items-center rounded-md hover:bg-accent"
+                          title="Duplicar"
+                        >
+                          <Copy className="size-3.5" />
                         </button>
                         <button onClick={() => setConfirmar({ id: p.id, numero: p.numero })} className="size-8 grid place-items-center rounded-md hover:bg-destructive/10 text-destructive" title="Remover">
                           <Trash2 className="size-3.5" />

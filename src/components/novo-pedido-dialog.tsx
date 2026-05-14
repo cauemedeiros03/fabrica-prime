@@ -97,10 +97,13 @@ export function NovoPedidoDialog({
           <Section title="Cliente">
             {isEdit ? (
               <>
-                <Field label="Nome do cliente" value={form.cliente_nome} onChange={() => {}} disabled />
-                <Field label="Telefone" value={form.telefone || ""} onChange={() => {}} disabled />
-                <Field label="E-mail" type="email" value={form.email || ""} onChange={() => {}} disabled />
-                <Field label="Cidade" value={form.cidade || ""} onChange={() => {}} disabled />
+                <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} />
+                <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} />
+                <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
+                <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
+                <p className="md:col-span-2 text-[11px] text-muted-foreground">
+                  Alterações aqui atualizam também a ficha do cliente.
+                </p>
               </>
             ) : (
               <div className="md:col-span-2 space-y-3">

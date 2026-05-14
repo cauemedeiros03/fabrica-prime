@@ -1,13 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { EtapaSelect } from "@/components/etapa-select";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { AddPagamentoDialog } from "@/components/add-pagamento-dialog";
 import {
   usePedido,
   useEtapasHistorico,
   usePagamentosPedido,
   useDeletePedido,
+  useDuplicatePedido,
+  useReagendarEntrega,
   type NovoPedidoInput,
 } from "@/hooks/use-pedidos";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL } from "@/lib/mock-data";
@@ -23,6 +26,9 @@ import {
   AlertTriangle,
   ClipboardList,
   History,
+  Copy,
+  Plus,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,12 +39,16 @@ export const Route = createFileRoute("/pedidos/$pedidoId")({
 
 function PedidoDetalhePage() {
   const { pedidoId } = Route.useParams();
+  const navigate = useNavigate();
   const { data: p, isLoading } = usePedido(pedidoId);
   const { data: historico = [] } = useEtapasHistorico(pedidoId);
   const { data: pagamentos = [] } = usePagamentosPedido(pedidoId);
   const del = useDeletePedido();
+  const dup = useDuplicatePedido();
+  const reagendar = useReagendarEntrega();
   const [edit, setEdit] = useState<(NovoPedidoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState(false);
+  const [pagamentoOpen, setPagamentoOpen] = useState(false);
 
   if (isLoading || !p) {
     return (
@@ -109,13 +119,34 @@ function PedidoDetalhePage() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} />
+          <button
+            onClick={() => setPagamentoOpen(true)}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+          >
+            <Plus className="size-4" /> Pagamento
+          </button>
           <button
             onClick={editar}
             className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border bg-card text-sm hover:bg-accent"
           >
             <Pencil className="size-4" /> Editar
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const novoId = await dup.mutateAsync(p.id);
+                toast.success("Pedido duplicado");
+                navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: novoId } });
+              } catch (e) {
+                toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+              }
+            }}
+            disabled={dup.isPending}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border bg-card text-sm hover:bg-accent disabled:opacity-60"
+          >
+            {dup.isPending ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />} Duplicar
           </button>
           <button
             onClick={() => setConfirmar(true)}
@@ -216,6 +247,25 @@ function PedidoDetalhePage() {
                 ? `Atrasado em ${Math.abs(diasFalta)} dia(s)`
                 : `Faltam ${diasFalta} dia(s) para a entrega`}
             </p>
+            <div className="flex items-center gap-2 pt-2">
+              <CalendarClock className="size-3.5 text-muted-foreground" />
+              <input
+                type="date"
+                defaultValue={p.entrega ? new Date(p.entrega).toISOString().slice(0, 10) : ""}
+                onChange={async (e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  try {
+                    await reagendar.mutateAsync({ id: p.id, entrega: v });
+                    toast.success("Entrega reagendada");
+                  } catch (err) {
+                    toast.error("Erro ao reagendar", { description: err instanceof Error ? err.message : "" });
+                  }
+                }}
+                className="h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              {reagendar.isPending && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
+            </div>
           </div>
         </section>
 
@@ -283,6 +333,7 @@ function PedidoDetalhePage() {
       </div>
 
       <NovoPedidoDialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} initial={edit} />
+      <AddPagamentoDialog open={pagamentoOpen} onOpenChange={setPagamentoOpen} pedidoId={p.id} numero={p.numero} saldo={saldo} />
 
       {confirmar && (
         <div

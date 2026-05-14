@@ -213,6 +213,19 @@ export function useUpdatePedido() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...input }: NovoPedidoInput & { id: string }) => {
+      // Update client data alongside order if cliente_id present
+      if (input.cliente_id) {
+        const { error: ec } = await supabase
+          .from("clientes")
+          .update({
+            nome: input.cliente_nome,
+            telefone: input.telefone || null,
+            email: input.email || null,
+            cidade: input.cidade || null,
+          })
+          .eq("id", input.cliente_id);
+        if (ec) throw ec;
+      }
       const { error } = await supabase
         .from("pedidos")
         .update({
@@ -230,7 +243,86 @@ export function useUpdatePedido() {
         .eq("id", id);
       if (error) throw error;
     },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedido", v.id] });
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+    },
+  });
+}
+
+export function useDuplicatePedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: p, error } = await supabase
+        .from("pedidos")
+        .select("cliente_id, produto, tipo, material, cor, observacoes, entrega, etapa, prioridade, valor_total")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      const { data: novo, error: e2 } = await supabase
+        .from("pedidos")
+        .insert({
+          cliente_id: p.cliente_id,
+          produto: p.produto,
+          tipo: p.tipo,
+          material: p.material,
+          cor: p.cor,
+          observacoes: p.observacoes,
+          entrega: p.entrega,
+          etapa: "pedido-recebido",
+          prioridade: p.prioridade,
+          valor_total: p.valor_total,
+          valor_pago: 0,
+          numero: "",
+        })
+        .select("id")
+        .single();
+      if (e2) throw e2;
+      return novo.id as string;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
+  });
+}
+
+export function useReagendarEntrega() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, entrega }: { id: string; entrega: string }) => {
+      const { error } = await supabase.from("pedidos").update({ entrega }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedido", v.id] });
+    },
+  });
+}
+
+export function useAddPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ pedido_id, valor, forma, pago_em, observacao }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
+      const { error } = await supabase.from("pagamentos").insert({
+        pedido_id,
+        valor,
+        forma: forma || null,
+        pago_em: pago_em || new Date().toISOString().slice(0, 10),
+        observacao: observacao || null,
+      });
+      if (error) throw error;
+      // increment valor_pago atomically via re-read
+      const { data: p } = await supabase.from("pedidos").select("valor_pago").eq("id", pedido_id).single();
+      const novoPago = Number(p?.valor_pago ?? 0) + valor;
+      await supabase.from("pedidos").update({ valor_pago: novoPago }).eq("id", pedido_id);
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pagamentos"] });
+      qc.invalidateQueries({ queryKey: ["pagamentos", v.pedido_id] });
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedido", v.pedido_id] });
+    },
   });
 }
 
