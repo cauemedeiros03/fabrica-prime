@@ -247,6 +247,25 @@ function PedidoDetalhePage() {
                 ? `Atrasado em ${Math.abs(diasFalta)} dia(s)`
                 : `Faltam ${diasFalta} dia(s) para a entrega`}
             </p>
+            <div className="flex items-center gap-2 pt-2">
+              <CalendarClock className="size-3.5 text-muted-foreground" />
+              <input
+                type="date"
+                defaultValue={p.entrega ? new Date(p.entrega).toISOString().slice(0, 10) : ""}
+                onChange={async (e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  try {
+                    await reagendar.mutateAsync({ id: p.id, entrega: v });
+                    toast.success("Entrega reagendada");
+                  } catch (err) {
+                    toast.error("Erro ao reagendar", { description: err instanceof Error ? err.message : "" });
+                  }
+                }}
+                className="h-8 px-2 rounded-md border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              {reagendar.isPending && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
+            </div>
           </div>
         </section>
 
