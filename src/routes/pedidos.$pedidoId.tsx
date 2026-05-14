@@ -333,6 +333,7 @@ function PedidoDetalhePage() {
       </div>
 
       <NovoPedidoDialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} initial={edit} />
+      <AddPagamentoDialog open={pagamentoOpen} onOpenChange={setPagamentoOpen} pedidoId={p.id} numero={p.numero} saldo={saldo} />
 
       {confirmar && (
         <div
