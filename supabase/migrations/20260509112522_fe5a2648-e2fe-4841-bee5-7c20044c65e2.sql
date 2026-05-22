@@ -3,8 +3,7 @@
 CREATE TYPE public.app_role AS ENUM ('admin', 'producao', 'financeiro', 'vendedor');
 
 CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   nome TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -29,11 +28,11 @@ AS $$
 $$;
 
 CREATE POLICY "Usuários veem o próprio perfil" ON public.profiles
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+  FOR SELECT TO authenticated USING (auth.uid() = id);
 CREATE POLICY "Usuários atualizam o próprio perfil" ON public.profiles
-  FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+  FOR UPDATE TO authenticated USING (auth.uid() = id);
 CREATE POLICY "Usuários inserem o próprio perfil" ON public.profiles
-  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Usuários veem os próprios papéis" ON public.user_roles
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
@@ -47,7 +46,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (user_id, nome)
+  INSERT INTO public.profiles (id, nome)
   VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', NEW.email));
 
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin');

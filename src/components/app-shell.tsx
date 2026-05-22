@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "@tanstack/react-router";
 import { AppSidebar } from "./app-sidebar";
 import { AppHeader } from "./app-header";
 import { NovoPedidoDialog } from "./novo-pedido-dialog";
+import { OrcamentoDialog } from "@/components/orcamento-dialog";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
@@ -19,16 +20,35 @@ export function AppShell({
   breadcrumbs?: Crumb[];
   children: ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, profile, subscription, loading } = useAuth();
+  console.log('Perfil Atual:', profile);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const [novoPedido, setNovoPedido] = useState(false);
+  const [novoOrcamento, setNovoOrcamento] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   useRealtimeSync();
 
+  // Paywall bypass checks (matches __root.tsx logic)
+  const isBypassActive = import.meta.env.VITE_BYPASS_PAYWALL === "true" || (typeof process !== "undefined" && process.env && process.env.BYPASS_PAYWALL === "true");
+  const isAdmin = user?.email === "admin@marcena.com.br" || user?.user_metadata?.role === "admin";
+  
+  // Direct bypass if active
+  const isSubActiveFromProfile = profile?.status_assinatura === "ativo" || profile?.status_assinatura === "active";
+  const hasActiveSub = subscription?.status === "active" || isSubActiveFromProfile;
+  const hasAccess = !!(isBypassActive || isAdmin || hasActiveSub);
+
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
-  }, [user, loading, navigate]);
+    if (!loading) {
+      if (!user) {
+        navigate({ to: "/login" });
+      } else if (!hasAccess) {
+        console.log("[AppShell] Acesso negado: Redirecionando para /assinatura", { isBypassActive, isAdmin, subscription });
+        navigate({ to: "/assinatura" });
+      }
+    }
+  }, [user, hasAccess, loading, navigate, subscription, isBypassActive, isAdmin]);
 
   // scroll-to-top on route change
   useEffect(() => {
@@ -36,12 +56,18 @@ export function AppShell({
     setMobileNav(false);
   }, [location.pathname]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen grid place-items-center bg-background">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  // Previne o "flash" da interface interna enquanto o useEffect faz o redirecionamento
+  // Se não houver usuário ou o acesso for negado, escondemos o shell.
+  if (!user || !hasAccess) {
+    return null;
   }
 
   return (
@@ -72,6 +98,7 @@ export function AppShell({
           title={title}
           subtitle={subtitle}
           onNovoPedido={() => setNovoPedido(true)}
+          onNovoOrcamento={() => setNovoOrcamento(true)}
           onOpenNav={() => setMobileNav(true)}
         />
         <main className="flex-1 p-6 lg:p-8 animate-in fade-in duration-200">
@@ -80,6 +107,7 @@ export function AppShell({
         </main>
       </div>
       <NovoPedidoDialog open={novoPedido} onOpenChange={setNovoPedido} />
+      <OrcamentoDialog open={novoOrcamento} onOpenChange={setNovoOrcamento} />
     </div>
   );
 }

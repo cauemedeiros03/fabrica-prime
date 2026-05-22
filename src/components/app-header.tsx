@@ -1,4 +1,4 @@
-import { Plus, Moon, Sun, LogOut, Menu } from "lucide-react";
+import { Plus, Moon, Sun, LogOut, Menu, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,11 +11,13 @@ export function AppHeader({
   title,
   subtitle,
   onNovoPedido,
+  onNovoOrcamento,
   onOpenNav,
 }: {
   title: string;
   subtitle?: string;
   onNovoPedido?: () => void;
+  onNovoOrcamento?: () => void;
   onOpenNav?: () => void;
 }) {
   const [dark, setDark] = useState(false);
@@ -63,13 +65,25 @@ export function AppHeader({
 
         <NotificationsPanel />
 
-        <button
-          onClick={onNovoPedido}
-          className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-[var(--shadow-glow)]"
-        >
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">Novo pedido</span>
-        </button>
+        {onNovoOrcamento && (
+          <button
+            onClick={onNovoOrcamento}
+            className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition shadow-[var(--shadow-soft)] shrink-0"
+          >
+            <FileText className="size-4" />
+            <span className="hidden sm:inline">Gerar Orçamento</span>
+          </button>
+        )}
+
+        {onNovoPedido && (
+          <button
+            onClick={onNovoPedido}
+            className="h-9 px-3.5 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition shadow-[var(--shadow-glow)] shrink-0"
+          >
+            <Plus className="size-4" />
+            <span className="hidden sm:inline">Novo pedido</span>
+          </button>
+        )}
 
         <button
           onClick={sair}

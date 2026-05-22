@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { ETAPAS, moeda, dataBR } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
 import { usePagamentos } from "@/hooks/use-pagamentos";
 import {
@@ -284,7 +284,7 @@ function PainelPage() {
                   fill="var(--color-primary)"
                   radius={[6, 6, 0, 0]}
                   className="cursor-pointer"
-                  onClick={(d: { id?: string }) => d?.id && navigate({ to: "/pedidos", search: { etapa: d.id } })}
+                  onClick={(d: { id?: string }) => d?.id && navigate({ to: "/pedidos", search: { etapa: d.id as StatusEtapa } })}
                 />
               </BarChart>
             </ResponsiveContainer>

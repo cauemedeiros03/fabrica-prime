@@ -3,15 +3,16 @@ import { useUpdatePedidoEtapa } from "@/hooks/use-pedidos";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
+
 interface Props {
-  pedidoId: string;
-  etapa: StatusEtapa;
-  numero?: string;
+  pedido: any;
   className?: string;
   variant?: "badge" | "default";
 }
 
-export function EtapaSelect({ pedidoId, etapa, numero, className = "", variant = "default" }: Props) {
+export function EtapaSelect({ pedido, className = "", variant = "default" }: Props) {
+  const { id: pedidoId, etapa, numero } = pedido;
   const update = useUpdatePedidoEtapa();
   const atual = ETAPAS.find((e) => e.id === etapa);
 
@@ -20,8 +21,14 @@ export function EtapaSelect({ pedidoId, etapa, numero, className = "", variant =
     try {
       await update.mutateAsync({ id: pedidoId, etapa: nova });
       const novaLabel = ETAPAS.find((e) => e.id === nova)?.label ?? nova;
+      const pedidoAtualizado = { ...pedido, etapa: nova };
+      
       toast.success(`Etapa atualizada${numero ? ` · ${numero}` : ""}`, {
         description: `Movido para "${novaLabel}".`,
+        action: {
+          label: "Avisar Cliente",
+          onClick: () => sendWhatsAppMessage(pedidoAtualizado)
+        }
       });
     } catch (e) {
       toast.error("Não foi possível atualizar", {

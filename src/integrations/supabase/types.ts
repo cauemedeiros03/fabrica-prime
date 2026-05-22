@@ -14,9 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      assinaturas: {
+        Row: {
+          id: string
+          usuario_id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          status: "active" | "past_due" | "unpaid" | "canceled" | null
+          data_expiracao: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          usuario_id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          status?: "active" | "past_due" | "unpaid" | "canceled" | null
+          data_expiracao?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          usuario_id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          status?: "active" | "past_due" | "unpaid" | "canceled" | null
+          data_expiracao?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           cidade: string | null
+          cpf: string | null
+          user_id: string
+          cep: string | null
+          endereco: string | null
+          numero: string | null
+          complemento: string | null
+          bairro: string | null
+          instagram: string | null
+          origem: string | null
           created_at: string
           email: string | null
           id: string
@@ -27,6 +69,15 @@ export type Database = {
         }
         Insert: {
           cidade?: string | null
+          cpf?: string | null
+          user_id?: string
+          cep?: string | null
+          endereco?: string | null
+          numero?: string | null
+          complemento?: string | null
+          bairro?: string | null
+          instagram?: string | null
+          origem?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -37,6 +88,15 @@ export type Database = {
         }
         Update: {
           cidade?: string | null
+          cpf?: string | null
+          user_id?: string
+          cep?: string | null
+          endereco?: string | null
+          numero?: string | null
+          complemento?: string | null
+          bairro?: string | null
+          instagram?: string | null
+          origem?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -44,6 +104,36 @@ export type Database = {
           observacoes?: string | null
           telefone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      configuracoes_marcenaria: {
+        Row: {
+          endereco: string | null
+          id: string
+          logo_url: string | null
+          nome_marcenaria: string
+          telefone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          endereco?: string | null
+          id?: string
+          logo_url?: string | null
+          nome_marcenaria: string
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          endereco?: string | null
+          id?: string
+          logo_url?: string | null
+          nome_marcenaria?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -191,21 +281,18 @@ export type Database = {
           id: string
           nome: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           nome?: string | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           nome?: string | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

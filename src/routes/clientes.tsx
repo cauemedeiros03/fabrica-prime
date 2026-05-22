@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { ClienteDialog } from "@/components/cliente-dialog";
+import { ClienteDialog, ClienteDetailSheet } from "@/components/cliente-dialog";
 import {
   useClientes,
   useDeleteCliente,
@@ -37,6 +37,8 @@ function ClientesPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<(ClienteInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<Cliente | null>(null);
+  const [detailClienteId, setDetailClienteId] = useState<string | null>(null);
+  const [openDetail, setOpenDetail] = useState(false);
 
   const stats = useMemo(() => {
     const m = new Map<string, { pedidos: number; total: number }>();
@@ -142,10 +144,12 @@ function ClientesPage() {
                 key={c.id}
                 className="group rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition relative"
               >
-                <Link
-                  to="/clientes/$clienteId"
-                  params={{ clienteId: c.id }}
-                  className="block"
+                <div
+                  onClick={() => {
+                    setDetailClienteId(c.id);
+                    setOpenDetail(true);
+                  }}
+                  className="block cursor-pointer text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-12 rounded-full bg-gradient-to-br from-primary/80 to-primary text-primary-foreground grid place-items-center font-semibold text-sm">
@@ -181,7 +185,7 @@ function ClientesPage() {
                     <span className="text-xs text-muted-foreground">Total comprado</span>
                     <span className="font-semibold tabular-nums">{moeda(s.total)}</span>
                   </div>
-                </Link>
+                </div>
 
                 <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                   <button
@@ -216,6 +220,11 @@ function ClientesPage() {
         open={!!edit}
         onOpenChange={(v) => !v && setEdit(null)}
         initial={edit}
+      />
+      <ClienteDetailSheet
+        open={openDetail}
+        onOpenChange={setOpenDetail}
+        clienteId={detailClienteId}
       />
 
       {confirmar && (

@@ -29,6 +29,7 @@ import {
   Copy,
   Plus,
   CalendarClock,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -66,23 +67,49 @@ function PedidoDetalhePage() {
   const atrasado = new Date(p.entrega) < new Date() && p.etapa !== "entregue";
   const diasFalta = Math.ceil((+new Date(p.entrega) - Date.now()) / (1000 * 60 * 60 * 24));
 
+  const handleWhatsApp = () => {
+    if (!p.telefone) {
+      toast.error("Cliente sem telefone cadastrado");
+      return;
+    }
+    const phone = p.telefone.replace(/\D/g, '');
+    
+    let msg = "";
+    if (p.etapa === "pronto-entrega") {
+      msg = `Olá! Ótima notícia: seu pedido ${p.produto} está Pronto para entrega! O saldo restante para a liberação é de ${moeda(saldo)}. Vamos agendar o envio?`;
+    } else {
+      msg = `Olá! Passando para avisar que a produção do seu pedido ${p.produto} avançou e agora ele está na etapa: ${etapa.label}! Tudo correndo super bem por aqui.`;
+    }
+    
+    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   const editar = () =>
     setEdit({
       id: p.id,
+      cliente_id: p.clienteId,
       cliente_nome: p.cliente,
       telefone: p.telefone,
       cidade: p.cidade,
-      email: (p as unknown as { email?: string }).email ?? "",
+      email: p.email ?? "",
       produto: p.produto,
       tipo: p.tipo,
       material: p.material,
       cor: p.cor,
-      observacoes: (p as unknown as { observacoes?: string }).observacoes ?? "",
+      observacoes: p.observacoes ?? "",
       entrega: p.entrega ? new Date(p.entrega).toISOString().slice(0, 10) : "",
       prioridade: p.prioridade,
       etapa: p.etapa,
       valor_total: p.valorTotal,
       valor_pago: p.valorPago,
+      cpf: p.cpf ?? "",
+      cep: p.cep ?? "",
+      endereco: p.endereco ?? "",
+      numero_endereco: p.numero_endereco ?? "",
+      complemento: p.complemento ?? "",
+      bairro: p.bairro ?? "",
+      instagram: p.instagram ?? "",
+      origem: p.origem ?? "",
     });
 
   const apagar = async () => {
@@ -120,12 +147,18 @@ function PedidoDetalhePage() {
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <EtapaSelect pedidoId={p.id} etapa={p.etapa} numero={p.numero} />
+          <EtapaSelect pedido={p} />
           <button
             onClick={() => setPagamentoOpen(true)}
             className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
           >
             <Plus className="size-4" /> Pagamento
+          </button>
+          <button
+            onClick={handleWhatsApp}
+            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-success/15 text-success text-sm font-medium hover:bg-success/25 transition-colors"
+          >
+            <MessageCircle className="size-4" /> Avisar Cliente
           </button>
           <button
             onClick={editar}
@@ -187,24 +220,6 @@ function PedidoDetalhePage() {
               </div>
             </div>
           </div>
-
-          {pagamentos.length > 0 && (
-            <div className="mt-5 pt-4 border-t">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                Pagamentos
-              </p>
-              <ul className="space-y-1.5 text-sm">
-                {pagamentos.map((pg) => (
-                  <li key={pg.id} className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      {dataBR(pg.pago_em)} · {pg.forma ?? "—"}
-                    </span>
-                    <span className="tabular-nums font-medium">{moeda(Number(pg.valor))}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </section>
 
         {/* Cliente + Entrega */}

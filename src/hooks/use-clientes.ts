@@ -8,6 +8,15 @@ export interface Cliente {
   email: string | null;
   cidade: string | null;
   observacoes: string | null;
+  user_id: string;
+  cpf: string | null;
+  cep: string | null;
+  endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  instagram: string | null;
+  origem: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +27,14 @@ export interface ClienteInput {
   email?: string;
   cidade?: string;
   observacoes?: string;
+  cpf?: string;
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  instagram?: string;
+  origem?: string;
 }
 
 export function useClientes() {
@@ -26,7 +43,7 @@ export function useClientes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, nome, telefone, email, cidade, observacoes, created_at, updated_at")
+        .select("id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at")
         .order("nome", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Cliente[];
@@ -41,7 +58,7 @@ export function useCliente(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, nome, telefone, email, cidade, observacoes, created_at, updated_at")
+        .select("id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -109,6 +126,14 @@ export function useCreateCliente() {
           email: input.email || null,
           cidade: input.cidade || null,
           observacoes: input.observacoes || null,
+          cpf: input.cpf || null,
+          cep: input.cep || null,
+          endereco: input.endereco || null,
+          numero: input.numero || null,
+          complemento: input.complemento || null,
+          bairro: input.bairro || null,
+          instagram: input.instagram || null,
+          origem: input.origem || null,
         })
         .select("id")
         .single();
@@ -131,6 +156,14 @@ export function useUpdateCliente() {
           email: input.email || null,
           cidade: input.cidade || null,
           observacoes: input.observacoes || null,
+          cpf: input.cpf || null,
+          cep: input.cep || null,
+          endereco: input.endereco || null,
+          numero: input.numero || null,
+          complemento: input.complemento || null,
+          bairro: input.bairro || null,
+          instagram: input.instagram || null,
+          origem: input.origem || null,
         })
         .eq("id", id);
       if (error) throw error;

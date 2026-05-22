@@ -4,7 +4,6 @@ export type StatusEtapa =
   | "corte"
   | "montagem"
   | "acabamento"
-  | "pintura"
   | "qualidade"
   | "pronto-entrega"
   | "entregue";
@@ -15,7 +14,6 @@ export const ETAPAS: { id: StatusEtapa; label: string; cor: string }[] = [
   { id: "corte", label: "Corte da Madeira", cor: "oklch(0.65 0.14 40)" },
   { id: "montagem", label: "Montagem", cor: "oklch(0.55 0.14 30)" },
   { id: "acabamento", label: "Acabamento", cor: "oklch(0.55 0.16 320)" },
-  { id: "pintura", label: "Pintura", cor: "oklch(0.5 0.18 290)" },
   { id: "qualidade", label: "Revisão de Qualidade", cor: "oklch(0.6 0.12 200)" },
   { id: "pronto-entrega", label: "Pronto para Entrega", cor: "oklch(0.55 0.14 160)" },
   { id: "entregue", label: "Entregue", cor: "oklch(0.5 0.1 145)" },
@@ -55,7 +53,7 @@ export const PEDIDOS: Pedido[] = [
   { id: "4", numero: "#1045", cliente: "Marcos Vieira", telefone: "(31) 98123-7788", cidade: "BH, MG", produto: "Cabeceira Estofada Queen", tipo: "Cabeceira", material: "Compensado + Linho", cor: "Bege areia", valorTotal: 3200, valorPago: 3200, entrega: dia(-2), criadoEm: dia(-18), etapa: "pronto-entrega", prioridade: "alta" },
   { id: "5", numero: "#1046", cliente: "Luísa Andrade", telefone: "(48) 99812-4455", cidade: "Florianópolis, SC", produto: "Rack para TV 75\"", tipo: "Rack", material: "Cumaru", cor: "Imbuia", valorTotal: 6700, valorPago: 2010, entrega: dia(12), criadoEm: dia(-3), etapa: "separando-madeira", prioridade: "media" },
   { id: "6", numero: "#1047", cliente: "Gabriel Souza", telefone: "(85) 99201-7733", cidade: "Fortaleza, CE", produto: "Conjunto Banquetas Bistrô", tipo: "Banqueta", material: "Eucalipto", cor: "Natural fosco", valorTotal: 2400, valorPago: 1200, entrega: dia(20), criadoEm: dia(-1), etapa: "pedido-recebido", prioridade: "baixa" },
-  { id: "7", numero: "#1041", cliente: "Família Tonnetti", telefone: "(11) 98000-1199", cidade: "Santo André, SP", produto: "Cozinha Planejada Completa", tipo: "Cozinha", material: "MDF + Carvalho", cor: "Verde oliva", valorTotal: 42500, valorPago: 21250, entrega: dia(28), criadoEm: dia(-25), etapa: "pintura", prioridade: "alta" },
+  { id: "7", numero: "#1041", cliente: "Família Tonnetti", telefone: "(11) 98000-1199", cidade: "Santo André, SP", produto: "Cozinha Planejada Completa", tipo: "Cozinha", material: "MDF + Carvalho", cor: "Verde oliva", valorTotal: 42500, valorPago: 21250, entrega: dia(28), criadoEm: dia(-25), etapa: "acabamento", prioridade: "alta" },
   { id: "8", numero: "#1040", cliente: "Estúdio Norte", telefone: "(11) 97777-8888", cidade: "São Paulo, SP", produto: "Mesa de Reunião 12 lugares", tipo: "Mesa", material: "Imbuia maciça", cor: "Natural envernizado", valorTotal: 22000, valorPago: 22000, entrega: dia(-15), criadoEm: dia(-45), etapa: "entregue", prioridade: "media" },
   { id: "9", numero: "#1039", cliente: "Helena Costa", telefone: "(41) 99876-5544", cidade: "Curitiba, PR", produto: "Aparador Hall Entrada", tipo: "Aparador", material: "Marfim maciça", cor: "Branco patina", valorTotal: 4800, valorPago: 2400, entrega: dia(5), criadoEm: dia(-10), etapa: "qualidade", prioridade: "media" },
 ];
@@ -71,6 +69,13 @@ export const PRIORIDADE_LABEL: Record<Prioridade, string> = {
   media: "Média",
   alta: "Alta",
   urgente: "Urgente",
+};
+
+export const PRIORIDADE_COR: Record<string, string> = {
+  baixa: "bg-muted text-muted-foreground",
+  media: "bg-info/15 text-info",
+  alta: "bg-warning/20 text-warning-foreground",
+  urgente: "bg-destructive/15 text-destructive",
 };
 
 export const RECEITA_MENSAL = [

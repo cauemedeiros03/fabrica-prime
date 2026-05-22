@@ -17,16 +17,54 @@ type Row = {
   observacoes: string | null;
   created_at: string;
   cliente_id: string;
-  clientes: { nome: string; telefone: string | null; cidade: string | null; email: string | null } | null;
+  clientes: {
+    nome: string;
+    telefone: string | null;
+    cidade: string | null;
+    email: string | null;
+    endereco: string | null;
+    numero: string | null;
+    bairro: string | null;
+    cep: string | null;
+    complemento: string | null;
+    cpf: string | null;
+    instagram: string | null;
+    origem: string | null;
+  } | null;
 };
 
-function mapRow(r: Row): Pedido & { observacoes?: string; clienteId: string; email?: string } {
+function mapRow(r: Row): Pedido & {
+  observacoes?: string;
+  clienteId: string;
+  email?: string;
+  clienteEndereco?: string;
+  cpf?: string;
+  cep?: string;
+  endereco?: string;
+  numero_endereco?: string;
+  complemento?: string;
+  bairro?: string;
+  instagram?: string;
+  origem?: string;
+} {
+  const c = r.clientes;
+  const addressParts = c
+    ? [
+        c.endereco,
+        c.numero,
+        c.complemento ? `(${c.complemento})` : "",
+        c.bairro,
+        c.cidade,
+        c.cep ? `CEP: ${c.cep}` : "",
+      ].filter(Boolean)
+    : [];
+
   return {
     id: r.id,
     numero: r.numero,
-    cliente: r.clientes?.nome ?? "—",
-    telefone: r.clientes?.telefone ?? "",
-    cidade: r.clientes?.cidade ?? "",
+    cliente: c?.nome ?? "—",
+    telefone: c?.telefone ?? "",
+    cidade: c?.cidade ?? "",
     produto: r.produto,
     tipo: r.tipo ?? "",
     material: r.material ?? "",
@@ -39,7 +77,16 @@ function mapRow(r: Row): Pedido & { observacoes?: string; clienteId: string; ema
     prioridade: r.prioridade,
     observacoes: r.observacoes ?? "",
     clienteId: r.cliente_id,
-    email: r.clientes?.email ?? "",
+    email: c?.email ?? "",
+    clienteEndereco: addressParts.length > 0 ? addressParts.join(", ") : "Não informado",
+    cpf: c?.cpf ?? "",
+    cep: c?.cep ?? "",
+    endereco: c?.endereco ?? "",
+    numero_endereco: c?.numero ?? "",
+    complemento: c?.complemento ?? "",
+    bairro: c?.bairro ?? "",
+    instagram: c?.instagram ?? "",
+    origem: c?.origem ?? "",
   };
 }
 
@@ -49,7 +96,7 @@ export function usePedidos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email)")
+        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as Row[]).map(mapRow);
@@ -107,13 +154,8 @@ export function usePagamentosPedido(pedidoId: string | undefined) {
     queryKey: ["pagamentos", pedidoId],
     enabled: !!pedidoId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pagamentos")
-        .select("id, valor, forma, pago_em, observacao, created_at")
-        .eq("pedido_id", pedidoId!)
-        .order("pago_em", { ascending: false });
-      if (error) throw error;
-      return data;
+      // Tabela removida conforme solicitação. Retorna array vazio.
+      return [];
     },
   });
 }
@@ -125,7 +167,7 @@ export function usePedido(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email)")
+        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .eq("id", id!)
         .single();
       if (error) throw error;
@@ -149,11 +191,19 @@ export interface NovoPedidoInput {
   observacoes?: string;
   // entrega
   entrega?: string; // YYYY-MM-DD
-  prioridade: Prioridade;
+  prioridade: "baixa" | "media" | "alta" | "urgente";
   etapa: StatusEtapa;
   // financeiro
   valor_total: number;
   valor_pago: number;
+  cpf?: string;
+  cep?: string;
+  endereco?: string;
+  numero_endereco?: string;
+  complemento?: string;
+  bairro?: string;
+  instagram?: string;
+  origem?: string;
 }
 
 export function useCreatePedido() {
@@ -169,11 +219,38 @@ export function useCreatePedido() {
             telefone: input.telefone || null,
             email: input.email || null,
             cidade: input.cidade || null,
+            cpf: input.cpf || null,
+            cep: input.cep || null,
+            endereco: input.endereco || null,
+            numero: input.numero_endereco || null,
+            complemento: input.complemento || null,
+            bairro: input.bairro || null,
+            instagram: input.instagram || null,
+            origem: input.origem || null,
           })
           .select("id")
           .single();
         if (e1) throw e1;
         clienteId = cli.id;
+      } else {
+        const { error: e1 } = await supabase
+          .from("clientes")
+          .update({
+            nome: input.cliente_nome,
+            telefone: input.telefone || null,
+            email: input.email || null,
+            cidade: input.cidade || null,
+            cpf: input.cpf || null,
+            cep: input.cep || null,
+            endereco: input.endereco || null,
+            numero: input.numero_endereco || null,
+            complemento: input.complemento || null,
+            bairro: input.bairro || null,
+            instagram: input.instagram || null,
+            origem: input.origem || null,
+          })
+          .eq("id", clienteId);
+        if (e1) throw e1;
       }
 
       const { data: pedido, error: e2 } = await supabase
@@ -196,13 +273,6 @@ export function useCreatePedido() {
         .single();
       if (e2) throw e2;
 
-      if (input.valor_pago > 0) {
-        await supabase.from("pagamentos").insert({
-          pedido_id: pedido.id,
-          valor: input.valor_pago,
-          forma: "Entrada",
-        });
-      }
       return pedido.id;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
@@ -222,6 +292,14 @@ export function useUpdatePedido() {
             telefone: input.telefone || null,
             email: input.email || null,
             cidade: input.cidade || null,
+            cpf: input.cpf || null,
+            cep: input.cep || null,
+            endereco: input.endereco || null,
+            numero: input.numero_endereco || null,
+            complemento: input.complemento || null,
+            bairro: input.bairro || null,
+            instagram: input.instagram || null,
+            origem: input.origem || null,
           })
           .eq("id", input.cliente_id);
         if (ec) throw ec;
@@ -303,19 +381,19 @@ export function useReagendarEntrega() {
 export function useAddPagamento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ pedido_id, valor, forma, pago_em, observacao }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
-      const { error } = await supabase.from("pagamentos").insert({
-        pedido_id,
-        valor,
-        forma: forma || null,
-        pago_em: pago_em || new Date().toISOString().slice(0, 10),
-        observacao: observacao || null,
-      });
-      if (error) throw error;
+    mutationFn: async ({ pedido_id, valor }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
       // increment valor_pago atomically via re-read
-      const { data: p } = await supabase.from("pedidos").select("valor_pago").eq("id", pedido_id).single();
-      const novoPago = Number(p?.valor_pago ?? 0) + valor;
-      await supabase.from("pedidos").update({ valor_pago: novoPago }).eq("id", pedido_id);
+      const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_total").eq("id", pedido_id).single();
+      if (pErr) {
+        console.error('Erro Supabase ao ler pedido:', pErr);
+        throw pErr;
+      }
+      
+      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: p.valor_total }).eq("id", pedido_id);
+      if (updateErr) {
+        console.error('Erro Supabase ao atualizar pedido:', updateErr);
+        throw updateErr;
+      }
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["pagamentos"] });
@@ -330,7 +408,6 @@ export function useDeletePedido() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("pagamentos").delete().eq("pedido_id", id);
       await supabase.from("etapas_pedido").delete().eq("pedido_id", id);
       const { error } = await supabase.from("pedidos").delete().eq("id", id);
       if (error) throw error;

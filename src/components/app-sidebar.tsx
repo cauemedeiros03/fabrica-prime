@@ -14,11 +14,16 @@ import {
   AlertTriangle,
   Clock,
   CalendarClock,
+  FileText,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 const nav = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
+  { to: "/orcamentos", label: "Orçamentos", icon: FileText },
   { to: "/producao", label: "Produção", icon: KanbanSquare },
   { to: "/entregas", label: "Entregas", icon: Truck },
   { to: "/financeiro", label: "Financeiro", icon: Wallet },
@@ -36,17 +41,65 @@ const atalhos = [
 export function AppSidebar() {
   const { pathname } = useLocation();
   const search = useRouterState({ select: (s) => s.location.search as Record<string, string> });
+  const { user } = useAuth();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadConfig() {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from("configuracoes_marcenaria")
+          .select("logo_url, nome_marcenaria")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          setLogoUrl(data.logo_url || null);
+          setNomeMarcenaria(data.nome_marcenaria || null);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar logo na sidebar:", err);
+      }
+    }
+
+    loadConfig();
+
+    const handleUpdate = () => {
+      loadConfig();
+    };
+
+    window.addEventListener("configuracoes_updated", handleUpdate);
+    return () => {
+      window.removeEventListener("configuracoes_updated", handleUpdate);
+    };
+  }, [user]);
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="px-5 h-16 flex items-center gap-2.5 border-b border-sidebar-border">
-        <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-[var(--shadow-glow)]">
-          <Hammer className="size-4.5" strokeWidth={2.4} />
-        </div>
-        <div className="leading-tight">
-          <p className="font-semibold tracking-tight">Marcena</p>
-          <p className="text-[11px] text-muted-foreground">Gestão de Marcenaria</p>
-        </div>
+        {logoUrl ? (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="size-9 rounded-xl border bg-background grid place-items-center overflow-hidden shrink-0">
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            </div>
+            <div className="leading-tight min-w-0">
+              <p className="font-semibold tracking-tight truncate">{nomeMarcenaria || "Marcena"}</p>
+              <p className="text-[11px] text-muted-foreground truncate">Gestão de Marcenaria</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-[var(--shadow-glow)]">
+              <Hammer className="size-4.5" strokeWidth={2.4} />
+            </div>
+            <div className="leading-tight">
+              <p className="font-semibold tracking-tight">{nomeMarcenaria || "Marcena"}</p>
+              <p className="text-[11px] text-muted-foreground">Gestão de Marcenaria</p>
+            </div>
+          </>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
@@ -112,7 +165,7 @@ export function AppSidebar() {
       </div>
 
       <Link
-        to="/"
+        to="/configuracoes"
         className="mx-3 mb-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent/60"
       >
         <Settings className="size-4" />

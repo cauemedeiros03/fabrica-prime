@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -6,8 +5,12 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  redirect,
 } from "@tanstack/react-router";
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
+import { createServerFn } from "@tanstack/react-start";
 
 import appCss from "../styles.css?url";
 
@@ -39,28 +42,40 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+      <div className="max-w-md w-full rounded-2xl border bg-card p-6 shadow-lg text-center space-y-4">
+        <div className="inline-flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+          <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground font-semibold">
+          Esta página não pôde ser carregada
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+        <p className="text-sm text-muted-foreground">
+          Ocorreu um erro no carregamento desta rota.
         </p>
+        {error && (
+          <div className="rounded-lg bg-muted p-3 text-left overflow-x-auto max-h-40">
+            <code className="text-xs text-destructive break-all font-mono">
+              {error.message}
+            </code>
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary h-10 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="flex-1 inline-flex items-center justify-center rounded-lg border border-input bg-background h-10 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Voltar ao Início
           </a>
         </div>
       </div>
@@ -68,7 +83,239 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+interface ErrorBoundaryProps {
+  children?: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error caught by ErrorBoundary:", error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+          <div className="max-w-md w-full rounded-2xl border bg-card p-6 shadow-lg text-center space-y-4">
+            <div className="inline-flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground font-semibold">
+              Ops! Algo deu errado
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Ocorreu um erro inesperado ao renderizar esta página.
+            </p>
+            {this.state.error && (
+              <div className="rounded-lg bg-muted p-3 text-left overflow-x-auto max-h-40">
+                <code className="text-xs text-destructive break-all font-mono">
+                  {this.state.error.message}
+                </code>
+              </div>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full inline-flex h-10 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+            >
+              Recarregar página
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+const checkUserSubscription = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const { getCookie } = await import("@tanstack/react-start/server");
+    const token = getCookie("sb-access-token");
+    if (!token) return { hasActiveSubscription: false, user: null };
+
+    const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || import.meta.env?.VITE_SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 
+                                     process.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
+                                     import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+                                     process.env.SUPABASE_ANON_KEY ||
+                                     process.env.VITE_SUPABASE_ANON_KEY ||
+                                     import.meta.env?.VITE_SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+      console.error("[checkUserSubscription] Missing Supabase environment variables on server");
+      return { hasActiveSubscription: false, user: null };
+    }
+
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const tempSupabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: false },
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      });
+
+      const { data: { user }, error: authError } = await tempSupabase.auth.getUser(token);
+      if (authError || !user) return { hasActiveSubscription: false, user: null };
+
+      // Bypass paywall for admin email, admin role, or BYPASS_PAYWALL env variable
+      const isBypassActive = process.env.BYPASS_PAYWALL === "true";
+      const isAdmin = user?.email === "admin@marcena.com.br" || user?.user_metadata?.role === "admin";
+
+      if (isBypassActive || isAdmin) {
+        console.log(`[checkUserSubscription] Bypassing subscription check for user: ${user?.email} (isBypassActive=${isBypassActive}, isAdmin=${isAdmin})`);
+        return {
+          hasActiveSubscription: true,
+          user,
+        };
+      }
+
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: profileData, error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .select("status_assinatura")
+          .eq("id", user?.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("[checkUserSubscription] Database error while fetching profile:", profileError);
+          return { hasActiveSubscription: false, user };
+        }
+
+        const status = profileData?.status_assinatura;
+        const hasActiveSubscription = status === "ativo" || status === "active";
+
+        return {
+          hasActiveSubscription,
+          user,
+        };
+      } catch (dbErr) {
+        console.error("[checkUserSubscription] Database connection error:", dbErr);
+        return { hasActiveSubscription: false, user };
+      }
+    } catch (err) {
+      console.error("[checkUserSubscription] Error checking user session/subscription on server:", err);
+      return { hasActiveSubscription: false, user: null };
+    }
+  });
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: async ({ location }) => {
+    // Skip check for public routes and API endpoints
+    const isPublic = ["/login", "/cadastro", "/assinatura"].includes(location.pathname);
+    const isApi = location.pathname.startsWith("/api/");
+
+    if (isApi) return;
+
+    if (typeof window === "undefined") {
+      // Server-side paywall validation
+      try {
+        const { hasActiveSubscription, user } = await checkUserSubscription();
+
+        if (!user) {
+          if (!isPublic) throw redirect({ to: "/login" });
+          return;
+        }
+
+        if (!isPublic) {
+          if (!hasActiveSubscription) {
+            throw redirect({ to: "/assinatura" });
+          }
+        } else {
+          // If on public pages but already subscribed, redirect to dashboard
+          if (hasActiveSubscription) {
+            throw redirect({ to: "/" });
+          }
+        }
+      } catch (err) {
+        // Rethrow redirect exceptions
+        if (err && typeof err === "object" && ("status" in err || "to" in err)) {
+          throw err;
+        }
+        console.error("[Server Auth] Paywall validation error:", err);
+        if (!isPublic) throw redirect({ to: "/login" });
+      }
+    } else {
+      // Client-side paywall validation
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          if (!isPublic) throw redirect({ to: "/login" });
+          return;
+        }
+
+        let hasActiveSubscription = false;
+        
+        // Client-side bypass check
+        const isBypassActive = import.meta.env.VITE_BYPASS_PAYWALL === "true" || (typeof process !== "undefined" && process.env && process.env.BYPASS_PAYWALL === "true");
+        const isAdmin = session.user?.email === "admin@marcena.com.br" || session.user?.user_metadata?.role === "admin";
+
+        if (isBypassActive || isAdmin) {
+          console.log(`[Client Auth] Bypassing subscription check for user: ${session.user?.email} (isBypassActive=${isBypassActive}, isAdmin=${isAdmin})`);
+          hasActiveSubscription = true;
+        } else {
+          try {
+            const { data: profileData, error: profileError } = await (supabase
+              .from("profiles") as any)
+              .select("status_assinatura")
+              .eq("id", session.user?.id)
+              .maybeSingle();
+
+            if (profileError || !profileData) {
+              console.warn("[Client Auth] Database error or missing profile, falling back to server check:", profileError);
+              const serverCheck = await checkUserSubscription();
+              hasActiveSubscription = serverCheck.hasActiveSubscription;
+            } else {
+              const status = profileData?.status_assinatura;
+              hasActiveSubscription = status === "ativo" || status === "active";
+            }
+          } catch (dbErr) {
+            console.error("[Client Auth] Connection error while fetching profile, falling back to server check:", dbErr);
+            const serverCheck = await checkUserSubscription();
+            hasActiveSubscription = serverCheck.hasActiveSubscription;
+          }
+        }
+
+        if (!isPublic) {
+          if (!hasActiveSubscription) {
+            throw redirect({ to: "/assinatura" });
+          }
+        } else {
+          if (hasActiveSubscription) {
+            throw redirect({ to: "/" });
+          }
+        }
+      } catch (err) {
+        if (err && typeof err === "object" && ("status" in err || "to" in err)) {
+          throw err;
+        }
+        console.error("[Client Auth] Paywall validation error:", err);
+        if (!isPublic) throw redirect({ to: "/login" });
+      }
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -113,9 +360,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors position="top-right" />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

@@ -11,15 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProducaoRouteImport } from './routes/producao'
 import { Route as PedidosRouteImport } from './routes/pedidos'
+import { Route as OrcamentosRouteImport } from './routes/orcamentos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntregasRouteImport } from './routes/entregas'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AssinaturaRouteImport } from './routes/assinatura'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
+import { Route as ApiWebhooksCaktoRouteImport } from './routes/api.webhooks.cakto'
 
 const ProducaoRoute = ProducaoRouteImport.update({
   id: '/producao',
@@ -29,6 +33,11 @@ const ProducaoRoute = ProducaoRouteImport.update({
 const PedidosRoute = PedidosRouteImport.update({
   id: '/pedidos',
   path: '/pedidos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrcamentosRoute = OrcamentosRouteImport.update({
+  id: '/orcamentos',
+  path: '/orcamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,6 +55,11 @@ const EntregasRoute = EntregasRouteImport.update({
   path: '/entregas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientesRoute = ClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -54,6 +68,11 @@ const ClientesRoute = ClientesRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssinaturaRoute = AssinaturaRouteImport.update({
+  id: '/assinatura',
+  path: '/assinatura',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaRoute = AgendaRouteImport.update({
@@ -76,99 +95,132 @@ const ClientesClienteIdRoute = ClientesClienteIdRouteImport.update({
   path: '/$clienteId',
   getParentRoute: () => ClientesRoute,
 } as any)
+const ApiWebhooksCaktoRoute = ApiWebhooksCaktoRouteImport.update({
+  id: '/api/webhooks/cakto',
+  path: '/api/webhooks/cakto',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/assinatura': typeof AssinaturaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
+  '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/assinatura': typeof AssinaturaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
+  '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/assinatura': typeof AssinaturaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
+  '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
+  '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/agenda'
+    | '/assinatura'
     | '/cadastro'
     | '/clientes'
+    | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/orcamentos'
     | '/pedidos'
     | '/producao'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
+    | '/api/webhooks/cakto'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agenda'
+    | '/assinatura'
     | '/cadastro'
     | '/clientes'
+    | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/orcamentos'
     | '/pedidos'
     | '/producao'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
+    | '/api/webhooks/cakto'
   id:
     | '__root__'
     | '/'
     | '/agenda'
+    | '/assinatura'
     | '/cadastro'
     | '/clientes'
+    | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/orcamentos'
     | '/pedidos'
     | '/producao'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
+    | '/api/webhooks/cakto'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
+  AssinaturaRoute: typeof AssinaturaRoute
   CadastroRoute: typeof CadastroRoute
   ClientesRoute: typeof ClientesRouteWithChildren
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
+  OrcamentosRoute: typeof OrcamentosRoute
   PedidosRoute: typeof PedidosRouteWithChildren
   ProducaoRoute: typeof ProducaoRoute
+  ApiWebhooksCaktoRoute: typeof ApiWebhooksCaktoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -185,6 +237,13 @@ declare module '@tanstack/react-router' {
       path: '/pedidos'
       fullPath: '/pedidos'
       preLoaderRoute: typeof PedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orcamentos': {
+      id: '/orcamentos'
+      path: '/orcamentos'
+      fullPath: '/orcamentos'
+      preLoaderRoute: typeof OrcamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -208,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntregasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clientes': {
       id: '/clientes'
       path: '/clientes'
@@ -220,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assinatura': {
+      id: '/assinatura'
+      path: '/assinatura'
+      fullPath: '/assinatura'
+      preLoaderRoute: typeof AssinaturaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda': {
@@ -250,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesClienteIdRouteImport
       parentRoute: typeof ClientesRoute
     }
+    '/api/webhooks/cakto': {
+      id: '/api/webhooks/cakto'
+      path: '/api/webhooks/cakto'
+      fullPath: '/api/webhooks/cakto'
+      preLoaderRoute: typeof ApiWebhooksCaktoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -279,14 +359,28 @@ const PedidosRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
+  AssinaturaRoute: AssinaturaRoute,
   CadastroRoute: CadastroRoute,
   ClientesRoute: ClientesRouteWithChildren,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
+  OrcamentosRoute: OrcamentosRoute,
   PedidosRoute: PedidosRouteWithChildren,
   ProducaoRoute: ProducaoRoute,
+  ApiWebhooksCaktoRoute: ApiWebhooksCaktoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

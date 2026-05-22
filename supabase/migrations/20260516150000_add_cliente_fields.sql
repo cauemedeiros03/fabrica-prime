@@ -1,0 +1,9 @@
+ALTER TABLE public.clientes
+ADD COLUMN cpf TEXT,
+ADD COLUMN cep TEXT,
+ADD COLUMN endereco TEXT,
+ADD COLUMN numero TEXT,
+ADD COLUMN complemento TEXT,
+ADD COLUMN bairro TEXT,
+ADD COLUMN instagram TEXT,
+ADD COLUMN origem TEXT;

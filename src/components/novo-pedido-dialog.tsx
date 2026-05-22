@@ -5,8 +5,9 @@ import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-da
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
 import { ClienteDialog } from "@/components/cliente-dialog";
+import { supabase } from "@/integrations/supabase/client";
 
-type EditState = (NovoPedidoInput & { id: string }) | null;
+type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
 
 export function NovoPedidoDialog({
   open,
@@ -17,7 +18,7 @@ export function NovoPedidoDialog({
   onOpenChange: (v: boolean) => void;
   initial?: EditState;
 }) {
-  const isEdit = !!initial;
+  const isEdit = !!initial && !!initial.id;
   const create = useCreatePedido();
   const update = useUpdatePedido();
 
@@ -37,12 +38,20 @@ export function NovoPedidoDialog({
     etapa: "pedido-recebido",
     valor_total: 0,
     valor_pago: 0,
+    cpf: "",
+    cep: "",
+    endereco: "",
+    numero_endereco: "",
+    complemento: "",
+    bairro: "",
+    instagram: "",
+    origem: "",
   };
   const [form, setForm] = useState<NovoPedidoInput>(empty);
   const [novoCliente, setNovoCliente] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setForm(initial ?? empty);
+    if (open) setForm(initial ? { ...empty, ...initial } : empty);
   }, [open, initial]);
 
   const restante = Math.max(0, (form.valor_total || 0) - (form.valor_pago || 0));
@@ -57,7 +66,7 @@ export function NovoPedidoDialog({
     }
     try {
       if (isEdit) {
-        await update.mutateAsync({ ...form, id: initial!.id });
+        await update.mutateAsync({ ...form, id: initial!.id as string });
         toast.success("Pedido atualizado");
       } else {
         await create.mutateAsync(form);
@@ -95,18 +104,8 @@ export function NovoPedidoDialog({
 
         <form onSubmit={onSubmit} className="px-6 py-5 space-y-6 max-h-[75vh] overflow-y-auto">
           <Section title="Cliente">
-            {isEdit ? (
-              <>
-                <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} />
-                <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} />
-                <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
-                <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
-                <p className="md:col-span-2 text-[11px] text-muted-foreground">
-                  Alterações aqui atualizam também a ficha do cliente.
-                </p>
-              </>
-            ) : (
-              <div className="md:col-span-2 space-y-3">
+            {!isEdit && (
+              <div className="md:col-span-2">
                 <ClienteAutocomplete
                   value={form.cliente_id}
                   onSelect={(c) =>
@@ -117,28 +116,76 @@ export function NovoPedidoDialog({
                       telefone: c?.telefone ?? "",
                       email: c?.email ?? "",
                       cidade: c?.cidade ?? "",
+                      cpf: c?.cpf ?? "",
+                      cep: c?.cep ?? "",
+                      endereco: c?.endereco ?? "",
+                      numero_endereco: c?.numero ?? "",
+                      complemento: c?.complemento ?? "",
+                      bairro: c?.bairro ?? "",
+                      instagram: c?.instagram ?? "",
+                      origem: c?.origem ?? "",
                     }))
                   }
                   onCreateNew={(nome) => setNovoCliente(nome)}
                 />
-                {form.cliente_id ? (
-                  <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
-                    <p><span className="font-medium text-foreground">{form.cliente_nome}</span></p>
-                    <p>{[form.telefone, form.email, form.cidade].filter(Boolean).join(" · ") || "Sem dados de contato"}</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} />
-                    <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} />
-                    <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
-                    <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
-                    <p className="md:col-span-2 text-[11px] text-muted-foreground">
-                      Dica: busque acima para reusar um cliente existente e evitar duplicatas.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
+
+            <div className="md:col-span-2 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Nome do cliente *" value={form.cliente_nome} onChange={(v) => set("cliente_nome", v)} />
+                <Field label="CPF / CNPJ" value={form.cpf || ""} onChange={(v) => set("cpf", v)} />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Telefone" value={form.telefone || ""} onChange={(v) => set("telefone", v)} />
+                <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Instagram" value={form.instagram || ""} onChange={(v) => set("instagram", v)} placeholder="@usuario" />
+                <div>
+                  <label className="text-xs font-medium">Origem</label>
+                  <select
+                    value={form.origem || ""}
+                    onChange={(e) => set("origem", e.target.value)}
+                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Loja Física">Loja Física</option>
+                    <option value="Indicação">Indicação</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Field label="CEP" value={form.cep || ""} onChange={(v) => set("cep", v)} />
+                <div className="col-span-2">
+                  <Field label="Endereço / Rua" value={form.endereco || ""} onChange={(v) => set("endereco", v)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <Field label="Número" value={form.numero_endereco || ""} onChange={(v) => set("numero_endereco", v)} />
+                <div className="col-span-3">
+                  <Field label="Complemento" value={form.complemento || ""} onChange={(v) => set("complemento", v)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Bairro" value={form.bairro || ""} onChange={(v) => set("bairro", v)} />
+                <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
+              </div>
+              
+              {form.cliente_id && (
+                <p className="text-[11px] text-muted-foreground">
+                  Alterações aqui atualizam também a ficha do cliente.
+                </p>
+              )}
+            </div>
           </Section>
 
           <Section title="Produto">
@@ -202,8 +249,36 @@ export function NovoPedidoDialog({
         open={!!novoCliente}
         onOpenChange={(v) => !v && setNovoCliente(null)}
         defaultName={novoCliente ?? ""}
-        onCreated={(id) => {
-          setForm((s) => ({ ...s, cliente_id: id, cliente_nome: novoCliente ?? s.cliente_nome }));
+        onCreated={async (id) => {
+          try {
+            const { data, error } = await supabase
+              .from("clientes")
+              .select("id, nome, telefone, email, cidade, cpf, cep, endereco, numero, complemento, bairro, instagram, origem")
+              .eq("id", id)
+              .single();
+            if (error) throw error;
+            if (data) {
+              setForm((s) => ({
+                ...s,
+                cliente_id: data.id,
+                cliente_nome: data.nome,
+                telefone: data.telefone ?? "",
+                email: data.email ?? "",
+                cidade: data.cidade ?? "",
+                cpf: data.cpf ?? "",
+                cep: data.cep ?? "",
+                endereco: data.endereco ?? "",
+                numero_endereco: data.numero ?? "",
+                complemento: data.complemento ?? "",
+                bairro: data.bairro ?? "",
+                instagram: data.instagram ?? "",
+                origem: data.origem ?? "",
+              }));
+            }
+          } catch (err) {
+            console.error("Erro ao buscar dados do cliente criado:", err);
+            setForm((s) => ({ ...s, cliente_id: id, cliente_nome: novoCliente ?? s.cliente_nome }));
+          }
           setNovoCliente(null);
           toast.success("Cliente vinculado ao pedido");
         }}
@@ -221,7 +296,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, value, onChange, type = "text", disabled }: { label: string; value: string; onChange: (v: string) => void; type?: string; disabled?: boolean }) {
+function Field({ label, value, onChange, type = "text", disabled, placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; disabled?: boolean; placeholder?: string }) {
   return (
     <div>
       <label className="text-xs font-medium">{label}</label>
@@ -229,6 +304,7 @@ function Field({ label, value, onChange, type = "text", disabled }: { label: str
         type={type}
         value={value}
         disabled={disabled}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:opacity-60"
       />
