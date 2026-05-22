@@ -20,6 +20,7 @@ import {
   Trash2,
   Loader2,
   Users,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +40,25 @@ function ClientesPage() {
   const [confirmar, setConfirmar] = useState<Cliente | null>(null);
   const [detailClienteId, setDetailClienteId] = useState<string | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
+
+  const handleWhatsApp = (telefone: string, nome: string) => {
+    let cleanPhone = telefone.replace(/\D/g, "");
+    if (!cleanPhone) {
+      toast.error("Este cliente não possui telefone cadastrado");
+      return;
+    }
+
+    if (!cleanPhone.startsWith("55")) {
+      cleanPhone = "55" + cleanPhone;
+    } else if (cleanPhone.length < 12) {
+      cleanPhone = "55" + cleanPhone;
+    }
+
+    const msg = `Olá *${nome}*!`;
+    const encodedMsg = encodeURIComponent(msg);
+    const url = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+    window.open(url, "_blank");
+  };
 
   const stats = useMemo(() => {
     const m = new Map<string, { pedidos: number; total: number }>();
@@ -182,12 +202,49 @@ function ClientesPage() {
                   </div>
 
                   <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Total comprado</span>
-                    <span className="font-semibold tabular-nums">{moeda(s.total)}</span>
+                    <div className="text-left">
+                      <span className="text-xs text-muted-foreground block">Total comprado</span>
+                      <span className="font-semibold tabular-nums">{moeda(s.total)}</span>
+                    </div>
+                    {/* Botões para celular (sempre visíveis e de 40x40px) */}
+                    <div className="flex md:hidden items-center gap-2">
+                      {c.telefone && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWhatsApp(c.telefone, c.nome);
+                          }}
+                          className="w-10 h-10 grid place-items-center rounded-lg border border-green-600/30 bg-card text-success hover:bg-green-600/10 transition-colors"
+                          aria-label="WhatsApp"
+                        >
+                          <MessageCircle className="size-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirEditar(c);
+                        }}
+                        className="w-10 h-10 grid place-items-center rounded-lg border bg-card hover:bg-accent transition-colors"
+                        aria-label="Editar"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmar(c);
+                        }}
+                        className="w-10 h-10 grid place-items-center rounded-lg border border-destructive/30 bg-card text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label="Remover"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                <div className="hidden md:flex absolute top-3 right-3 items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

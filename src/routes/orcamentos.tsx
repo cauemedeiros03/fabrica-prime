@@ -341,6 +341,165 @@ Qualquer dúvida, estamos à disposição!`;
     window.open(url, "_blank");
   };
 
+  const renderCard = (o: Orcamento) => {
+    const isAprovado = o.status === "Aprovado";
+    const dataEmissao = new Date(o.criadoEm).toLocaleDateString("pt-BR");
+    return (
+      <div
+        key={o.id}
+        className="group rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col justify-between min-h-[220px]"
+      >
+        <div>
+          <div className="flex justify-between items-start gap-2 mb-2">
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <Calendar className="size-3" /> {dataEmissao}
+            </span>
+            <span
+              className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
+                isAprovado
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+              }`}
+            >
+              {o.status || "Pendente"}
+            </span>
+          </div>
+
+          <h4 className="font-semibold text-base text-foreground leading-snug group-hover:text-amber-600 transition">
+            {o.clienteNome}
+          </h4>
+
+          {/* Detalhes do Produto */}
+          <p className="text-sm font-medium text-muted-foreground mt-2 line-clamp-1">
+            {o.produtoDescricao}
+          </p>
+          
+          <div className="mt-2 text-xs text-muted-foreground space-y-1">
+            {o.produtoMaterial && (
+              <p>
+                <span className="font-medium">Material:</span> {o.produtoMaterial}
+              </p>
+            )}
+            {o.produtoMedidas && (
+              <p>
+                <span className="font-medium">Medidas:</span> {o.produtoMedidas}
+              </p>
+            )}
+            {o.clienteCidade && (
+              <p className="inline-flex items-center gap-1 mt-1 text-[11px]">
+                <MapPin className="size-3 text-muted-foreground/60" /> {o.clienteCidade}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-muted/60 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <span className="text-[10px] text-muted-foreground block uppercase font-medium">
+                Valor Proposto
+              </span>
+              <span className="text-base font-bold tabular-nums text-foreground">
+                {moeda(o.valorSugerido)}
+              </span>
+            </div>
+
+            {/* Menu de Ações - Desktop */}
+            <div className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => setPrintData(o)}
+                className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                title="Imprimir PDF"
+              >
+                <Printer className="size-3.5" />
+              </button>
+              {o.clienteTelefone && (
+                <button
+                  onClick={() => handleWhatsApp(o)}
+                  className="size-8 grid place-items-center rounded-lg border hover:bg-green-600/10 hover:text-green-600 text-muted-foreground transition"
+                  title="Enviar WhatsApp"
+                >
+                  <MessageCircle className="size-3.5" />
+                </button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-8 px-2 rounded-lg border text-xs font-medium hover:bg-accent transition">
+                    Mais
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 bg-card border">
+                  <DropdownMenuItem onClick={() => setEdit(o)} className="cursor-pointer">
+                    <Pencil className="size-3.5 mr-2" /> Editar
+                  </DropdownMenuItem>
+                  {!isAprovado && (
+                    <DropdownMenuItem
+                      onClick={() => setConfirmarConversao(o)}
+                      className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium"
+                    >
+                      <Check className="size-3.5 mr-2" /> Aprovar / Pedido
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() => setConfirmarExcluir(o)}
+                    className="cursor-pointer text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="size-3.5 mr-2" /> Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Barra de Ações Direta - Celular (sempre visível no mobile, botões de 40x40px) */}
+          <div className="flex md:hidden items-center justify-between gap-2 w-full mt-2 pt-2 border-t border-dashed">
+            {o.clienteTelefone ? (
+              <button
+                onClick={() => handleWhatsApp(o)}
+                className="w-10 h-10 grid place-items-center rounded-lg border border-green-600/30 bg-card text-success hover:bg-green-600/10 transition-colors"
+                title="Enviar WhatsApp"
+              >
+                <MessageCircle className="size-4" />
+              </button>
+            ) : (
+              <div className="w-10 h-10" />
+            )}
+            <button
+              onClick={() => setPrintData(o)}
+              className="w-10 h-10 grid place-items-center rounded-lg border bg-card hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              title="Imprimir PDF"
+            >
+              <Printer className="size-4" />
+            </button>
+            <button
+              onClick={() => setEdit(o)}
+              className="w-10 h-10 grid place-items-center rounded-lg border bg-card hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              title="Editar"
+            >
+              <Pencil className="size-4" />
+            </button>
+            {!isAprovado && (
+              <button
+                onClick={() => setConfirmarConversao(o)}
+                className="w-10 h-10 grid place-items-center rounded-lg border border-emerald-600/30 bg-card text-emerald-600 hover:bg-emerald-50 transition-colors"
+                title="Aprovar e Criar Pedido"
+              >
+                <CheckCircle className="size-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmarExcluir(o)}
+              className="w-10 h-10 grid place-items-center rounded-lg border border-destructive/30 bg-card text-destructive hover:bg-destructive/10 transition-colors"
+              title="Excluir"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <AppShell
       title="Orçamentos"
@@ -486,223 +645,121 @@ Qualquer dúvida, estamos à disposição!`;
       ) : view === "grid" ? (
         /* GRID LAYOUT */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtrados.map((o) => {
-            const isAprovado = o.status === "Aprovado";
-            const dataEmissao = new Date(o.criadoEm).toLocaleDateString("pt-BR");
-            return (
-              <div
-                key={o.id}
-                className="group rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col justify-between min-h-[220px]"
-              >
-                <div>
-                  <div className="flex justify-between items-start gap-2 mb-2">
-                    <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                      <Calendar className="size-3" /> {dataEmissao}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
-                        isAprovado
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                      }`}
-                    >
-                      {o.status || "Pendente"}
-                    </span>
-                  </div>
-
-                  <h4 className="font-semibold text-base text-foreground leading-snug group-hover:text-amber-600 transition">
-                    {o.clienteNome}
-                  </h4>
-
-                  {/* Detalhes do Produto */}
-                  <p className="text-sm font-medium text-muted-foreground mt-2 line-clamp-1">
-                    {o.produtoDescricao}
-                  </p>
-                  
-                  <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                    {o.produtoMaterial && (
-                      <p>
-                        <span className="font-medium">Material:</span> {o.produtoMaterial}
-                      </p>
-                    )}
-                    {o.produtoMedidas && (
-                      <p>
-                        <span className="font-medium">Medidas:</span> {o.produtoMedidas}
-                      </p>
-                    )}
-                    {o.clienteCidade && (
-                      <p className="inline-flex items-center gap-1 mt-1 text-[11px]">
-                        <MapPin className="size-3 text-muted-foreground/60" /> {o.clienteCidade}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-4 border-t border-muted/60 flex items-center justify-between">
-                  <div className="text-left">
-                    <span className="text-[10px] text-muted-foreground block uppercase font-medium">
-                      Valor Proposto
-                    </span>
-                    <span className="text-base font-bold tabular-nums text-foreground">
-                      {moeda(o.valorSugerido)}
-                    </span>
-                  </div>
-
-                  {/* Menu de Ações */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setPrintData(o)}
-                      className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
-                      title="Imprimir PDF"
-                    >
-                      <Printer className="size-3.5" />
-                    </button>
-                    {o.clienteTelefone && (
-                      <button
-                        onClick={() => handleWhatsApp(o)}
-                        className="size-8 grid place-items-center rounded-lg border hover:bg-green-600/10 hover:text-green-600 text-muted-foreground transition"
-                        title="Enviar WhatsApp"
-                      >
-                        <MessageCircle className="size-3.5" />
-                      </button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="h-8 px-2 rounded-lg border text-xs font-medium hover:bg-accent transition">
-                          Mais
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 bg-card border">
-                        <DropdownMenuItem onClick={() => setEdit(o)} className="cursor-pointer">
-                          <Pencil className="size-3.5 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        {!isAprovado && (
-                          <DropdownMenuItem
-                            onClick={() => setConfirmarConversao(o)}
-                            className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium"
-                          >
-                            <Check className="size-3.5 mr-2" /> Aprovar / Pedido
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => setConfirmarExcluir(o)}
-                          className="cursor-pointer text-destructive focus:bg-destructive/10"
-                        >
-                          <Trash2 className="size-3.5 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {filtrados.map((o) => renderCard(o))}
         </div>
       ) : (
         /* TABLE LAYOUT */
-        <div className="rounded-2xl border bg-card overflow-hidden shadow-[var(--shadow-soft)]">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider border-b">
-                <tr>
-                  <th className="text-left font-medium pl-5 pr-4 py-3">Cliente</th>
-                  <th className="text-left font-medium px-4 py-3">Projeto / Móvel</th>
-                  <th className="text-left font-medium px-4 py-3">Data</th>
-                  <th className="text-right font-medium px-4 py-3">Valor Sugerido</th>
-                  <th className="text-center font-medium px-4 py-3">Status</th>
-                  <th className="px-5 py-3 text-right" />
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filtrados.map((o) => {
-                  const isAprovado = o.status === "Aprovado";
-                  const dataEmissao = new Date(o.criadoEm).toLocaleDateString("pt-BR");
-                  return (
-                    <tr key={o.id} className="hover:bg-accent/40 transition">
-                      <td className="pl-5 pr-4 py-3.5 font-semibold text-foreground">
-                        {o.clienteNome}
-                        {o.clienteCidade && (
-                          <span className="text-xs text-muted-foreground block font-normal">
-                            {o.clienteCidade}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className="font-medium text-foreground block">{o.produtoDescricao}</span>
-                        {o.produtoMaterial && (
-                          <span className="text-xs text-muted-foreground">{o.produtoMaterial}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-muted-foreground tabular-nums">
-                        {dataEmissao}
-                      </td>
-                      <td className="px-4 py-3.5 text-right font-bold text-foreground tabular-nums">
-                        {moeda(o.valorSugerido)}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span
-                          className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full inline-block ${
-                            isAprovado
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                          }`}
-                        >
-                          {o.status || "Pendente"}
-                        </span>
-                      </td>
-                      <td className="pl-4 pr-5 py-3.5 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            onClick={() => setPrintData(o)}
-                            className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
-                            title="Imprimir PDF"
-                          >
-                            <Printer className="size-3.5" />
-                          </button>
-                          {o.clienteTelefone && (
-                            <button
-                              onClick={() => handleWhatsApp(o)}
-                              className="size-8 grid place-items-center rounded-lg border hover:bg-green-600/10 hover:text-green-600 text-muted-foreground transition"
-                              title="Enviar WhatsApp"
-                            >
-                              <MessageCircle className="size-3.5" />
-                            </button>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="h-8 px-2.5 rounded-lg border text-xs font-medium hover:bg-accent transition">
-                                Ações
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40 bg-card border">
-                              <DropdownMenuItem onClick={() => setEdit(o)} className="cursor-pointer">
-                                <Pencil className="size-3.5 mr-2" /> Editar
-                              </DropdownMenuItem>
-                              {!isAprovado && (
-                                <DropdownMenuItem
-                                  onClick={() => setConfirmarConversao(o)}
-                                  className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium"
-                                >
-                                  <Check className="size-3.5 mr-2" /> Aprovar / Pedido
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => setConfirmarExcluir(o)}
-                                className="cursor-pointer text-destructive focus:bg-destructive/10"
-                              >
-                                <Trash2 className="size-3.5 mr-2" /> Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile view for Table selection (fallback to cards) */}
+          <div className="block md:hidden grid grid-cols-1 gap-4">
+            {filtrados.map((o) => renderCard(o))}
           </div>
-        </div>
+
+          {/* Desktop view for Table selection */}
+          <div className="hidden md:block rounded-2xl border bg-card overflow-hidden shadow-[var(--shadow-soft)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider border-b">
+                  <tr>
+                    <th className="text-left font-medium pl-5 pr-4 py-3">Cliente</th>
+                    <th className="text-left font-medium px-4 py-3">Projeto / Móvel</th>
+                    <th className="text-left font-medium px-4 py-3">Data</th>
+                    <th className="text-right font-medium px-4 py-3">Valor Sugerido</th>
+                    <th className="text-center font-medium px-4 py-3">Status</th>
+                    <th className="px-5 py-3 text-right" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filtrados.map((o) => {
+                    const isAprovado = o.status === "Aprovado";
+                    const dataEmissao = new Date(o.criadoEm).toLocaleDateString("pt-BR");
+                    return (
+                      <tr key={o.id} className="hover:bg-accent/40 transition">
+                        <td className="pl-5 pr-4 py-3.5 font-semibold text-foreground">
+                          {o.clienteNome}
+                          {o.clienteCidade && (
+                            <span className="text-xs text-muted-foreground block font-normal">
+                              {o.clienteCidade}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="font-medium text-foreground block">{o.produtoDescricao}</span>
+                          {o.produtoMaterial && (
+                            <span className="text-xs text-muted-foreground">{o.produtoMaterial}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-muted-foreground tabular-nums">
+                          {dataEmissao}
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-bold text-foreground tabular-nums">
+                          {moeda(o.valorSugerido)}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span
+                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full inline-block ${
+                              isAprovado
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            }`}
+                          >
+                            {o.status || "Pendente"}
+                          </span>
+                        </td>
+                        <td className="pl-4 pr-5 py-3.5 text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => setPrintData(o)}
+                              className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                              title="Imprimir PDF"
+                            >
+                              <Printer className="size-3.5" />
+                            </button>
+                            {o.clienteTelefone && (
+                              <button
+                                onClick={() => handleWhatsApp(o)}
+                                className="size-8 grid place-items-center rounded-lg border hover:bg-green-600/10 hover:text-green-600 text-muted-foreground transition"
+                                title="Enviar WhatsApp"
+                              >
+                                <MessageCircle className="size-3.5" />
+                              </button>
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="h-8 px-2.5 rounded-lg border text-xs font-medium hover:bg-accent transition">
+                                  Ações
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40 bg-card border">
+                                <DropdownMenuItem onClick={() => setEdit(o)} className="cursor-pointer">
+                                  <Pencil className="size-3.5 mr-2" /> Editar
+                                </DropdownMenuItem>
+                                {!isAprovado && (
+                                  <DropdownMenuItem
+                                    onClick={() => setConfirmarConversao(o)}
+                                    className="cursor-pointer text-emerald-600 dark:text-emerald-400 font-medium"
+                                  >
+                                    <Check className="size-3.5 mr-2" /> Aprovar / Pedido
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => setConfirmarExcluir(o)}
+                                  className="cursor-pointer text-destructive focus:bg-destructive/10"
+                                >
+                                  <Trash2 className="size-3.5 mr-2" /> Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {/* 4. MODAIS E DIÁLOGOS */}
