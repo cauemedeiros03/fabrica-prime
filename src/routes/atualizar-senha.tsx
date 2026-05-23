@@ -4,12 +4,12 @@ import { Hammer, Loader2, Eye, EyeOff, Lock, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/nova-senha")({
-  component: NovaSenhaPage,
-  head: () => ({ meta: [{ title: "Nova senha · Sua bancada" }] }),
+export const Route = createFileRoute("/atualizar-senha")({
+  component: AtualizarSenhaPage,
+  head: () => ({ meta: [{ title: "Atualizar senha · Sua bancada" }] }),
 });
 
-function NovaSenhaPage() {
+function AtualizarSenhaPage() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,14 +37,17 @@ function NovaSenhaPage() {
     setLoading(true);
 
     try {
+      console.log("[Atualização de Senha] Iniciando atualização de senha no Supabase...");
       const { error } = await supabase.auth.updateUser({ password });
 
       setLoading(false);
       if (error) {
+        console.error("[Atualização de Senha] Erro ao atualizar senha:", error);
         toast.error("Erro ao redefinir a senha", { description: error.message });
         return;
       }
 
+      console.log("[Atualização de Senha] Senha atualizada com sucesso!");
       toast.success("Senha redefinida com sucesso!", {
         description: "Você já pode entrar usando sua nova senha."
       });
@@ -57,6 +60,7 @@ function NovaSenhaPage() {
       navigate({ to: "/login" });
     } catch (err: any) {
       setLoading(false);
+      console.error("[Atualização de Senha] Exceção durante redefinição:", err);
       toast.error("Erro inesperado", { description: err.message });
     }
   };

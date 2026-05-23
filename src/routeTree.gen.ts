@@ -13,13 +13,13 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProducaoRouteImport } from './routes/producao'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as OrcamentosRouteImport } from './routes/orcamentos'
-import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntregasRouteImport } from './routes/entregas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as AtualizarSenhaRouteImport } from './routes/atualizar-senha'
 import { Route as AssinaturaRouteImport } from './routes/assinatura'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -45,11 +45,6 @@ const PedidosRoute = PedidosRouteImport.update({
 const OrcamentosRoute = OrcamentosRouteImport.update({
   id: '/orcamentos',
   path: '/orcamentos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NovaSenhaRoute = NovaSenhaRouteImport.update({
-  id: '/nova-senha',
-  path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -80,6 +75,11 @@ const ClientesRoute = ClientesRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AtualizarSenhaRoute = AtualizarSenhaRouteImport.update({
+  id: '/atualizar-senha',
+  path: '/atualizar-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssinaturaRoute = AssinaturaRouteImport.update({
@@ -117,13 +117,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
@@ -136,13 +136,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
@@ -156,13 +156,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
   '/configuracoes': typeof ConfiguracoesRoute
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
-  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
@@ -177,13 +177,13 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
     | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
-    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
@@ -196,13 +196,13 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
     | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
-    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
@@ -215,13 +215,13 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
     | '/configuracoes'
     | '/entregas'
     | '/financeiro'
     | '/login'
-    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
@@ -235,13 +235,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AssinaturaRoute: typeof AssinaturaRoute
+  AtualizarSenhaRoute: typeof AtualizarSenhaRoute
   CadastroRoute: typeof CadastroRoute
   ClientesRoute: typeof ClientesRouteWithChildren
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
-  NovaSenhaRoute: typeof NovaSenhaRoute
   OrcamentosRoute: typeof OrcamentosRoute
   PedidosRoute: typeof PedidosRouteWithChildren
   ProducaoRoute: typeof ProducaoRoute
@@ -277,13 +277,6 @@ declare module '@tanstack/react-router' {
       path: '/orcamentos'
       fullPath: '/orcamentos'
       preLoaderRoute: typeof OrcamentosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nova-senha': {
-      id: '/nova-senha'
-      path: '/nova-senha'
-      fullPath: '/nova-senha'
-      preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -326,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/atualizar-senha': {
+      id: '/atualizar-senha'
+      path: '/atualizar-senha'
+      fullPath: '/atualizar-senha'
+      preLoaderRoute: typeof AtualizarSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinatura': {
@@ -400,13 +400,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AssinaturaRoute: AssinaturaRoute,
+  AtualizarSenhaRoute: AtualizarSenhaRoute,
   CadastroRoute: CadastroRoute,
   ClientesRoute: ClientesRouteWithChildren,
   ConfiguracoesRoute: ConfiguracoesRoute,
   EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
-  NovaSenhaRoute: NovaSenhaRoute,
   OrcamentosRoute: OrcamentosRoute,
   PedidosRoute: PedidosRouteWithChildren,
   ProducaoRoute: ProducaoRoute,

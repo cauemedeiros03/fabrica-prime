@@ -25,22 +25,24 @@ function RecuperarSenhaPage() {
     setLoading(true);
     
     try {
+      console.log("[Recuperação de Senha] Iniciando envio para:", email);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/nova-senha`,
+        redirectTo: `${window.location.origin}/atualizar-senha`,
       });
 
       setLoading(false);
       if (error) {
+        console.error("[Recuperação de Senha] Erro do Supabase ao enviar email:", error);
         toast.error("Erro ao solicitar recuperação", { description: error.message });
         return;
       }
 
-      toast.success("E-mail enviado!", { 
-        description: "Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha." 
-      });
+      console.log("[Recuperação de Senha] E-mail enviado com sucesso para:", email);
+      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
       setSubmitted(true);
     } catch (err: any) {
       setLoading(false);
+      console.error("[Recuperação de Senha] Exceção durante envio:", err);
       toast.error("Erro inesperado", { description: err.message });
     }
   };
