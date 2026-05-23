@@ -23,7 +23,7 @@ export const Route = createFileRoute("/configuracoes")({
   component: ConfiguracoesPage,
   head: () => ({
     meta: [
-      { title: "Configurações · Marcena" },
+      { title: "Configurações · Sua bancada" },
     ],
   }),
 });

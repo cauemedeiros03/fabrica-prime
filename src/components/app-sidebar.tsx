@@ -85,7 +85,7 @@ export function AppSidebar() {
               <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div className="leading-tight min-w-0">
-              <p className="font-semibold tracking-tight truncate">{nomeMarcenaria || "Marcena"}</p>
+              <p className="font-semibold tracking-tight truncate">{nomeMarcenaria || "Sua bancada"}</p>
               <p className="text-[11px] text-muted-foreground truncate">Gestão de Marcenaria</p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export function AppSidebar() {
               <Hammer className="size-4.5" strokeWidth={2.4} />
             </div>
             <div className="leading-tight">
-              <p className="font-semibold tracking-tight">{nomeMarcenaria || "Marcena"}</p>
+              <p className="font-semibold tracking-tight">{nomeMarcenaria || "Sua bancada"}</p>
               <p className="text-[11px] text-muted-foreground">Gestão de Marcenaria</p>
             </div>
           </>

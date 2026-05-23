@@ -41,7 +41,7 @@ import { OrcamentoDialog, PrintableOrcamento, type Orcamento } from "@/component
 
 export const Route = createFileRoute("/orcamentos")({
   component: OrcamentosPage,
-  head: () => ({ meta: [{ title: "Orçamentos · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Orçamentos · Sua bancada" }] }),
 });
 
 const mapDbRowToOrcamento = (row: any): Orcamento => ({

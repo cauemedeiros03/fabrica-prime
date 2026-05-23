@@ -35,7 +35,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/pedidos/$pedidoId")({
   component: PedidoDetalhePage,
-  head: () => ({ meta: [{ title: "Pedido · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Pedido · Sua bancada" }] }),
 });
 
 function PedidoDetalhePage() {

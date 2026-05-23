@@ -11,7 +11,7 @@ export const Route = createFileRoute("/login")({
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/" });
   },
-  head: () => ({ meta: [{ title: "Entrar · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Entrar · Sua bancada" }] }),
 });
 
 function LoginPage() {
@@ -41,7 +41,7 @@ function LoginPage() {
             <Hammer className="size-5" strokeWidth={2.4} />
           </div>
           <div className="leading-tight">
-            <p className="font-semibold tracking-tight text-lg">Marcena</p>
+            <p className="font-semibold tracking-tight text-lg">Sua bancada</p>
             <p className="text-xs text-muted-foreground">Gestão de Marcenaria</p>
           </div>
         </div>

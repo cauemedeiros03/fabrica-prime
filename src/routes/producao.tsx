@@ -16,7 +16,7 @@ import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/producao")({
   component: ProducaoPage,
-  head: () => ({ meta: [{ title: "Produção · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Produção · Sua bancada" }] }),
 });
 
 function ProducaoPage() {

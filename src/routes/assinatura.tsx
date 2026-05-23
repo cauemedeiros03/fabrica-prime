@@ -9,7 +9,7 @@ export const Route = createFileRoute("/assinatura")({
   component: AssinaturaPage,
   head: () => ({
     meta: [
-      { title: "Assinatura · Marcena" },
+      { title: "Assinatura · Sua bancada" },
     ],
   }),
 });
@@ -50,7 +50,7 @@ function AssinaturaPage() {
             <div className="size-8 rounded-lg bg-primary text-primary-foreground grid place-items-center">
               <Package className="size-4" />
             </div>
-            <span className="font-semibold tracking-tight text-lg">Marcena ERP</span>
+            <span className="font-semibold tracking-tight text-lg">Sua bancada ERP</span>
           </div>
           <button
             onClick={handleLogout}
@@ -136,7 +136,7 @@ function AssinaturaPage() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-sm text-muted-foreground border-t">
-        <p>&copy; {new Date().getFullYear()} Marcena ERP. Todos os direitos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Sua bancada ERP. Todos os direitos reservados.</p>
       </footer>
     </div>
   );

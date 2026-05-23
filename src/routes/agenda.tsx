@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/agenda")({
   component: AgendaPage,
-  head: () => ({ meta: [{ title: "Agenda · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Agenda · Sua bancada" }] }),
 });
 
 const PRIO_BORDER: Record<string, string> = {

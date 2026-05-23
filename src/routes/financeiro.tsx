@@ -7,7 +7,7 @@ import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/financeiro")({
   component: FinanceiroPage,
-  head: () => ({ meta: [{ title: "Financeiro · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Financeiro · Sua bancada" }] }),
   validateSearch: (s: Record<string, unknown>): { filtro?: "pendentes" } => ({
     filtro: s.filtro === "pendentes" ? "pendentes" : undefined,
   }),

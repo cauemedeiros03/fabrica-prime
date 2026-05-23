@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
   component: PainelPage,
   head: () => ({
     meta: [
-      { title: "Painel · Marcena — Gestão para Marcenarias" },
+      { title: "Painel · Sua bancada — Gestão de Marcenaria" },
       {
         name: "description",
         content:

@@ -28,7 +28,7 @@ const FILTRO_LABEL: Record<FiltroChave, string> = {
 
 export const Route = createFileRoute("/pedidos")({
   component: PedidosPage,
-  head: () => ({ meta: [{ title: "Pedidos · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Pedidos · Sua bancada" }] }),
   validateSearch: (s: Record<string, unknown>): { filtro?: FiltroChave; etapa?: StatusEtapa; view?: 'kanban' | 'list' } => ({
     filtro: (s.filtro as FiltroChave) || undefined,
     etapa: (s.etapa as StatusEtapa) || undefined,

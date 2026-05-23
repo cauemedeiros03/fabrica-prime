@@ -7,7 +7,7 @@ import { Loader2, AlertTriangle, MapPin, Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/entregas")({
   component: EntregasPage,
-  head: () => ({ meta: [{ title: "Entregas · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Entregas · Sua bancada" }] }),
 });
 
 const PRIORIDADE_COR: Record<string, string> = {

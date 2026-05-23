@@ -37,7 +37,7 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
             )}
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                {config?.nome_marcenaria || "Marcena"}
+                {config?.nome_marcenaria || "Sua bancada"}
               </h1>
               <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
                 Gestão de Marcenaria

@@ -318,10 +318,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Marcena — Gestão para marcenarias" },
+      { title: "Sua bancada — Gestão de Marcenaria" },
       { name: "description", content: "Gestão completa de pedidos, produção e finanças para marcenarias e fábricas de móveis sob medida." },
-      { name: "author", content: "Marcena" },
-      { property: "og:title", content: "Marcena — Gestão para marcenarias" },
+      { name: "author", content: "Sua bancada" },
+      { property: "og:title", content: "Sua bancada — Gestão de Marcenaria" },
       { property: "og:description", content: "Pedidos, produção e financeiro em um só lugar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

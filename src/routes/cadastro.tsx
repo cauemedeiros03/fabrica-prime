@@ -11,7 +11,7 @@ export const Route = createFileRoute("/cadastro")({
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/" });
   },
-  head: () => ({ meta: [{ title: "Criar conta · Marcena" }] }),
+  head: () => ({ meta: [{ title: "Criar conta · Sua bancada" }] }),
 });
 
 function CadastroPage() {
@@ -49,7 +49,7 @@ function CadastroPage() {
             <Hammer className="size-5" strokeWidth={2.4} />
           </div>
           <div className="leading-tight">
-            <p className="font-semibold tracking-tight text-lg">Marcena</p>
+            <p className="font-semibold tracking-tight text-lg">Sua bancada</p>
             <p className="text-xs text-muted-foreground">Gestão de Marcenaria</p>
           </div>
         </div>
