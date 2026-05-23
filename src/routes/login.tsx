@@ -26,7 +26,7 @@ function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) {
@@ -43,6 +43,12 @@ function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      console.error("[Login] Erro de autenticação:", error);
+      // Limpa qualquer estado residual/cookie se o login falhar
+      await supabase.auth.signOut();
+      document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      
       toast.error("Credenciais inválidas", { description: error.message });
       return;
     }

@@ -157,8 +157,19 @@ export function useAuth() {
           return;
         }
 
-        const currentSession = data?.session;
-        console.log(currentSession ? "[Auth] Sessão encontrada" : "[Auth] Nenhuma sessão encontrada");
+        let currentSession = data?.session;
+        if (currentSession) {
+          console.log("[Auth] Sessão em local storage encontrada. Confirmando validade com o servidor...");
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError || !user) {
+            console.warn("[Auth] Token de sessão inválido ou expirado. Limpando sessão residual...");
+            await supabase.auth.signOut();
+            updateAuthCookies(null);
+            currentSession = null;
+          }
+        }
+
+        console.log(currentSession ? "[Auth] Sessão confirmada e ativa" : "[Auth] Nenhuma sessão confirmada");
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);

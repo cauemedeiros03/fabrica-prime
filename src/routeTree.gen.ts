@@ -25,6 +25,7 @@ import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiWebhooksCaktoRouteImport } from './routes/api.webhooks.cakto'
 
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
@@ -107,6 +108,11 @@ const ClientesClienteIdRoute = ClientesClienteIdRouteImport.update({
   path: '/$clienteId',
   getParentRoute: () => ClientesRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksCaktoRoute = ApiWebhooksCaktoRouteImport.update({
   id: '/api/webhooks/cakto',
   path: '/api/webhooks/cakto',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/producao'
     | '/recuperar-senha'
+    | '/auth/callback'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/producao'
     | '/recuperar-senha'
+    | '/auth/callback'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/producao'
     | '/recuperar-senha'
+    | '/auth/callback'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -246,6 +258,7 @@ export interface RootRouteChildren {
   PedidosRoute: typeof PedidosRouteWithChildren
   ProducaoRoute: typeof ProducaoRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   ApiWebhooksCaktoRoute: typeof ApiWebhooksCaktoRoute
 }
 
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesClienteIdRouteImport
       parentRoute: typeof ClientesRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/cakto': {
       id: '/api/webhooks/cakto'
       path: '/api/webhooks/cakto'
@@ -411,6 +431,7 @@ const rootRouteChildren: RootRouteChildren = {
   PedidosRoute: PedidosRouteWithChildren,
   ProducaoRoute: ProducaoRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   ApiWebhooksCaktoRoute: ApiWebhooksCaktoRoute,
 }
 export const routeTree = rootRouteImport

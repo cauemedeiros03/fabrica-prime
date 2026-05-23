@@ -228,7 +228,7 @@ const checkUserSubscription = createServerFn({ method: "GET" })
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     // Skip check for public routes and API endpoints
-    const isPublic = ["/login", "/cadastro", "/assinatura"].includes(location.pathname);
+    const isPublic = ["/login", "/cadastro", "/assinatura", "/auth/callback"].includes(location.pathname);
     const isApi = location.pathname.startsWith("/api/");
 
     if (isApi) return;
@@ -265,9 +265,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // Client-side paywall validation
       try {
         const { supabase } = await import("@/integrations/supabase/client");
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (!session) {
+        if (userError || !user) {
           if (!isPublic) throw redirect({ to: "/login" });
           return;
         }
@@ -275,17 +275,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         let hasActiveSubscription = false;
         
         // Client-side bypass check
-        const isAdmin = session.user?.email === "admin@marcena.com.br";
+        const isAdmin = user?.email === "admin@marcena.com.br";
 
         if (isAdmin) {
-          console.log(`[Client Auth] Bypassing subscription check for user: ${session.user?.email} (isAdmin=${isAdmin})`);
+          console.log(`[Client Auth] Bypassing subscription check for user: ${user?.email} (isAdmin=${isAdmin})`);
           hasActiveSubscription = true;
         } else {
           try {
             const { data: profileData, error: profileError } = await (supabase
               .from("profiles") as any)
               .select("status_assinatura, trial_ends_at")
-              .eq("id", session.user?.id)
+              .eq("id", user?.id)
               .maybeSingle();
 
             if (profileError || !profileData) {
