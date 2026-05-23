@@ -77,7 +77,7 @@ export function AppSidebar() {
   }, [user]);
 
   return (
-    <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+    <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground overflow-y-auto lg:overflow-hidden max-h-screen lg:max-h-none pb-12 lg:pb-0">
       <div className="px-5 h-16 flex items-center gap-2.5 border-b border-sidebar-border">
         {logoUrl ? (
           <div className="flex items-center gap-2.5 min-w-0">
@@ -102,7 +102,7 @@ export function AppSidebar() {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className="flex-1 lg:overflow-y-auto px-3 py-4 space-y-0.5">
         <p className="px-2 pt-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Espaço de trabalho
         </p>
