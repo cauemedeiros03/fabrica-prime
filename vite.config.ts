@@ -26,6 +26,6 @@ export default defineConfig({
   },
 });
 
-// Triggering fresh Vercel deploy
+// Triggering fresh Vercel deploy with correct author email
 
 
