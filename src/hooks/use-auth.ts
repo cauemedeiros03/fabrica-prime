@@ -16,8 +16,8 @@ export type UserSubscription = {
 };
 
 const getProfileServer = createServerFn({ method: "GET" })
-  .handler(async (ctx: { data: string }) => {
-    const userId = ctx.data;
+  .handler(async (ctx: any) => {
+    const userId = ctx.data as string;
     const { getCookie } = await import("@tanstack/react-start/server");
     const token = getCookie("sb-access-token");
     if (!token) return null;
@@ -114,7 +114,7 @@ export function useAuth() {
 
         if (!profileData || profileRes?.error) {
           console.warn("[Auth] Erro ou dados vazios no perfil cliente, tentando via server function...");
-          profileData = await getProfileServer({ data: userId });
+          profileData = await getProfileServer({ data: userId } as any);
         }
 
         if (profileData) {
