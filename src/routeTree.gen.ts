@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProducaoRouteImport } from './routes/producao'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as OrcamentosRouteImport } from './routes/orcamentos'
+import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EntregasRouteImport } from './routes/entregas'
@@ -25,6 +27,11 @@ import { Route as PedidosPedidoIdRouteImport } from './routes/pedidos.$pedidoId'
 import { Route as ClientesClienteIdRouteImport } from './routes/clientes.$clienteId'
 import { Route as ApiWebhooksCaktoRouteImport } from './routes/api.webhooks.cakto'
 
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProducaoRoute = ProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
@@ -38,6 +45,11 @@ const PedidosRoute = PedidosRouteImport.update({
 const OrcamentosRoute = OrcamentosRouteImport.update({
   id: '/orcamentos',
   path: '/orcamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovaSenhaRoute = NovaSenhaRouteImport.update({
+  id: '/nova-senha',
+  path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -111,9 +123,11 @@ export interface FileRoutesByFullPath {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -128,9 +142,11 @@ export interface FileRoutesByTo {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -146,9 +162,11 @@ export interface FileRoutesById {
   '/entregas': typeof EntregasRoute
   '/financeiro': typeof FinanceiroRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
   '/producao': typeof ProducaoRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
   '/pedidos/$pedidoId': typeof PedidosPedidoIdRoute
   '/api/webhooks/cakto': typeof ApiWebhooksCaktoRoute
@@ -165,9 +183,11 @@ export interface FileRouteTypes {
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
+    | '/recuperar-senha'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -182,9 +202,11 @@ export interface FileRouteTypes {
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
+    | '/recuperar-senha'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -199,9 +221,11 @@ export interface FileRouteTypes {
     | '/entregas'
     | '/financeiro'
     | '/login'
+    | '/nova-senha'
     | '/orcamentos'
     | '/pedidos'
     | '/producao'
+    | '/recuperar-senha'
     | '/clientes/$clienteId'
     | '/pedidos/$pedidoId'
     | '/api/webhooks/cakto'
@@ -217,14 +241,23 @@ export interface RootRouteChildren {
   EntregasRoute: typeof EntregasRoute
   FinanceiroRoute: typeof FinanceiroRoute
   LoginRoute: typeof LoginRoute
+  NovaSenhaRoute: typeof NovaSenhaRoute
   OrcamentosRoute: typeof OrcamentosRoute
   PedidosRoute: typeof PedidosRouteWithChildren
   ProducaoRoute: typeof ProducaoRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ApiWebhooksCaktoRoute: typeof ApiWebhooksCaktoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/producao': {
       id: '/producao'
       path: '/producao'
@@ -244,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/orcamentos'
       fullPath: '/orcamentos'
       preLoaderRoute: typeof OrcamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nova-senha': {
+      id: '/nova-senha'
+      path: '/nova-senha'
+      fullPath: '/nova-senha'
+      preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -366,9 +406,11 @@ const rootRouteChildren: RootRouteChildren = {
   EntregasRoute: EntregasRoute,
   FinanceiroRoute: FinanceiroRoute,
   LoginRoute: LoginRoute,
+  NovaSenhaRoute: NovaSenhaRoute,
   OrcamentosRoute: OrcamentosRoute,
   PedidosRoute: PedidosRouteWithChildren,
   ProducaoRoute: ProducaoRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
   ApiWebhooksCaktoRoute: ApiWebhooksCaktoRoute,
 }
 export const routeTree = rootRouteImport

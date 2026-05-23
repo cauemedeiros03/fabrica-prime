@@ -22,6 +22,22 @@ function CadastroPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) {
+        toast.error("Erro ao cadastrar com o Google", { description: error.message });
+      }
+    } catch (err: any) {
+      toast.error("Erro inesperado", { description: err.message });
+    }
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -108,6 +124,44 @@ function CadastroPage() {
               Criar conta
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
+            </div>
+          </div>
+
+          {/* Google Login Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground transition active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+          >
+            <svg className="size-4 animate-infinite" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.16 2.64 1.077 6.555l4.19 3.21Z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M1.077 6.555A12.013 12.013 0 0 0 0 12c0 1.93.46 3.75 1.277 5.373l4.24-3.29a7.013 7.013 0 0 1-.45-2.083c0-2.3.83-4.42 2.199-6.045l-4.19-3.21Z"
+              />
+              <path
+                fill="#4285F4"
+                d="M12 24c3.245 0 5.973-1.073 7.964-2.927l-3.864-3c-1.127.755-2.564 1.209-4.1 1.209-3.2 0-5.91-2.164-6.873-5.073l-4.24 3.29C3.16 21.36 7.27 24 12 24Z"
+              />
+              <path
+                fill="#34A853"
+                d="M24 12c0-.86-.073-1.69-.218-2.5H12v4.727h6.727c-.29 1.527-1.154 2.818-2.454 3.69l3.864 3C22.382 19.182 24 15.818 24 12Z"
+              />
+            </svg>
+            Criar conta com o Google
+          </button>
 
           <p className="mt-5 text-xs text-center text-muted-foreground">
             Já tem conta?{" "}
