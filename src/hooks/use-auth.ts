@@ -16,8 +16,7 @@ export type UserSubscription = {
 };
 
 const getProfileServer = createServerFn({ method: "GET" })
-  .validator((d: string) => d)
-  .handler(async (ctx) => {
+  .handler(async (ctx: { data: string }) => {
     const userId = ctx.data;
     const { getCookie } = await import("@tanstack/react-start/server");
     const token = getCookie("sb-access-token");
