@@ -75,7 +75,6 @@ export function useAuth() {
 
   useEffect(() => {
     let isMounted = true;
-    console.log("[Auth] Iniciando Auth - Efeito montado");
 
     // Write token cookies for server-side auth
     const updateAuthCookies = (sess: Session | null) => {
@@ -91,7 +90,6 @@ export function useAuth() {
     };
 
     async function fetchProfileAndSubscription(userId: string) {
-      console.log(`[Auth] Buscando perfil para user: ${userId}`);
       try {
         const fetchProfilePromise = (supabase
           .from("profiles") as any)
@@ -118,7 +116,6 @@ export function useAuth() {
         }
 
         if (profileData) {
-          console.log("[Auth] Perfil carregado com sucesso:", profileData);
           setProfile(profileData as UserProfile);
 
           const status = profileData.status_assinatura;
@@ -131,14 +128,12 @@ export function useAuth() {
             setSubscription({ status: null, data_expiracao: null });
           }
         } else {
-          console.log("[Auth] Nenhum perfil encontrado via cliente ou server");
           setSubscription(null);
         }
       } catch (err) {
         console.error("[Auth] Exceção na busca de perfil:", err);
       } finally {
         if (isMounted) {
-          console.log("[Auth] Finalizando Loading");
           setLoading(false);
         }
       }
@@ -146,7 +141,6 @@ export function useAuth() {
 
     async function initializeSession() {
       try {
-        console.log("[Auth] Verificando sessão (getSession)...");
         const { data, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
@@ -159,7 +153,6 @@ export function useAuth() {
 
         let currentSession = data?.session;
         if (currentSession) {
-          console.log("[Auth] Sessão em local storage encontrada. Confirmando validade com o servidor...");
           const { data: { user }, error: userError } = await supabase.auth.getUser();
           if (userError || !user) {
             console.warn("[Auth] Token de sessão inválido ou expirado. Limpando sessão residual...");
@@ -168,8 +161,6 @@ export function useAuth() {
             currentSession = null;
           }
         }
-
-        console.log(currentSession ? "[Auth] Sessão confirmada e ativa" : "[Auth] Nenhuma sessão confirmada");
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
@@ -179,7 +170,6 @@ export function useAuth() {
           await fetchProfileAndSubscription(currentSession.user.id);
         } else {
           setLoading(false);
-          console.log("[Auth] Finalizando Loading (Deslogado)");
         }
       } catch (err) {
         console.error("[Auth] Exceção geral em initializeSession:", err);
@@ -190,7 +180,6 @@ export function useAuth() {
     initializeSession();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`[Auth] onAuthStateChange disparado. Evento: ${event}`);
       if (!isMounted) return;
       
       setSession(currentSession);
@@ -209,13 +198,10 @@ export function useAuth() {
     });
 
     return () => {
-      console.log("[Auth] Desmontando Auth - Limpando listener");
       isMounted = false;
       sub.subscription.unsubscribe();
     };
   }, []);
-
-  console.log('Perfil Atual:', profile);
 
   return { session, user, profile, subscription, loading };
 }

@@ -21,7 +21,6 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { user, profile, subscription, loading } = useAuth();
-  console.log('Perfil Atual:', profile);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,11 +45,10 @@ export function AppShell({
       if (!user) {
         navigate({ to: "/login" });
       } else if (!hasAccess) {
-        console.log("[AppShell] Acesso negado: Redirecionando para /assinatura", { isAdmin, subscription });
         navigate({ to: "/assinatura" });
       }
     }
-  }, [user, hasAccess, loading, navigate, subscription, isAdmin]);
+  }, [user?.id, hasAccess, loading, navigate]);
 
   // scroll-to-top on route change
   useEffect(() => {

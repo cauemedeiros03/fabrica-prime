@@ -47,7 +47,7 @@ export function AppSidebar() {
 
   useEffect(() => {
     async function loadConfig() {
-      if (!user) return;
+      if (!user?.id) return;
       try {
         const { data, error } = await supabase
           .from("configuracoes_marcenaria")
@@ -74,7 +74,7 @@ export function AppSidebar() {
     return () => {
       window.removeEventListener("configuracoes_updated", handleUpdate);
     };
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground overflow-y-auto lg:overflow-hidden max-h-screen lg:max-h-none pb-12 lg:pb-0">
