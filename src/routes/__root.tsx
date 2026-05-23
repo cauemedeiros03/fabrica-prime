@@ -192,7 +192,7 @@ const checkUserSubscription = createServerFn({ method: "GET" })
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from("profiles")
-          .select("status_assinatura")
+          .select("status_assinatura, trial_ends_at")
           .eq("id", user?.id)
           .maybeSingle();
 
@@ -202,7 +202,14 @@ const checkUserSubscription = createServerFn({ method: "GET" })
         }
 
         const status = profileData?.status_assinatura;
-        const hasActiveSubscription = status === "ativo" || status === "active";
+        const trialEndsAt = (profileData as any)?.trial_ends_at;
+        
+        let hasActiveSubscription = false;
+        if (status === "ativo" || status === "active") {
+          hasActiveSubscription = true;
+        } else if (status === "trial" && trialEndsAt) {
+          hasActiveSubscription = new Date(trialEndsAt) > new Date();
+        }
 
         return {
           hasActiveSubscription,
@@ -277,7 +284,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           try {
             const { data: profileData, error: profileError } = await (supabase
               .from("profiles") as any)
-              .select("status_assinatura")
+              .select("status_assinatura, trial_ends_at")
               .eq("id", session.user?.id)
               .maybeSingle();
 
@@ -287,7 +294,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               hasActiveSubscription = serverCheck.hasActiveSubscription;
             } else {
               const status = profileData?.status_assinatura;
-              hasActiveSubscription = status === "ativo" || status === "active";
+              const trialEndsAt = (profileData as any)?.trial_ends_at;
+              if (status === "ativo" || status === "active") {
+                hasActiveSubscription = true;
+              } else if (status === "trial" && trialEndsAt) {
+                hasActiveSubscription = new Date(trialEndsAt) > new Date();
+              }
             }
           } catch (dbErr) {
             console.error("[Client Auth] Connection error while fetching profile, falling back to server check:", dbErr);

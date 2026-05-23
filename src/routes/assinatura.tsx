@@ -3,7 +3,10 @@ import { Check, LogOut, Package, Star, TrendingUp, ShieldCheck } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-import { createServerFn } from "@tanstack/react-start";
+import { useAuth } from "@/hooks/use-auth";
+
+// Link de checkout da Cakto - fácil de substituir depois
+const CAKTO_CHECKOUT_URL = import.meta.env.VITE_CAKTO_PLAN_ID || "https://pay.cakto.com.br/63vqari_895705";
 
 export const Route = createFileRoute("/assinatura")({
   component: AssinaturaPage,
@@ -17,6 +20,9 @@ export const Route = createFileRoute("/assinatura")({
 function AssinaturaPage() {
   const navigate = useNavigate();
   const [loadingSession, setLoadingSession] = useState(false);
+  const { profile } = useAuth();
+
+  const isTrialExpired = profile?.status_assinatura === "trial";
 
   const handleLogout = async () => {
     try {
@@ -30,9 +36,8 @@ function AssinaturaPage() {
 
   const handleAssinar = () => {
     setLoadingSession(true);
-    const checkoutUrl = import.meta.env.VITE_CAKTO_PLAN_ID;
-    if (checkoutUrl) {
-      window.location.href = checkoutUrl;
+    if (CAKTO_CHECKOUT_URL) {
+      window.location.href = CAKTO_CHECKOUT_URL;
     } else {
       toast.error("URL de checkout da Cakto não configurada.");
       setLoadingSession(false);
@@ -66,10 +71,12 @@ function AssinaturaPage() {
         {/* Header Section */}
         <div className="text-center max-w-2xl mx-auto space-y-4 mb-16 animate-in slide-in-from-bottom-4 duration-500">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-            Sua assinatura está inativa
+            {isTrialExpired ? "Seu período de teste grátis acabou" : "Sua assinatura está inativa"}
           </h1>
           <p className="text-lg text-muted-foreground">
-            Para continuar gerenciando sua marcenaria com eficiência, organizar pedidos e controlar seu financeiro, escolha nosso plano Premium.
+            {isTrialExpired 
+              ? "O seu período de testes de 7 dias chegou ao fim. Para continuar gerenciando sua marcenaria com eficiência, organizar pedidos e controlar seu financeiro, escolha nosso plano Premium."
+              : "Para continuar gerenciando sua marcenaria com eficiência, organizar pedidos e controlar seu financeiro, escolha nosso plano Premium."}
           </p>
         </div>
 

@@ -7,6 +7,7 @@ export type UserProfile = {
   id: string;
   nome: string | null;
   status_assinatura?: string | null;
+  trial_ends_at?: string | null;
 };
 
 export type UserSubscription = {
@@ -121,8 +122,11 @@ export function useAuth() {
           setProfile(profileData as UserProfile);
 
           const status = profileData.status_assinatura;
-          if (status === "ativo" || status === "active") {
-            setSubscription({ status: "active", data_expiracao: null });
+          const trialEndsAt = (profileData as any).trial_ends_at;
+          const isTrialValid = status === "trial" && trialEndsAt && new Date(trialEndsAt) > new Date();
+
+          if (status === "ativo" || status === "active" || isTrialValid) {
+            setSubscription({ status: "active", data_expiracao: trialEndsAt || null });
           } else {
             setSubscription({ status: null, data_expiracao: null });
           }

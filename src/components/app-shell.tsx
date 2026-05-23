@@ -34,7 +34,10 @@ export function AppShell({
   const isAdmin = user?.email === "admin@marcena.com.br";
   
   // Direct bypass if active
-  const isSubActiveFromProfile = profile?.status_assinatura === "ativo" || profile?.status_assinatura === "active";
+  const status = profile?.status_assinatura;
+  const trialEndsAt = (profile as any)?.trial_ends_at;
+  const isTrialValid = status === "trial" && trialEndsAt && new Date(trialEndsAt) > new Date();
+  const isSubActiveFromProfile = status === "ativo" || status === "active" || isTrialValid;
   const hasActiveSub = subscription?.status === "active" || isSubActiveFromProfile;
   const hasAccess = !!(isAdmin || hasActiveSub);
 
