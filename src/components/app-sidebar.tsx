@@ -41,7 +41,20 @@ const atalhos = [
 export function AppSidebar() {
   const { pathname } = useLocation();
   const search = useRouterState({ select: (s) => s.location.search as Record<string, string> });
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  
+  const status = profile?.status_assinatura;
+  const trialEndsAt = profile?.trial_ends_at;
+
+  const getTrialDaysRemaining = () => {
+    if (!trialEndsAt) return 0;
+    const diffTime = new Date(trialEndsAt).getTime() - new Date().getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const diasRestantes = getTrialDaysRemaining();
+  const CAKTO_CHECKOUT_URL = import.meta.env.VITE_CAKTO_PLAN_ID || "https://pay.cakto.com.br/63vqari_895705";
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
 
@@ -151,18 +164,23 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="m-3 rounded-xl border border-sidebar-border bg-gradient-to-br from-sidebar-accent to-sidebar p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="size-4 text-primary" />
-          <p className="text-sm font-medium">Plano Pro</p>
+      {status === "trial" && (
+        <div className="m-3 rounded-xl border border-sidebar-border bg-gradient-to-br from-sidebar-accent to-sidebar p-4 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="size-4 text-primary" />
+            <p className="text-sm font-medium">Período de Teste</p>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}
+          </p>
+          <a
+            href={CAKTO_CHECKOUT_URL}
+            className="w-full inline-flex items-center justify-center rounded-md bg-success text-success-foreground text-xs font-medium py-2 hover:opacity-90 transition shadow-sm text-center"
+          >
+            Ativar Conta
+          </a>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Aproveite recursos avançados de automação e relatórios.
-        </p>
-        <button className="w-full rounded-md bg-primary text-primary-foreground text-xs font-medium py-2 hover:opacity-90 transition">
-          Fazer upgrade
-        </button>
-      </div>
+      )}
 
       <Link
         to="/configuracoes"

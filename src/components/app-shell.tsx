@@ -8,6 +8,7 @@ import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import { Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 
 export function AppShell({
   title,
@@ -55,6 +56,25 @@ export function AppShell({
     if (typeof window !== "undefined") window.scrollTo({ top: 0, left: 0 });
     setMobileNav(false);
   }, [location.pathname]);
+
+  // Alerta de boas-vindas para primeiro login / cadastro recente
+  useEffect(() => {
+    if (user && profile && typeof window !== "undefined") {
+      const isFirstLogin = localStorage.getItem("suabancada_first_login") === "true";
+      const hasShownWelcome = localStorage.getItem("suabancada_welcome_shown") === "true";
+      
+      const createdTime = profile.created_at ? new Date(profile.created_at).getTime() : 0;
+      const isRecentlyCreated = createdTime && (new Date().getTime() - createdTime < 1000 * 60 * 10); // 10 minutos
+      
+      if ((isFirstLogin || isRecentlyCreated) && !hasShownWelcome) {
+        toast.success("Bem-vindo ao Sua bancada! Seu período de 7 dias de teste grátis começou.", {
+          duration: 8000,
+        });
+        localStorage.setItem("suabancada_welcome_shown", "true");
+        localStorage.removeItem("suabancada_first_login");
+      }
+    }
+  }, [user, profile]);
 
   if (loading) {
     return (

@@ -24,6 +24,7 @@ function CadastroPage() {
 
   const handleGoogleLogin = async () => {
     try {
+      localStorage.setItem("suabancada_first_login", "true");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -54,6 +55,7 @@ function CadastroPage() {
       toast.error("Não foi possível cadastrar", { description: error.message });
       return;
     }
+    localStorage.setItem("suabancada_first_login", "true");
     toast.success("Conta criada!", { description: "Verifique seu e-mail para confirmar." });
     navigate({ to: "/login" });
   };

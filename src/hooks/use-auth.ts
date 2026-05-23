@@ -8,6 +8,7 @@ export type UserProfile = {
   nome: string | null;
   status_assinatura?: string | null;
   trial_ends_at?: string | null;
+  created_at?: string | null;
 };
 
 export type UserSubscription = {
