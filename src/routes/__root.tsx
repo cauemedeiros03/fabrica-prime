@@ -228,7 +228,7 @@ const checkUserSubscription = createServerFn({ method: "GET" })
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     // Skip check for public routes and API endpoints
-    const isPublic = ["/login", "/cadastro", "/assinatura", "/auth/callback"].includes(location.pathname);
+    const isPublic = ["/login", "/cadastro", "/assinatura", "/auth/callback", "/recuperar-senha", "/atualizar-senha"].includes(location.pathname);
     const isApi = location.pathname.startsWith("/api/");
 
     if (isApi) return;
