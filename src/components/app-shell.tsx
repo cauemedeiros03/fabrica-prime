@@ -31,24 +31,23 @@ export function AppShell({
   useRealtimeSync();
 
   // Paywall bypass checks (matches __root.tsx logic)
-  const isBypassActive = import.meta.env.VITE_BYPASS_PAYWALL === "true" || (typeof process !== "undefined" && process.env && process.env.BYPASS_PAYWALL === "true");
-  const isAdmin = user?.email === "admin@marcena.com.br" || user?.user_metadata?.role === "admin";
+  const isAdmin = user?.email === "admin@marcena.com.br";
   
   // Direct bypass if active
   const isSubActiveFromProfile = profile?.status_assinatura === "ativo" || profile?.status_assinatura === "active";
   const hasActiveSub = subscription?.status === "active" || isSubActiveFromProfile;
-  const hasAccess = !!(isBypassActive || isAdmin || hasActiveSub);
+  const hasAccess = !!(isAdmin || hasActiveSub);
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         navigate({ to: "/login" });
       } else if (!hasAccess) {
-        console.log("[AppShell] Acesso negado: Redirecionando para /assinatura", { isBypassActive, isAdmin, subscription });
+        console.log("[AppShell] Acesso negado: Redirecionando para /assinatura", { isAdmin, subscription });
         navigate({ to: "/assinatura" });
       }
     }
-  }, [user, hasAccess, loading, navigate, subscription, isBypassActive, isAdmin]);
+  }, [user, hasAccess, loading, navigate, subscription, isAdmin]);
 
   // scroll-to-top on route change
   useEffect(() => {

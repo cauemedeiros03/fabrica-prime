@@ -177,12 +177,11 @@ const checkUserSubscription = createServerFn({ method: "GET" })
       const { data: { user }, error: authError } = await tempSupabase.auth.getUser(token);
       if (authError || !user) return { hasActiveSubscription: false, user: null };
 
-      // Bypass paywall for admin email, admin role, or BYPASS_PAYWALL env variable
-      const isBypassActive = process.env.BYPASS_PAYWALL === "true";
-      const isAdmin = user?.email === "admin@marcena.com.br" || user?.user_metadata?.role === "admin";
+      // Bypass paywall only for system admin email
+      const isAdmin = user?.email === "admin@marcena.com.br";
 
-      if (isBypassActive || isAdmin) {
-        console.log(`[checkUserSubscription] Bypassing subscription check for user: ${user?.email} (isBypassActive=${isBypassActive}, isAdmin=${isAdmin})`);
+      if (isAdmin) {
+        console.log(`[checkUserSubscription] Bypassing subscription check for user: ${user?.email} (isAdmin=${isAdmin})`);
         return {
           hasActiveSubscription: true,
           user,
@@ -269,11 +268,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         let hasActiveSubscription = false;
         
         // Client-side bypass check
-        const isBypassActive = import.meta.env.VITE_BYPASS_PAYWALL === "true" || (typeof process !== "undefined" && process.env && process.env.BYPASS_PAYWALL === "true");
-        const isAdmin = session.user?.email === "admin@marcena.com.br" || session.user?.user_metadata?.role === "admin";
+        const isAdmin = session.user?.email === "admin@marcena.com.br";
 
-        if (isBypassActive || isAdmin) {
-          console.log(`[Client Auth] Bypassing subscription check for user: ${session.user?.email} (isBypassActive=${isBypassActive}, isAdmin=${isAdmin})`);
+        if (isAdmin) {
+          console.log(`[Client Auth] Bypassing subscription check for user: ${session.user?.email} (isAdmin=${isAdmin})`);
           hasActiveSubscription = true;
         } else {
           try {
