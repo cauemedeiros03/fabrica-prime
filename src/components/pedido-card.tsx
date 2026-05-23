@@ -37,7 +37,9 @@ export function PedidoCard({ p, onClick, onEdit, onDuplicate, onDelete, onPrint,
       <div className="flex justify-between items-start mb-2 gap-2">
         <div>
           <span className="text-xs font-semibold text-muted-foreground">{p.numero}</span>
-          <h4 className="font-medium text-sm leading-tight mt-0.5 line-clamp-2">{p.produto}</h4>
+          <h4 className="font-medium text-sm leading-tight mt-0.5 line-clamp-2">
+            {p.produto} - <span className="text-muted-foreground font-normal">Cliente: {p.clientes?.nome || p.cliente}</span>
+          </h4>
         </div>
         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap ${PRIORIDADE_COR[p.prioridade as keyof typeof PRIORIDADE_COR]}`}>
           {PRIORIDADE_LABEL[p.prioridade as keyof typeof PRIORIDADE_LABEL]}

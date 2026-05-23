@@ -87,6 +87,7 @@ function mapRow(r: Row): Pedido & {
     bairro: c?.bairro ?? "",
     instagram: c?.instagram ?? "",
     origem: c?.origem ?? "",
+    clientes: c ? { nome: c.nome } : null,
   };
 }
 
@@ -96,7 +97,7 @@ export function usePedidos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
+        .select("*, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .order("created_at", { ascending: false });
       if (error) {
         console.error("Erro na busca de pedidos (usePedidos):", error);
@@ -170,7 +171,7 @@ export function usePedido(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
+        .select("*, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .eq("id", id!)
         .single();
       if (error) throw error;

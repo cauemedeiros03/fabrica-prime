@@ -37,6 +37,7 @@ export interface Pedido {
   criadoEm: string;
   etapa: StatusEtapa;
   prioridade: Prioridade;
+  clientes?: { nome: string } | null;
 }
 
 const hoje = new Date();

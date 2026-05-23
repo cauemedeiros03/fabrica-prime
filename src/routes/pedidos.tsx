@@ -468,7 +468,9 @@ function PedidosPage() {
                             />
                             <div className="min-w-0 flex-1 py-0.5">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-medium truncate">{p.produto}</span>
+                                <span className="font-medium truncate">
+                                  {p.produto} - <span className="text-muted-foreground font-normal">Cliente: {p.clientes?.nome || p.cliente}</span>
+                                </span>
                                 <span className="text-[11px] text-muted-foreground tabular-nums">{p.numero}</span>
                                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${PRIORIDADE_COR[p.prioridade]}`}>
                                   {PRIORIDADE_LABEL[p.prioridade]}
