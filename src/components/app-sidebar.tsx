@@ -43,12 +43,27 @@ export function AppSidebar() {
   const search = useRouterState({ select: (s) => s.location.search as Record<string, string> });
   const { user, profile } = useAuth();
   
+  console.log("Dados do Perfil na Sidebar:", profile);
+
   const status = profile?.status_assinatura;
   const trialEndsAt = profile?.trial_ends_at;
 
   const getTrialTimeRemaining = () => {
-    if (!trialEndsAt) return { days: 0, hours: 0, percentage: 0 };
-    const end = new Date(trialEndsAt).getTime();
+    // Se não tiver trialEndsAt no perfil, tenta calcular com base no created_at + 7 dias, ou assume a data atual + 7 dias como último fallback
+    let endTimeStr = trialEndsAt;
+    if (!endTimeStr && profile?.created_at) {
+      const createdDate = new Date(profile.created_at);
+      createdDate.setDate(createdDate.getDate() + 7);
+      endTimeStr = createdDate.toISOString();
+    }
+    
+    if (!endTimeStr) {
+      const defaultEnd = new Date();
+      defaultEnd.setDate(defaultEnd.getDate() + 7);
+      endTimeStr = defaultEnd.toISOString();
+    }
+
+    const end = new Date(endTimeStr).getTime();
     const now = new Date().getTime();
     const diffTime = end - now;
     if (diffTime <= 0) return { days: 0, hours: 0, percentage: 0 };
@@ -64,6 +79,8 @@ export function AppSidebar() {
   };
 
   const { days: dias, hours: horas, percentage: pct } = getTrialTimeRemaining();
+  const isAtivo = status === "ativo" || status === "active";
+  const showTrialCard = !isAtivo;
   const CAKTO_CHECKOUT_URL = import.meta.env.VITE_CAKTO_PLAN_ID || "https://pay.cakto.com.br/63vqari_895705";
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
@@ -174,7 +191,7 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {status === "trial" && (
+      {showTrialCard && (
         <div className="m-3 rounded-xl border border-sidebar-border bg-gradient-to-br from-sidebar-accent to-sidebar p-4 animate-in fade-in duration-200">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="size-4 text-primary" />
