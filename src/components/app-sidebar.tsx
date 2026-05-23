@@ -46,14 +46,24 @@ export function AppSidebar() {
   const status = profile?.status_assinatura;
   const trialEndsAt = profile?.trial_ends_at;
 
-  const getTrialDaysRemaining = () => {
-    if (!trialEndsAt) return 0;
-    const diffTime = new Date(trialEndsAt).getTime() - new Date().getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
+  const getTrialTimeRemaining = () => {
+    if (!trialEndsAt) return { days: 0, hours: 0, percentage: 0 };
+    const end = new Date(trialEndsAt).getTime();
+    const now = new Date().getTime();
+    const diffTime = end - now;
+    if (diffTime <= 0) return { days: 0, hours: 0, percentage: 0 };
+
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    // Período total do trial é de 7 dias
+    const totalDuration = 7 * 24 * 60 * 60 * 1000;
+    const percentage = Math.max(0, Math.min(100, (diffTime / totalDuration) * 100));
+
+    return { days: diffDays, hours: diffHours, percentage };
   };
 
-  const diasRestantes = getTrialDaysRemaining();
+  const { days: dias, hours: horas, percentage: pct } = getTrialTimeRemaining();
   const CAKTO_CHECKOUT_URL = import.meta.env.VITE_CAKTO_PLAN_ID || "https://pay.cakto.com.br/63vqari_895705";
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
@@ -170,9 +180,20 @@ export function AppSidebar() {
             <Sparkles className="size-4 text-primary" />
             <p className="text-sm font-medium">Período de Teste</p>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            {diasRestantes} {diasRestantes === 1 ? "dia restante" : "dias restantes"}
-          </p>
+          
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+            <Clock className="size-3.5 text-primary animate-pulse shrink-0" />
+            <span>Restam {dias} {dias === 1 ? "dia" : "dias"} e {horas} {horas === 1 ? "hora" : "horas"}</span>
+          </div>
+
+          {/* Barra de Progresso Discreta */}
+          <div className="w-full bg-muted rounded-full h-1 mb-4 overflow-hidden">
+            <div 
+              className="bg-primary h-full rounded-full transition-all duration-500" 
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+
           <a
             href={CAKTO_CHECKOUT_URL}
             className="w-full inline-flex items-center justify-center rounded-md bg-success text-success-foreground text-xs font-medium py-2 hover:opacity-90 transition shadow-sm text-center"
