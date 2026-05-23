@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
@@ -96,7 +96,7 @@ function Stat({
 
 type Periodo = "7d" | "30d" | "12m";
 
-function aggregate(pagamentos: { valor: number; pago_em: string }[], periodo: Periodo) {
+function aggregate(pedidos: { valorTotal: number; criadoEm: string }[], periodo: Periodo) {
   const now = new Date();
   if (periodo === "7d") {
     const buckets: { label: string; receita: number; key: string }[] = [];
@@ -110,10 +110,10 @@ function aggregate(pagamentos: { valor: number; pago_em: string }[], periodo: Pe
         receita: 0,
       });
     }
-    pagamentos.forEach((p) => {
-      const k = String(p.pago_em).slice(0, 10);
+    pedidos.forEach((p) => {
+      const k = String(p.criadoEm).slice(0, 10);
       const b = buckets.find((x) => x.key === k);
-      if (b) b.receita += Number(p.valor);
+      if (b) b.receita += Number(p.valorTotal);
     });
     return buckets.map(({ label, receita }) => ({ mes: label, receita }));
   }
@@ -131,10 +131,10 @@ function aggregate(pagamentos: { valor: number; pago_em: string }[], periodo: Pe
         end: +new Date(end.toDateString()) + 86400000,
       });
     }
-    pagamentos.forEach((p) => {
-      const t = +new Date(p.pago_em);
+    pedidos.forEach((p) => {
+      const t = +new Date(p.criadoEm);
       const b = buckets.find((x) => t >= x.start && t < x.end);
-      if (b) b.receita += Number(p.valor);
+      if (b) b.receita += Number(p.valorTotal);
     });
     return buckets.map(({ label, receita }) => ({ mes: label, receita }));
   }
@@ -148,21 +148,31 @@ function aggregate(pagamentos: { valor: number; pago_em: string }[], periodo: Pe
       receita: 0,
     });
   }
-  pagamentos.forEach((p) => {
-    const d = new Date(p.pago_em);
+  pedidos.forEach((p) => {
+    const d = new Date(p.criadoEm);
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const b = buckets.find((x) => x.key === k);
-    if (b) b.receita += Number(p.valor);
+    if (b) b.receita += Number(p.valorTotal);
   });
   return buckets.map(({ label, receita }) => ({ mes: label, receita }));
 }
 
 function PainelPage() {
-  const { data: PEDIDOS = [], isLoading: lp } = usePedidos();
-  const { data: PAGAMENTOS = [], isLoading: lpg } = usePagamentos();
+  const { data: PEDIDOS = [], isLoading: lp, error: ep } = usePedidos();
+  const { data: PAGAMENTOS = [], isLoading: lpg, error: epg } = usePagamentos();
   const [periodo, setPeriodo] = useState<Periodo>("12m");
   const navigate = useNavigate();
   const isLoading = lp || lpg;
+
+  // Efeitos para expor quaisquer erros de requisição no console
+  useEffect(() => {
+    if (ep) {
+      console.error("Erro ao buscar pedidos no Painel:", ep);
+    }
+    if (epg) {
+      console.error("Erro ao buscar pagamentos no Painel:", epg);
+    }
+  }, [ep, epg]);
 
   const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
   const atrasados = PEDIDOS.filter((p) => new Date(p.entrega) < new Date() && p.etapa !== "entregue");
@@ -171,7 +181,21 @@ function PainelPage() {
   const recebidoTotal = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
   const aReceber = receitaTotal - recebidoTotal;
 
-  const chartData = useMemo(() => aggregate(PAGAMENTOS, periodo), [PAGAMENTOS, periodo]);
+  // Filtrar os pedidos para incluir apenas os status válidos
+  const chartPedidos = useMemo(() => {
+    return PEDIDOS.filter((p) => {
+      const status = String(p.etapa || "").toLowerCase();
+      return (
+        status === "entregue" ||
+        status === "pago" ||
+        status === "concluido" ||
+        status === "concluído" ||
+        status === "finalizado"
+      );
+    });
+  }, [PEDIDOS]);
+
+  const chartData = useMemo(() => aggregate(chartPedidos, periodo), [chartPedidos, periodo]);
   const receitaPeriodo = chartData.reduce((s, x) => s + x.receita, 0);
 
   const etapasAgg = ETAPAS.map((e) => ({
@@ -203,7 +227,7 @@ function PainelPage() {
               </p>
               <p className="text-2xl font-semibold tracking-tight">{moeda(receitaPeriodo)}</p>
               <p className="text-xs text-success inline-flex items-center gap-1 mt-1">
-                <TrendingUp className="size-3.5" /> {PAGAMENTOS.length} pagamento(s) recebidos
+                <TrendingUp className="size-3.5" /> {chartPedidos.length} pedido(s) faturado(s)
               </p>
             </div>
             <div className="flex gap-1 text-xs">

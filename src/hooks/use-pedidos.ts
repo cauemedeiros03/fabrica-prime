@@ -98,7 +98,10 @@ export function usePedidos() {
         .from("pedidos")
         .select("id, numero, produto, tipo, material, cor, valor_total, valor_pago, entrega, etapa, prioridade, observacoes, created_at, cliente_id, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("Erro na busca de pedidos (usePedidos):", error);
+        throw error;
+      }
       return (data as unknown as Row[]).map(mapRow);
     },
   });
