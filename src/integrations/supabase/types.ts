@@ -107,6 +107,33 @@ export type Database = {
         }
         Relationships: []
       }
+      despesas: {
+        Row: {
+          id: string
+          created_at: string
+          user_id: string
+          descricao: string
+          valor: number
+          data: string
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          user_id?: string
+          descricao: string
+          valor: number
+          data?: string
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          user_id?: string
+          descricao?: string
+          valor?: number
+          data?: string
+        }
+        Relationships: []
+      }
       configuracoes_marcenaria: {
         Row: {
           endereco: string | null
@@ -216,6 +243,7 @@ export type Database = {
       pedidos: {
         Row: {
           cliente_id: string
+          cliente_nome: string | null
           cor: string | null
           created_at: string
           entrega: string | null
@@ -228,11 +256,13 @@ export type Database = {
           produto: string
           tipo: string | null
           updated_at: string
+          user_id: string
           valor_pago: number
           valor_total: number
         }
         Insert: {
           cliente_id: string
+          cliente_nome?: string | null
           cor?: string | null
           created_at?: string
           entrega?: string | null
@@ -245,11 +275,13 @@ export type Database = {
           produto: string
           tipo?: string | null
           updated_at?: string
+          user_id?: string
           valor_pago?: number
           valor_total?: number
         }
         Update: {
           cliente_id?: string
+          cliente_nome?: string | null
           cor?: string | null
           created_at?: string
           entrega?: string | null
@@ -262,6 +294,7 @@ export type Database = {
           produto?: string
           tipo?: string | null
           updated_at?: string
+          user_id?: string
           valor_pago?: number
           valor_total?: number
         }
@@ -281,6 +314,8 @@ export type Database = {
           email: string | null
           id: string
           nome: string | null
+          status_assinatura: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -288,6 +323,8 @@ export type Database = {
           email?: string | null
           id?: string
           nome?: string | null
+          status_assinatura?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -295,6 +332,8 @@ export type Database = {
           email?: string | null
           id?: string
           nome?: string | null
+          status_assinatura?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -124,6 +124,7 @@ function OrcamentosPage() {
         const { data, error } = await (supabase as any)
           .from("orcamentos_salvos")
           .select("*")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (!error && data) {
@@ -205,7 +206,11 @@ function OrcamentosPage() {
     // 2. Supabase
     if (user) {
       try {
-        await (supabase as any).from("orcamentos_salvos").delete().eq("id", id);
+        await (supabase as any)
+          .from("orcamentos_salvos")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
       } catch (e) {
         console.warn("Erro ao deletar no Supabase:", e);
       }
@@ -219,6 +224,10 @@ function OrcamentosPage() {
   // Converter Orçamento em Pedido Oficial
   const converter = async () => {
     if (!confirmarConversao) return;
+    if (!user) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
     const orcamento = confirmarConversao;
     const id = orcamento.id;
 
@@ -239,6 +248,7 @@ function OrcamentosPage() {
             nome: orcamento.clienteNome,
             telefone: orcamento.clienteTelefone || null,
             cidade: orcamento.clienteCidade || null,
+            user_id: user.id,
           })
           .select("id")
           .single();
@@ -280,7 +290,8 @@ function OrcamentosPage() {
           const { error: delErr } = await (supabase as any)
             .from("orcamentos_salvos")
             .delete()
-            .eq("id", id);
+            .eq("id", id)
+            .eq("user_id", user.id);
           if (delErr) throw delErr;
         } catch (e) {
           console.warn("Erro ao deletar no Supabase:", e);

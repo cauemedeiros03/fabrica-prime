@@ -212,7 +212,7 @@ function ClientesPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleWhatsApp(c.telefone, c.nome);
+                            handleWhatsApp(c.telefone!, c.nome);
                           }}
                           className="w-10 h-10 grid place-items-center rounded-lg border border-green-600/30 bg-card text-success hover:bg-green-600/10 transition-colors"
                           aria-label="WhatsApp"

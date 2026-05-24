@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Pedido, StatusEtapa, Prioridade } from "@/lib/mock-data";
+import { useAuth } from "@/hooks/use-auth";
 
 type Row = {
   id: string;
@@ -92,12 +93,16 @@ function mapRow(r: Row): Pedido & {
 }
 
 export function usePedidos() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["pedidos"],
+    queryKey: ["pedidos", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("pedidos")
         .select("*, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) {
         console.error("Erro na busca de pedidos (usePedidos):", error);
@@ -110,23 +115,25 @@ export function usePedidos() {
 
 export function useUpdatePedidoEtapa() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, etapa, observacao }: { id: string; etapa: StatusEtapa; observacao?: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { data: atual } = await supabase
         .from("pedidos")
         .select("etapa")
         .eq("id", id)
+        .eq("user_id", user.id)
         .single();
       const anterior = (atual?.etapa as StatusEtapa | undefined) ?? null;
       if (anterior === etapa) return;
-      const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id);
+      const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
-      const { data: u } = await supabase.auth.getUser();
       await supabase.from("etapas_pedido").insert({
         pedido_id: id,
         etapa_anterior: anterior,
         etapa_nova: etapa,
-        autor_id: u.user?.id ?? null,
+        autor_id: user.id,
         observacao: observacao ?? null,
       });
     },
@@ -138,14 +145,17 @@ export function useUpdatePedidoEtapa() {
 }
 
 export function useEtapasHistorico(pedidoId: string | undefined) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["etapas_pedido", pedidoId],
-    enabled: !!pedidoId,
+    queryKey: ["etapas_pedido", pedidoId, user?.id],
+    enabled: !!pedidoId && !!user?.id,
     queryFn: async () => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("etapas_pedido")
-        .select("id, etapa_anterior, etapa_nova, observacao, created_at, autor_id")
+        .select("id, etapa_anterior, etapa_nova, observacao, created_at, autor_id, pedidos!inner(user_id)")
         .eq("pedido_id", pedidoId!)
+        .eq("pedidos.user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -165,14 +175,17 @@ export function usePagamentosPedido(pedidoId: string | undefined) {
 }
 
 export function usePedido(id: string | undefined) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["pedido", id],
-    enabled: !!id,
+    queryKey: ["pedido", id, user?.id],
+    enabled: !!id && !!user?.id,
     queryFn: async () => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("pedidos")
         .select("*, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .eq("id", id!)
+        .eq("user_id", user.id)
         .single();
       if (error) throw error;
       return mapRow(data as unknown as Row);
@@ -212,8 +225,10 @@ export interface NovoPedidoInput {
 
 export function useCreatePedido() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: NovoPedidoInput) => {
+      if (!user) throw new Error("Usuário não autenticado");
       let clienteId = input.cliente_id;
       if (!clienteId) {
         const { data: cli, error: e1 } = await supabase
@@ -231,6 +246,7 @@ export function useCreatePedido() {
             bairro: input.bairro || null,
             instagram: input.instagram || null,
             origem: input.origem || null,
+            user_id: user.id,
           })
           .select("id")
           .single();
@@ -253,7 +269,8 @@ export function useCreatePedido() {
             instagram: input.instagram || null,
             origem: input.origem || null,
           })
-          .eq("id", clienteId);
+          .eq("id", clienteId)
+          .eq("user_id", user.id);
         if (e1) throw e1;
       }
 
@@ -272,6 +289,7 @@ export function useCreatePedido() {
           valor_total: input.valor_total,
           valor_pago: input.valor_pago,
           numero: "",
+          user_id: user.id,
         })
         .select("id")
         .single();
@@ -285,8 +303,10 @@ export function useCreatePedido() {
 
 export function useUpdatePedido() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, ...input }: NovoPedidoInput & { id: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       // Update client data alongside order if cliente_id present
       if (input.cliente_id) {
         const { error: ec } = await supabase
@@ -305,7 +325,8 @@ export function useUpdatePedido() {
             instagram: input.instagram || null,
             origem: input.origem || null,
           })
-          .eq("id", input.cliente_id);
+          .eq("id", input.cliente_id)
+          .eq("user_id", user.id);
         if (ec) throw ec;
       }
       const { error } = await supabase
@@ -322,7 +343,8 @@ export function useUpdatePedido() {
           valor_total: input.valor_total,
           valor_pago: input.valor_pago,
         })
-        .eq("id", id);
+        .eq("id", id)
+        .eq("user_id", user.id);
       if (error) throw error;
     },
     onSuccess: (_d, v) => {
@@ -335,12 +357,15 @@ export function useUpdatePedido() {
 
 export function useDuplicatePedido() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { data: p, error } = await supabase
         .from("pedidos")
         .select("cliente_id, produto, tipo, material, cor, observacoes, entrega, etapa, prioridade, valor_total")
         .eq("id", id)
+        .eq("user_id", user.id)
         .single();
       if (error) throw error;
       const { data: novo, error: e2 } = await supabase
@@ -358,6 +383,7 @@ export function useDuplicatePedido() {
           valor_total: p.valor_total,
           valor_pago: 0,
           numero: "",
+          user_id: user.id,
         })
         .select("id")
         .single();
@@ -370,9 +396,11 @@ export function useDuplicatePedido() {
 
 export function useReagendarEntrega() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, entrega }: { id: string; entrega: string }) => {
-      const { error } = await supabase.from("pedidos").update({ entrega }).eq("id", id);
+      if (!user) throw new Error("Usuário não autenticado");
+      const { error } = await supabase.from("pedidos").update({ entrega }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
     },
     onSuccess: (_d, v) => {
@@ -384,16 +412,18 @@ export function useReagendarEntrega() {
 
 export function useAddPagamento() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ pedido_id, valor }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
       // increment valor_pago atomically via re-read
-      const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_total").eq("id", pedido_id).single();
+      const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_total").eq("id", pedido_id).eq("user_id", user.id).single();
       if (pErr) {
         console.error('Erro Supabase ao ler pedido:', pErr);
         throw pErr;
       }
       
-      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: p.valor_total }).eq("id", pedido_id);
+      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: p.valor_total }).eq("id", pedido_id).eq("user_id", user.id);
       if (updateErr) {
         console.error('Erro Supabase ao atualizar pedido:', updateErr);
         throw updateErr;
@@ -410,10 +440,21 @@ export function useAddPagamento() {
 
 export function useDeletePedido() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
+      const { data: checkData, error: checkError } = await supabase
+        .from("pedidos")
+        .select("id")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (checkError) throw checkError;
+      if (!checkData) throw new Error("Pedido não encontrado ou sem permissão");
+
       await supabase.from("etapas_pedido").delete().eq("pedido_id", id);
-      const { error } = await supabase.from("pedidos").delete().eq("id", id);
+      const { error } = await supabase.from("pedidos").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),

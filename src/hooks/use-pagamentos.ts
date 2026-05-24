@@ -15,12 +15,8 @@ export function usePagamentos() {
   return useQuery({
     queryKey: ["pagamentos"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pagamentos")
-        .select("id, pedido_id, valor, forma, pago_em, observacao, created_at")
-        .order("pago_em", { ascending: false });
-      if (error) throw error;
-      return (data ?? []).map((p) => ({ ...p, valor: Number(p.valor) })) as Pagamento[];
+      // Retorna array vazio devido à remoção da tabela pagamentos no banco de dados.
+      return [];
     },
   });
 }

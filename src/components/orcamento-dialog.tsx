@@ -174,7 +174,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             valor_sugerido: Number(form.valorSugerido),
             validade_dias: Number(form.validadeDias),
             status: statusVal,
-          }).eq("id", budgetId);
+          }).eq("id", budgetId).eq("user_id", user.id);
         } else {
           await (supabase as any).from("orcamentos_salvos").insert({
             cliente_nome: form.clienteNome,
@@ -279,7 +279,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             valor_sugerido: Number(form.valorSugerido),
             validade_dias: Number(form.validadeDias),
             status: statusVal,
-          }).eq("id", budgetId);
+          }).eq("id", budgetId).eq("user_id", user.id);
         } else {
           await (supabase as any).from("orcamentos_salvos").insert({
             cliente_nome: form.clienteNome,
