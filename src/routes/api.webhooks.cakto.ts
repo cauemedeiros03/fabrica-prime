@@ -9,11 +9,12 @@ export const Route = createFileRoute("/api/webhooks/cakto")({
           const body = await request.json();
           console.log("[Webhook Cakto] Received payload:", body);
 
-          const email = body.customer?.email || body.email || body.data?.customer?.email || body.data?.email;
+          // Support various formats for email
+          const email = body.customer?.email || body.email || body.customer_email || body.data?.customer?.email || body.data?.email || body.data?.customer_email;
           if (!email) {
             console.warn("[Webhook Cakto] Email not found in payload");
-            return new Response(JSON.stringify({ error: "Email not found in payload" }), {
-              status: 400,
+            return new Response(JSON.stringify({ error: "Email not found in payload", success: false }), {
+              status: 200, // Return 200 to acknowledge webhook delivery and prevent loops
               headers: { "Content-Type": "application/json" },
             });
           }
@@ -80,8 +81,8 @@ export const Route = createFileRoute("/api/webhooks/cakto")({
 
           if (!userId) {
             console.warn(`[Webhook Cakto] User not found for email: ${email}`);
-            return new Response(JSON.stringify({ error: `User not found for email: ${email}` }), {
-              status: 404,
+            return new Response(JSON.stringify({ error: `User not found for email: ${email}`, success: false }), {
+              status: 200, // Return 200 to acknowledge webhook delivery even if user is missing
               headers: { "Content-Type": "application/json" },
             });
           }
@@ -94,8 +95,8 @@ export const Route = createFileRoute("/api/webhooks/cakto")({
 
           if (updateError) {
             console.error("[Webhook Cakto] Error updating profile status:", updateError);
-            return new Response(JSON.stringify({ error: "Failed to update profile" }), {
-              status: 500,
+            return new Response(JSON.stringify({ error: "Failed to update profile", success: false }), {
+              status: 200, // Return 200 to prevent retries for non-transient update issues
               headers: { "Content-Type": "application/json" },
             });
           }
@@ -107,8 +108,8 @@ export const Route = createFileRoute("/api/webhooks/cakto")({
           });
         } catch (error: any) {
           console.error("[Webhook Cakto] Error processing webhook:", error);
-          return new Response(JSON.stringify({ error: error.message || "Internal Server Error" }), {
-            status: 500,
+          return new Response(JSON.stringify({ error: error.message || "Internal Server Error", success: false }), {
+            status: 200, // Always return 200 to avoid webhook loop/retry flooding
             headers: { "Content-Type": "application/json" },
           });
         }
