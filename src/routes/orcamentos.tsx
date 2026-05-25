@@ -639,11 +639,11 @@ Qualquer dúvida, estamos à disposição!`;
         <div className="rounded-2xl border bg-card p-12 text-center shadow-[var(--shadow-soft)]">
           <FileText className="size-12 mx-auto text-muted-foreground/30 mb-3" />
           <p className="font-semibold text-lg">Nenhum orçamento encontrado</p>
-          <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-            {q
-              ? "Tente refinar sua busca utilizando o nome de outro cliente ou projeto."
-              : "Crie orçamentos rápidos para seus clientes sem impactar as métricas do Kanban principal."}
-          </p>
+          {q && (
+            <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+              Tente refinar sua busca utilizando o nome de outro cliente ou projeto.
+            </p>
+          )}
           {!q && (
             <button
               onClick={() => setOpenNew(true)}

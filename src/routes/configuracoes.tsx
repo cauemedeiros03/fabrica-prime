@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -576,6 +576,25 @@ function ConfiguracoesPage() {
                       )}
                     </>
                   )}
+                </div>
+
+                {/* Links de Documentação Legal (LGPD) */}
+                <div className="border bg-card rounded-2xl p-6 shadow-[var(--shadow-soft)]">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold tracking-tight mb-1">Documentos Legais</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Consulte os termos e a política de privacidade em conformidade com a LGPD.
+                    </p>
+                  </div>
+                  <div className="flex gap-4 text-sm text-primary">
+                    <Link to="/termos" className="hover:underline flex items-center gap-1.5 font-medium">
+                      Termos de Uso
+                    </Link>
+                    <span className="text-muted-foreground">•</span>
+                    <Link to="/privacidade" className="hover:underline flex items-center gap-1.5 font-medium">
+                      Política de Privacidade
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}

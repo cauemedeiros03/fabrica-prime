@@ -239,7 +239,7 @@ export function NovoPedidoDialog({
               className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
-              {isEdit ? "Salvar alterações" : "Criar pedido"}
+              {saving ? "Salvando..." : (isEdit ? "Salvar alterações" : "Criar pedido")}
             </button>
           </div>
         </form>

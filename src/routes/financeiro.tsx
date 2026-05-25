@@ -363,7 +363,7 @@ function FinanceiroPage() {
                   className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
                 >
                   {salvando && <Loader2 className="size-4 animate-spin" />}
-                  Salvar
+                  {salvando ? "Salvando..." : "Salvar"}
                 </button>
               </div>
             </form>

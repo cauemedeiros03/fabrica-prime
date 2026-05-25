@@ -177,6 +177,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
           }).eq("id", budgetId).eq("user_id", user.id);
         } else {
           await (supabase as any).from("orcamentos_salvos").insert({
+            id: budgetId,
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
             cliente_cidade: form.clienteCidade,
@@ -282,6 +283,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
           }).eq("id", budgetId).eq("user_id", user.id);
         } else {
           await (supabase as any).from("orcamentos_salvos").insert({
+            id: budgetId,
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
             cliente_cidade: form.clienteCidade,
@@ -467,8 +469,12 @@ Qualquer dúvida, estou à disposição!`;
               disabled={salvando}
               className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-60 transition"
             >
-              <MessageCircle className="size-4" />
-              Enviar por WhatsApp
+              {salvando ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <MessageCircle className="size-4" />
+              )}
+              {salvando ? "Salvando..." : "Enviar por WhatsApp"}
             </button>
             <button
               type="submit"
@@ -480,7 +486,7 @@ Qualquer dúvida, estou à disposição!`;
               ) : (
                 <Printer className="size-4" />
               )}
-              Concluir / Imprimir PDF
+              {salvando ? "Salvando..." : "Concluir / Imprimir PDF"}
             </button>
           </div>
         </form>

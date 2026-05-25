@@ -27,8 +27,8 @@ function AuthCallbackPage() {
         if (session) {
           console.log("[Auth Callback] Sessão detectada para o usuário:", session.user.email);
           // Definir os cookies de autenticação para o SSR
-          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
-          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+          document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
           
           if (isMounted) navigate({ to: "/" });
         } else {

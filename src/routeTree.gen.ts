@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProducaoRouteImport } from './routes/producao'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as OrcamentosRouteImport } from './routes/orcamentos'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,6 +22,7 @@ import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AtualizarSenhaRouteImport } from './routes/atualizar-senha'
+import { Route as AssinaturaPendenteRouteImport } from './routes/assinatura-pendente'
 import { Route as AssinaturaRouteImport } from './routes/assinatura'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +32,11 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiWebhookCaktoRouteImport } from './routes/api.webhook-cakto'
 import { Route as ApiWebhooksCaktoRouteImport } from './routes/api.webhooks.cakto'
 
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
@@ -37,6 +45,11 @@ const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
 const ProducaoRoute = ProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PedidosRoute = PedidosRouteImport.update({
@@ -84,6 +97,11 @@ const AtualizarSenhaRoute = AtualizarSenhaRouteImport.update({
   path: '/atualizar-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssinaturaPendenteRoute = AssinaturaPendenteRouteImport.update({
+  id: '/assinatura-pendente',
+  path: '/assinatura-pendente',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssinaturaRoute = AssinaturaRouteImport.update({
   id: '/assinatura',
   path: '/assinatura',
@@ -129,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/assinatura-pendente': typeof AssinaturaPendenteRoute
   '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
@@ -138,8 +157,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
+  '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
@@ -150,6 +171,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/assinatura-pendente': typeof AssinaturaPendenteRoute
   '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
@@ -159,8 +181,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
+  '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
@@ -172,6 +196,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/assinatura': typeof AssinaturaRoute
+  '/assinatura-pendente': typeof AssinaturaPendenteRoute
   '/atualizar-senha': typeof AtualizarSenhaRoute
   '/cadastro': typeof CadastroRoute
   '/clientes': typeof ClientesRouteWithChildren
@@ -181,8 +206,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/orcamentos': typeof OrcamentosRoute
   '/pedidos': typeof PedidosRouteWithChildren
+  '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/clientes/$clienteId': typeof ClientesClienteIdRoute
@@ -195,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/assinatura-pendente'
     | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
@@ -204,8 +232,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/orcamentos'
     | '/pedidos'
+    | '/privacidade'
     | '/producao'
     | '/recuperar-senha'
+    | '/termos'
     | '/api/webhook-cakto'
     | '/auth/callback'
     | '/clientes/$clienteId'
@@ -216,6 +246,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/assinatura-pendente'
     | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
@@ -225,8 +256,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/orcamentos'
     | '/pedidos'
+    | '/privacidade'
     | '/producao'
     | '/recuperar-senha'
+    | '/termos'
     | '/api/webhook-cakto'
     | '/auth/callback'
     | '/clientes/$clienteId'
@@ -237,6 +270,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/assinatura'
+    | '/assinatura-pendente'
     | '/atualizar-senha'
     | '/cadastro'
     | '/clientes'
@@ -246,8 +280,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/orcamentos'
     | '/pedidos'
+    | '/privacidade'
     | '/producao'
     | '/recuperar-senha'
+    | '/termos'
     | '/api/webhook-cakto'
     | '/auth/callback'
     | '/clientes/$clienteId'
@@ -259,6 +295,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   AssinaturaRoute: typeof AssinaturaRoute
+  AssinaturaPendenteRoute: typeof AssinaturaPendenteRoute
   AtualizarSenhaRoute: typeof AtualizarSenhaRoute
   CadastroRoute: typeof CadastroRoute
   ClientesRoute: typeof ClientesRouteWithChildren
@@ -268,8 +305,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OrcamentosRoute: typeof OrcamentosRoute
   PedidosRoute: typeof PedidosRouteWithChildren
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ProducaoRoute: typeof ProducaoRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
+  TermosRoute: typeof TermosRoute
   ApiWebhookCaktoRoute: typeof ApiWebhookCaktoRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApiWebhooksCaktoRoute: typeof ApiWebhooksCaktoRoute
@@ -277,6 +316,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recuperar-senha': {
       id: '/recuperar-senha'
       path: '/recuperar-senha'
@@ -289,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/producao'
       fullPath: '/producao'
       preLoaderRoute: typeof ProducaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pedidos': {
@@ -352,6 +405,13 @@ declare module '@tanstack/react-router' {
       path: '/atualizar-senha'
       fullPath: '/atualizar-senha'
       preLoaderRoute: typeof AtualizarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assinatura-pendente': {
+      id: '/assinatura-pendente'
+      path: '/assinatura-pendente'
+      fullPath: '/assinatura-pendente'
+      preLoaderRoute: typeof AssinaturaPendenteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assinatura': {
@@ -440,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   AssinaturaRoute: AssinaturaRoute,
+  AssinaturaPendenteRoute: AssinaturaPendenteRoute,
   AtualizarSenhaRoute: AtualizarSenhaRoute,
   CadastroRoute: CadastroRoute,
   ClientesRoute: ClientesRouteWithChildren,
@@ -449,8 +510,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OrcamentosRoute: OrcamentosRoute,
   PedidosRoute: PedidosRouteWithChildren,
+  PrivacidadeRoute: PrivacidadeRoute,
   ProducaoRoute: ProducaoRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
+  TermosRoute: TermosRoute,
   ApiWebhookCaktoRoute: ApiWebhookCaktoRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ApiWebhooksCaktoRoute: ApiWebhooksCaktoRoute,

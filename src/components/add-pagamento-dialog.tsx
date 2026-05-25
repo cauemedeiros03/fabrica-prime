@@ -114,7 +114,8 @@ export function AddPagamentoDialog({
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => onOpenChange(false)} className="h-9 px-4 rounded-lg border text-sm hover:bg-accent">Cancelar</button>
             <button type="submit" disabled={add.isPending} className="h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60">
-              {add.isPending && <Loader2 className="size-4 animate-spin" />} Registrar
+              {add.isPending && <Loader2 className="size-4 animate-spin" />} 
+              {add.isPending ? "Salvando..." : "Registrar"}
             </button>
           </div>
         </form>

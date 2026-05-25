@@ -81,8 +81,8 @@ export function useAuth() {
     const updateAuthCookies = (sess: Session | null) => {
       if (typeof document !== "undefined") {
         if (sess) {
-          document.cookie = `sb-access-token=${sess.access_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
-          document.cookie = `sb-refresh-token=${sess.refresh_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
+          document.cookie = `sb-access-token=${sess.access_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+          document.cookie = `sb-refresh-token=${sess.refresh_token}; path=/; max-age=2592000; SameSite=Lax; Secure`;
         } else {
           document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";

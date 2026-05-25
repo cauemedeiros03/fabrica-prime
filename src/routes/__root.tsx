@@ -146,9 +146,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 const checkUserSubscription = createServerFn({ method: "GET" })
   .handler(async () => {
-    const { getCookie } = await import("@tanstack/react-start/server");
-    const token = getCookie("sb-access-token");
-    if (!token) return { hasActiveSubscription: false, user: null };
+    const { getCookie, setCookie } = await import("@tanstack/react-start/server");
+    let token = getCookie("sb-access-token");
+    const refreshToken = getCookie("sb-refresh-token");
 
     const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || import.meta.env?.VITE_SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 
@@ -165,17 +165,60 @@ const checkUserSubscription = createServerFn({ method: "GET" })
 
     try {
       const { createClient } = await import("@supabase/supabase-js");
-      const tempSupabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      let user = null;
+      let tempSupabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
         auth: { persistSession: false },
-        global: {
+        global: token ? {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        } : undefined,
       });
 
-      const { data: { user }, error: authError } = await tempSupabase.auth.getUser(token);
-      if (authError || !user) return { hasActiveSubscription: false, user: null };
+      if (token) {
+        try {
+          const { data: { user: currentUser }, error: authError } = await tempSupabase.auth.getUser(token);
+          if (!authError && currentUser) {
+            user = currentUser;
+          }
+        } catch (err) {
+          console.warn("[checkUserSubscription] Failed to get user from token:", err);
+        }
+      }
+
+      // If token is invalid or expired but we have a refresh token, try refreshing
+      if (!user && refreshToken) {
+        console.log("[checkUserSubscription] Access token invalid/expired, attempting session refresh...");
+        try {
+          const { data: refreshData, error: refreshError } = await tempSupabase.auth.refreshSession({
+            refresh_token: refreshToken,
+          });
+
+          if (!refreshError && refreshData?.session) {
+            user = refreshData.session.user;
+            token = refreshData.session.access_token;
+            const newRefreshToken = refreshData.session.refresh_token;
+
+            console.log("[checkUserSubscription] Session refreshed successfully!");
+
+            // Update cookies with 30-day maxAge
+            const cookieOptions = {
+              path: "/",
+              maxAge: 60 * 60 * 24 * 30, // 30 days
+              sameSite: "lax" as const,
+              secure: process.env.NODE_ENV === "production",
+            };
+            setCookie("sb-access-token", token, cookieOptions);
+            setCookie("sb-refresh-token", newRefreshToken, cookieOptions);
+          } else {
+            console.warn("[checkUserSubscription] Session refresh failed:", refreshError);
+          }
+        } catch (err) {
+          console.error("[checkUserSubscription] Error refreshing session:", err);
+        }
+      }
+
+      if (!user) return { hasActiveSubscription: false, user: null };
 
       // Bypass paywall only for system admin email
       const isAdmin = user?.email === "admin@marcena.com.br";
@@ -228,7 +271,17 @@ const checkUserSubscription = createServerFn({ method: "GET" })
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     // Skip check for public routes and API endpoints
-    const isPublic = ["/login", "/cadastro", "/assinatura", "/auth/callback", "/recuperar-senha", "/atualizar-senha"].includes(location.pathname);
+    const isPublic = [
+      "/login", 
+      "/cadastro", 
+      "/assinatura", 
+      "/assinatura-pendente", 
+      "/auth/callback", 
+      "/recuperar-senha", 
+      "/atualizar-senha",
+      "/termos",
+      "/privacidade"
+    ].includes(location.pathname);
     const isApi = location.pathname.startsWith("/api/");
 
     if (isApi) return;
@@ -245,11 +298,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
         if (!isPublic) {
           if (!hasActiveSubscription) {
-            throw redirect({ to: "/assinatura" });
+            throw redirect({ to: "/assinatura-pendente" });
           }
         } else {
-          // If on public pages but already subscribed, redirect to dashboard
-          if (hasActiveSubscription) {
+          // If on public login/sign-up/subscription pages but already subscribed, redirect to dashboard
+          const authPages = ["/login", "/cadastro", "/assinatura", "/assinatura-pendente"];
+          if (hasActiveSubscription && authPages.includes(location.pathname)) {
             throw redirect({ to: "/" });
           }
         }
@@ -310,10 +364,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
         if (!isPublic) {
           if (!hasActiveSubscription) {
-            throw redirect({ to: "/assinatura" });
+            throw redirect({ to: "/assinatura-pendente" });
           }
         } else {
-          if (hasActiveSubscription) {
+          const authPages = ["/login", "/cadastro", "/assinatura", "/assinatura-pendente"];
+          if (hasActiveSubscription && authPages.includes(location.pathname)) {
             throw redirect({ to: "/" });
           }
         }
