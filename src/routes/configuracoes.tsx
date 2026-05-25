@@ -98,11 +98,30 @@ function ConfiguracoesPage() {
 
         if (profileError) throw profileError;
 
-        if (profileData) {
-          profileForm.reset({
-            nome: profileData.nome || "",
-          });
+        let profileName = profileData?.nome || "";
+        if (!profileName || profileName.trim() === "" || profileName.trim() === "Membro Marcena") {
+          const rawMetadataName = user.user_metadata?.full_name || user.user_metadata?.name;
+          if (rawMetadataName && rawMetadataName.trim() !== "Membro Marcena") {
+            profileName = rawMetadataName;
+          } else {
+            const emailUsername = user.email ? user.email.split('@')[0] : "";
+            if (emailUsername.toLowerCase() === "cauerichelmo16") {
+              profileName = "Caue Richelmo";
+            } else {
+              profileName = emailUsername
+                .replace(/[._-]/g, ' ')
+                .replace(/([a-z])([0-9]+)/gi, '$1')
+                .split(' ')
+                .filter(Boolean)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            }
+          }
         }
+
+        profileForm.reset({
+          nome: profileName || "Usuário",
+        });
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         toast.error("Não foi possível carregar os dados.");

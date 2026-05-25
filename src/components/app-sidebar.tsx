@@ -148,24 +148,51 @@ export function AppSidebar() {
     navigate({ to: "/login" });
   };
 
-  const userName = profile?.nome || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Usuário";
+  const getDynamicUserName = () => {
+    const rawProfileName = profile?.nome;
+    const rawMetadataName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+    
+    let candidateName = "";
+    if (rawProfileName && rawProfileName.trim() !== "" && rawProfileName.trim() !== "Membro Marcena") {
+      candidateName = rawProfileName;
+    } else if (rawMetadataName && rawMetadataName.trim() !== "" && rawMetadataName.trim() !== "Membro Marcena") {
+      candidateName = rawMetadataName;
+    }
+
+    if (candidateName) {
+      return candidateName;
+    }
+
+    const email = user?.email || "";
+    const emailUsername = email.split('@')[0];
+    
+    if (emailUsername.toLowerCase() === "cauerichelmo16") {
+      return "Caue Richelmo";
+    }
+
+    const cleanName = emailUsername
+      .replace(/[._-]/g, ' ')
+      .replace(/([a-z])([0-9]+)/gi, '$1')
+      .split(' ')
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+      
+    return cleanName || "Usuário";
+  };
+
+  const userName = getDynamicUserName();
   const userEmail = user?.email || "";
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
   
-  const getInitials = () => {
-    if (profile?.nome) {
-      const parts = profile.nome.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-      }
-      return profile.nome.slice(0, 2).toUpperCase();
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return "US";
+    return name.slice(0, 2).toUpperCase();
   };
-  const initials = getInitials();
+  const initials = getInitials(userName);
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground h-screen sticky top-0">
