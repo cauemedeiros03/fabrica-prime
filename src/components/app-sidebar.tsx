@@ -204,10 +204,11 @@ export function AppSidebar() {
             <div className="space-y-1">
               {category.items.map((item) => {
                 const isShortcut = category.isShortcut;
+                const itemWithSearch = item as { to: string; search?: Record<string, string>; label: string; icon: any };
                 let active = false;
                 
                 if (isShortcut) {
-                  const filtroAlvo = (item.search as { filtro?: string })?.filtro;
+                  const filtroAlvo = itemWithSearch.search?.filtro;
                   active = pathname === item.to && search?.filtro === filtroAlvo;
                 } else {
                   active = pathname === item.to && !search?.filtro && !search?.etapa;
@@ -220,7 +221,7 @@ export function AppSidebar() {
                   <Link
                     key={linkKey}
                     to={item.to}
-                    search={isShortcut ? (item.search || {}) : {}}
+                    search={isShortcut ? (itemWithSearch.search || {}) : {}}
                     className={
                       active
                         ? isShortcut
