@@ -1,9 +1,5 @@
-import { Plus, Moon, Sun, LogOut, Menu, FileText } from "lucide-react";
+import { Plus, Moon, Sun, Menu, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 import { GlobalSearch } from "./global-search";
 import { NotificationsPanel } from "./notifications-panel";
 
@@ -21,20 +17,10 @@ export function AppHeader({
   onOpenNav?: () => void;
 }) {
   const [dark, setDark] = useState(false);
-  const navigate = useNavigate();
-  const { user } = useAuth();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
-
-  const inic = (user?.email ?? "U").slice(0, 2).toUpperCase();
-
-  const sair = async () => {
-    await supabase.auth.signOut();
-    toast.success("Sessão encerrada");
-    navigate({ to: "/login" });
-  };
 
   return (
     <header className="h-16 border-b bg-background/80 backdrop-blur-md sticky top-0 z-30 flex items-center gap-3 px-4 lg:px-6">
@@ -84,19 +70,6 @@ export function AppHeader({
             <span className="hidden sm:inline">Novo pedido</span>
           </button>
         )}
-
-        <button
-          onClick={sair}
-          className="size-9 grid place-items-center rounded-lg border hover:bg-accent transition"
-          aria-label="Sair"
-          title="Sair"
-        >
-          <LogOut className="size-4" />
-        </button>
-
-        <div className="size-9 rounded-full bg-gradient-to-br from-primary/80 to-primary grid place-items-center text-primary-foreground text-xs font-semibold ml-1">
-          {inic}
-        </div>
       </div>
     </header>
   );
