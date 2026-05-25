@@ -315,6 +315,7 @@ export type Database = {
           id: string
           nome: string | null
           status_assinatura: string | null
+          telefone: string | null
           trial_ends_at: string | null
           updated_at: string
         }
@@ -324,6 +325,7 @@ export type Database = {
           id?: string
           nome?: string | null
           status_assinatura?: string | null
+          telefone?: string | null
           trial_ends_at?: string | null
           updated_at?: string
         }
@@ -333,6 +335,7 @@ export type Database = {
           id?: string
           nome?: string | null
           status_assinatura?: string | null
+          telefone?: string | null
           trial_ends_at?: string | null
           updated_at?: string
         }
