@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Paperclip, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
@@ -46,9 +46,112 @@ export function NovoPedidoDialog({
     bairro: "",
     instagram: "",
     origem: "",
+    anexos: [],
   };
   const [form, setForm] = useState<NovoPedidoInput>(empty);
   const [novoCliente, setNovoCliente] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const getFileNameFromUrl = (url: string) => {
+    try {
+      const decoded = decodeURIComponent(url);
+      const parts = decoded.split("/");
+      const lastPart = parts[parts.length - 1];
+      return lastPart.split("?")[0];
+    } catch (e) {
+      return "Arquivo";
+    }
+  };
+
+  const isImageUrl = (url: string) => {
+    const name = getFileNameFromUrl(url).toLowerCase();
+    return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".webp");
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      await uploadFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
+
+  const uploadFiles = async (files: FileList) => {
+    setIsUploading(true);
+    const newUrls: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileType = file.type;
+      const isImg = fileType.startsWith("image/");
+      const isPdf = fileType === "application/pdf";
+      
+      if (!isImg && !isPdf) {
+        toast.error(`Formato não suportado: ${file.name}. Envie imagens (JPG/PNG) ou PDF.`);
+        continue;
+      }
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const filePath = `pedidos/${fileName}`;
+
+      try {
+        const { error } = await supabase.storage
+          .from("anexos-pedidos")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("anexos-pedidos")
+          .getPublicUrl(filePath);
+
+        newUrls.push(publicUrl);
+        toast.success(`Upload concluído: ${file.name}`);
+      } catch (err: any) {
+        console.error("Erro no upload:", err);
+        toast.error(`Erro ao enviar ${file.name}: ${err.message || "Erro desconhecido"}`);
+      }
+    }
+
+    if (newUrls.length > 0) {
+      setForm((s) => ({
+        ...s,
+        anexos: [...(s.anexos || []), ...newUrls],
+      }));
+    }
+    setIsUploading(false);
+  };
+
+  const removeAnexo = (urlToRemove: string) => {
+    setForm((s) => ({
+      ...s,
+      anexos: (s.anexos || []).filter((url) => url !== urlToRemove),
+    }));
+  };
 
   useEffect(() => {
     if (open) setForm(initial ? { ...empty, ...initial } : empty);
@@ -225,6 +328,83 @@ export function NovoPedidoDialog({
             </div>
           </Section>
 
+          <Section title="Anexos do Projeto (Fotos / PDFs)">
+            <div className="md:col-span-2 space-y-4">
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                  dragActive
+                    ? "border-primary bg-primary/5 scale-[0.99]"
+                    : "border-muted-foreground/20 bg-background hover:bg-accent/40"
+                }`}
+                onClick={() => document.getElementById("file-upload")?.click()}
+              >
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/gif,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                
+                {isUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="size-8 animate-spin text-primary" />
+                    <p className="text-sm font-medium text-muted-foreground">Fazendo upload dos arquivos...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="mx-auto size-10 rounded-full bg-accent flex items-center justify-center">
+                      <Paperclip className="size-5 text-muted-foreground" />
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-semibold text-primary">Clique para anexar</span> ou arraste arquivos aqui
+                    </div>
+                    <p className="text-xs text-muted-foreground">Imagens (JPG, PNG) e PDFs (Máx 10MB)</p>
+                  </div>
+                )}
+              </div>
+
+              {form.anexos && form.anexos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+                  {form.anexos.map((url, idx) => {
+                    const isImg = isImageUrl(url);
+                    const name = getFileNameFromUrl(url);
+                    return (
+                      <div key={idx} className="relative group rounded-xl border bg-card overflow-hidden aspect-video flex flex-col items-center justify-center p-2 shadow-sm">
+                        {isImg ? (
+                          <img
+                            src={url}
+                            alt="Anexo"
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-center p-2">
+                            <FileText className="size-8 text-destructive/80 mb-1" />
+                            <span className="text-xs font-medium truncate max-w-[120px] text-muted-foreground">
+                              {name}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeAnexo(url)}
+                          className="absolute top-1 right-1 size-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md opacity-90 hover:opacity-100 transition-opacity"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Section>
+
           <div className="flex items-center justify-end gap-2 pt-2 border-t">
             <button
               type="button"
@@ -235,11 +415,11 @@ export function NovoPedidoDialog({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || isUploading}
               className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
             >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? "Salvando..." : (isEdit ? "Salvar alterações" : "Criar pedido")}
+              {(saving || isUploading) && <Loader2 className="size-4 animate-spin" />}
+              {isUploading ? "Enviando arquivos..." : saving ? "Salvando..." : (isEdit ? "Salvar alterações" : "Criar pedido")}
             </button>
           </div>
         </form>

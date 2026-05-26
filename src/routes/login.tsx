@@ -9,7 +9,17 @@ export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/" });
+    const session = data?.session;
+    if (session) {
+      if (session?.user?.email_confirmed_at) {
+        throw redirect({ to: "/" });
+      } else {
+        // Limpa sessão residual não confirmada para evitar loops
+        await supabase.auth.signOut();
+        document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
+    }
   },
   head: () => ({ meta: [{ title: "Entrar · Sua bancada" }] }),
 });
@@ -21,6 +31,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [manterConectado, setManterConectado] = useState(true);
+  const [warningMsg, setWarningMsg] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     try {
@@ -41,6 +52,7 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setWarningMsg(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -50,7 +62,18 @@ function LoginPage() {
       document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       
-      toast.error("Credenciais inválidas", { description: error.message });
+      const isEmailNotConfirmed = error.message?.toLowerCase().includes("email not confirmed") || 
+                                  error.message?.toLowerCase().includes("confirmar") ||
+                                  error.message?.toLowerCase().includes("confirmado");
+
+      if (isEmailNotConfirmed) {
+        setWarningMsg("Este e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada.");
+        toast.error("E-mail não confirmado", {
+          description: "Por favor, verifique sua caixa de entrada (e a pasta de spam) para ativar sua conta.",
+        });
+      } else {
+        toast.error("Credenciais inválidas", { description: error.message });
+      }
       return;
     }
     toast.success("Bem-vindo de volta!");
@@ -149,6 +172,12 @@ function LoginPage() {
           </div>
 
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-[var(--shadow-elevated)] space-y-6">
+            {warningMsg && (
+              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm leading-relaxed flex gap-2.5 items-start animate-in fade-in slide-in-from-top-2 duration-200">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>{warningMsg}</span>
+              </div>
+            )}
             <form onSubmit={onSubmit} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Hammer, Loader2, Eye, EyeOff, Zap, PiggyBank } from "lucide-react";
+import { Hammer, Loader2, Eye, EyeOff, Zap, PiggyBank, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -9,10 +9,35 @@ export const Route = createFileRoute("/cadastro")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/" });
+    const session = data?.session;
+    if (session) {
+      if (session?.user?.email_confirmed_at) {
+        throw redirect({ to: "/" });
+      } else {
+        // Limpa sessão residual não confirmada para evitar loops
+        await supabase.auth.signOut();
+        document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
+    }
   },
   head: () => ({ meta: [{ title: "Criar conta · Sua bancada" }] }),
 });
+
+const formatCelular = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  const limited = digits.slice(0, 11);
+  if (limited.length <= 2) {
+    return limited.length > 0 ? `(${limited}` : limited;
+  }
+  if (limited.length <= 6) {
+    return `(${limited.slice(0, 2)}) ${limited.slice(2)}`;
+  }
+  if (limited.length <= 10) {
+    return `(${limited.slice(0, 2)}) ${limited.slice(2, 6)}-${limited.slice(6)}`;
+  }
+  return `(${limited.slice(0, 2)}) ${limited.slice(2, 7)}-${limited.slice(7)}`;
+};
 
 function CadastroPage() {
   const navigate = useNavigate();
@@ -22,6 +47,8 @@ function CadastroPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleGoogleLogin = async () => {
     try {
@@ -40,29 +67,61 @@ function CadastroPage() {
     }
   };
 
-  const onSubmit = async (e: FormEvent) => {
+  const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: { 
-          nome,
-          telefone: celular,
-        },
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error("Não foi possível cadastrar", { description: error.message });
-      return;
+    setErrorMsg("");
+    setSucesso(false);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nome_marcenaria: nome,
+            whatsapp: celular,
+            status_assinatura: "pendente"
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      // SE O E-MAIL PRECISAR DE CONFIRMAÇÃO (data.session é null):
+      if (data?.user && !data?.session) {
+        setSucesso(true); // Ativa o estado de sucesso para mostrar o aviso na tela
+        setLoading(false);
+        return;
+      }
+
+      // Caso a confirmação mude no futuro e logue direto:
+      if (data?.session) {
+        navigate({ to: "/" });
+      }
+
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erro ao criar conta.");
+      toast.error("Erro ao criar conta", { description: err.message });
+    } finally {
+      setLoading(false);
     }
-    localStorage.setItem("suabancada_first_login", "true");
-    toast.success("Conta criada!", { description: "Verifique seu e-mail para confirmar." });
-    navigate({ to: "/login" });
   };
+
+  if (sucesso) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-xl shadow-sm border border-slate-100 max-w-md mx-auto my-12">
+        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-3xl mb-4">📬</div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Verifique seu e-mail!</h2>
+        <p className="text-slate-600 text-sm mb-6">
+          Enviamos um link de ativação para o e-mail informado. Acesse sua caixa de entrada (ou a pasta de spam) para confirmar seu cadastro e liberar seu acesso ao sistema.
+        </p>
+        <button onClick={() => window.location.reload()} className="text-sm font-medium text-emerald-600 hover:underline">
+          Voltar para o início
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-background font-sans selection:bg-primary/20">
@@ -153,7 +212,13 @@ function CadastroPage() {
           </div>
 
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-[var(--shadow-elevated)] space-y-6">
-            <form onSubmit={onSubmit} className="space-y-4">
+            {errorMsg && (
+              <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm leading-relaxed flex gap-2.5 items-start animate-in fade-in slide-in-from-top-2 duration-200">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>{errorMsg}</span>
+              </div>
+            )}
+            <form onSubmit={handleSignUp} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nome completo</label>
                 <input
@@ -184,8 +249,8 @@ function CadastroPage() {
                   type="tel"
                   required
                   value={celular}
-                  onChange={(e) => setCelular(e.target.value)}
-                  placeholder="(82) 99999-9999"
+                  onChange={(e) => setCelular(formatCelular(e.target.value))}
+                  placeholder="(11) 99999-9999"
                   className="mt-1.5 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
                 />
               </div>

@@ -155,8 +155,8 @@ export function useAuth() {
         let currentSession = data?.session;
         if (currentSession) {
           const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (userError || !user) {
-            console.warn("[Auth] Token de sessão inválido ou expirado. Limpando sessão residual...");
+          if (userError || !user || !user.email_confirmed_at) {
+            console.warn("[Auth] Token de sessão inválido, expirado ou e-mail não confirmado. Limpando sessão residual...");
             await supabase.auth.signOut();
             updateAuthCookies(null);
             currentSession = null;
@@ -167,7 +167,7 @@ export function useAuth() {
         setUser(currentSession?.user ?? null);
         updateAuthCookies(currentSession);
         
-        if (currentSession?.user) {
+        if (currentSession?.user?.id) {
           await fetchProfileAndSubscription(currentSession.user.id);
         } else {
           setLoading(false);
@@ -183,11 +183,23 @@ export function useAuth() {
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!isMounted) return;
       
+      if (currentSession?.user && !currentSession?.user?.email_confirmed_at) {
+        console.warn("[Auth Event] Usuário com e-mail não confirmado. Limpando sessão...");
+        await supabase.auth.signOut();
+        updateAuthCookies(null);
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setSubscription(null);
+        setLoading(false);
+        return;
+      }
+
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       updateAuthCookies(currentSession);
       
-      if (currentSession?.user) {
+      if (currentSession?.user?.id) {
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
           await fetchProfileAndSubscription(currentSession.user.id);
         }

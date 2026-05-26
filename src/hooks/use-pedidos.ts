@@ -32,6 +32,7 @@ type Row = {
     instagram: string | null;
     origem: string | null;
   } | null;
+  anexos: string[] | null;
 };
 
 function mapRow(r: Row): Pedido & {
@@ -89,6 +90,7 @@ function mapRow(r: Row): Pedido & {
     instagram: c?.instagram ?? "",
     origem: c?.origem ?? "",
     clientes: c ? { nome: c.nome } : null,
+    anexos: Array.isArray(r.anexos) ? (r.anexos as string[]) : [],
   };
 }
 
@@ -221,6 +223,7 @@ export interface NovoPedidoInput {
   bairro?: string;
   instagram?: string;
   origem?: string;
+  anexos?: string[];
 }
 
 export function useCreatePedido() {
@@ -290,6 +293,7 @@ export function useCreatePedido() {
           valor_pago: input.valor_pago,
           numero: "",
           user_id: user.id,
+          anexos: input.anexos || [],
         })
         .select("id")
         .single();
@@ -342,6 +346,7 @@ export function useUpdatePedido() {
           prioridade: input.prioridade,
           valor_total: input.valor_total,
           valor_pago: input.valor_pago,
+          anexos: input.anexos,
         })
         .eq("id", id)
         .eq("user_id", user.id);
@@ -363,7 +368,7 @@ export function useDuplicatePedido() {
       if (!user) throw new Error("Usuário não autenticado");
       const { data: p, error } = await supabase
         .from("pedidos")
-        .select("cliente_id, produto, tipo, material, cor, observacoes, entrega, etapa, prioridade, valor_total")
+        .select("cliente_id, produto, tipo, material, cor, observacoes, entrega, etapa, prioridade, valor_total, anexos")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
@@ -384,6 +389,7 @@ export function useDuplicatePedido() {
           valor_pago: 0,
           numero: "",
           user_id: user.id,
+          anexos: p.anexos || [],
         })
         .select("id")
         .single();

@@ -179,7 +179,12 @@ const checkUserSubscription = createServerFn({ method: "GET" })
         try {
           const { data: { user: currentUser }, error: authError } = await tempSupabase.auth.getUser(token);
           if (!authError && currentUser) {
-            user = currentUser;
+            if (!currentUser.email_confirmed_at) {
+              console.log("[checkUserSubscription] Server-side: User email is not confirmed:", currentUser.email);
+              user = null;
+            } else {
+              user = currentUser;
+            }
           }
         } catch (err) {
           console.warn("[checkUserSubscription] Failed to get user from token:", err);
@@ -195,21 +200,27 @@ const checkUserSubscription = createServerFn({ method: "GET" })
           });
 
           if (!refreshError && refreshData?.session) {
-            user = refreshData.session.user;
-            token = refreshData.session.access_token;
-            const newRefreshToken = refreshData.session.refresh_token;
+            const currentUser = refreshData.session?.user;
+            if (!currentUser || !currentUser.email_confirmed_at) {
+              console.log("[checkUserSubscription] Server-side (refresh): User email is not confirmed:", currentUser?.email);
+              user = null;
+            } else {
+              user = currentUser;
+              token = refreshData.session.access_token;
+              const newRefreshToken = refreshData.session.refresh_token;
 
-            console.log("[checkUserSubscription] Session refreshed successfully!");
+              console.log("[checkUserSubscription] Session refreshed successfully!");
 
-            // Update cookies with 30-day maxAge
-            const cookieOptions = {
-              path: "/",
-              maxAge: 60 * 60 * 24 * 30, // 30 days
-              sameSite: "lax" as const,
-              secure: process.env.NODE_ENV === "production",
-            };
-            setCookie("sb-access-token", token, cookieOptions);
-            setCookie("sb-refresh-token", newRefreshToken, cookieOptions);
+              // Update cookies with 30-day maxAge
+              const cookieOptions = {
+                path: "/",
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                sameSite: "lax" as const,
+                secure: process.env.NODE_ENV === "production",
+              };
+              setCookie("sb-access-token", token, cookieOptions);
+              setCookie("sb-refresh-token", newRefreshToken, cookieOptions);
+            }
           } else {
             console.warn("[checkUserSubscription] Session refresh failed:", refreshError);
           }
@@ -323,6 +334,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
         if (userError || !user) {
           if (!isPublic) throw redirect({ to: "/login" });
+          return;
+        }
+
+        if (!user.email_confirmed_at) {
+          console.warn("[Client Auth] User email is not confirmed:", user.email);
+          if (!isPublic) {
+            await supabase.auth.signOut();
+            document.cookie = "sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            document.cookie = "sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            throw redirect({ to: "/login" });
+          }
           return;
         }
 

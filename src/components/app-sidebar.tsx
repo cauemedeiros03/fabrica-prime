@@ -183,16 +183,15 @@ export function AppSidebar() {
 
   const userName = getDynamicUserName();
   const userEmail = user?.email || "";
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
-  
   const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
+    if (!name) return "SB"; // Padrão se estiver vazio (Sua Bancada)
+    const words = name.trim().split(/\s+/);
+    if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
   };
-  const initials = getInitials(userName);
+
+  const nomeEmpresa = user?.user_metadata?.nome_marcenaria || nomeMarcenaria || user?.user_metadata?.full_name || userName || "Sua Marcenaria";
+  const statusAssinatura = user?.user_metadata?.status_assinatura || profile?.status_assinatura || "pendente";
 
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground h-screen sticky top-0">
@@ -209,15 +208,15 @@ export function AppSidebar() {
             </div>
           </div>
         ) : (
-          <>
-            <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-[var(--shadow-glow)]">
-              <Hammer className="size-4.5" strokeWidth={2.4} />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="size-9 rounded-xl bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-primary-foreground text-xs font-semibold shrink-0 border border-primary/20 shadow-[var(--shadow-glow)]">
+              {getInitials(nomeEmpresa)}
             </div>
-            <div className="leading-tight">
-              <p className="font-semibold tracking-tight">{nomeMarcenaria || "Sua bancada"}</p>
-              <p className="text-[11px] text-muted-foreground">Gestão da sua marcenaria</p>
+            <div className="leading-tight min-w-0">
+              <p className="font-semibold tracking-tight truncate">{nomeMarcenaria || "Sua bancada"}</p>
+              <p className="text-[11px] text-muted-foreground truncate">Gestão da sua marcenaria</p>
             </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -299,26 +298,26 @@ export function AppSidebar() {
       </nav>
 
       {/* User Profile Card (Fixed footer) */}
-      <div className="p-4 border-t border-sidebar-border bg-sidebar shrink-0 flex items-center gap-3">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={userName}
-            className="size-9 rounded-full object-cover border border-sidebar-border shrink-0"
-          />
-        ) : (
-          <div className="size-9 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-primary-foreground text-xs font-semibold shrink-0 border border-primary/20">
-            {initials}
+      <div className="p-4 border-t border-sidebar-border bg-sidebar shrink-0 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3 p-1 min-w-0 flex-1">
+          {/* Avatar Dinâmico */}
+          <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-500/20">
+            {user?.user_metadata?.avatar_url ? (
+              <img src={user.user_metadata.avatar_url} alt="Logo" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <span>{getInitials(nomeEmpresa)}</span>
+            )}
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-sidebar-foreground truncate leading-none" title={userName}>
-            {userName}
-          </p>
-          <p className="text-xs text-gray-400 truncate mt-1 leading-none" title={userEmail}>
-            {userEmail}
-          </p>
+
+          {/* Textos Dinâmicos */}
+          <div className="flex flex-col min-w-0">
+            <span className="font-semibold text-sm text-sidebar-foreground truncate" title={nomeEmpresa}>{nomeEmpresa}</span>
+            <span className={`text-xs font-medium truncate ${statusAssinatura === 'pago' || statusAssinatura === 'active' || statusAssinatura === 'ativo' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              {statusAssinatura === 'pago' || statusAssinatura === 'active' || statusAssinatura === 'ativo' ? 'Membro Sua Bancada' : 'Usuário Novo'}
+            </span>
+          </div>
         </div>
+
         <button
           onClick={handleLogout}
           className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"

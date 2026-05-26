@@ -30,6 +30,8 @@ import {
   Plus,
   CalendarClock,
   MessageCircle,
+  Paperclip,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -302,6 +304,63 @@ function PedidoDetalhePage() {
             )}
           </dl>
         </section>
+
+        {/* Anexos */}
+        {p.anexos && p.anexos.length > 0 && (
+          <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
+            <h2 className="text-sm font-semibold tracking-tight mb-3 flex items-center gap-2">
+              <Paperclip className="size-4 text-primary" />
+              Anexos do Projeto
+            </h2>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {p.anexos.map((url, idx) => {
+                const getFileNameFromUrl = (urlStr: string) => {
+                  try {
+                    const decoded = decodeURIComponent(urlStr);
+                    const parts = decoded.split("/");
+                    const lastPart = parts[parts.length - 1];
+                    return lastPart.split("?")[0];
+                  } catch (e) {
+                    return "Arquivo";
+                  }
+                };
+
+                const isImageUrl = (urlStr: string) => {
+                  const name = getFileNameFromUrl(urlStr).toLowerCase();
+                  return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".webp");
+                };
+
+                const isImg = isImageUrl(url);
+                const name = getFileNameFromUrl(url);
+
+                return (
+                  <a
+                    key={idx}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="relative group rounded-xl border bg-card hover:bg-accent/40 hover:border-primary/30 transition-all overflow-hidden aspect-video flex flex-col items-center justify-center p-2 shadow-sm cursor-pointer"
+                  >
+                    {isImg ? (
+                      <img
+                        src={url}
+                        alt={name}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-center p-2">
+                        <FileText className="size-8 text-destructive/80 mb-1" />
+                        <span className="text-[11px] font-medium truncate max-w-[120px] text-muted-foreground">
+                          {name}
+                        </span>
+                      </div>
+                    )}
+                  </a>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Timeline */}
         <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] lg:col-span-3">

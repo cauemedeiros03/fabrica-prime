@@ -242,6 +242,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          anexos: string[] | null
           cliente_id: string
           cliente_nome: string | null
           cor: string | null
@@ -261,6 +262,7 @@ export type Database = {
           valor_total: number
         }
         Insert: {
+          anexos?: string[] | null
           cliente_id: string
           cliente_nome?: string | null
           cor?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           valor_total?: number
         }
         Update: {
+          anexos?: string[] | null
           cliente_id?: string
           cliente_nome?: string | null
           cor?: string | null

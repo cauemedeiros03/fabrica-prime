@@ -43,13 +43,13 @@ export function AppShell({
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
+      if (!user || !user.email_confirmed_at) {
         navigate({ to: "/login" });
       } else if (!hasAccess) {
         navigate({ to: "/assinatura" });
       }
     }
-  }, [user?.id, hasAccess, loading, navigate]);
+  }, [user?.id, user?.email_confirmed_at, hasAccess, loading, navigate]);
 
   // scroll-to-top on route change
   useEffect(() => {
@@ -85,8 +85,8 @@ export function AppShell({
   }
 
   // Previne o "flash" da interface interna enquanto o useEffect faz o redirecionamento
-  // Se não houver usuário ou o acesso for negado, escondemos o shell.
-  if (!user || !hasAccess) {
+  // Se não houver usuário, e-mail não confirmado ou o acesso for negado, escondemos o shell.
+  if (!user || !user.email_confirmed_at || !hasAccess) {
     return null;
   }
 

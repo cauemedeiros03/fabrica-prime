@@ -38,6 +38,7 @@ export interface Pedido {
   etapa: StatusEtapa;
   prioridade: Prioridade;
   clientes?: { nome: string } | null;
+  anexos?: string[];
 }
 
 const hoje = new Date();

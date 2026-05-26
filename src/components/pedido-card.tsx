@@ -1,4 +1,4 @@
-import { MessageCircle, Pencil, Copy, Trash2, Printer } from "lucide-react";
+import { MessageCircle, Pencil, Copy, Trash2, Printer, Paperclip } from "lucide-react";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
@@ -54,9 +54,17 @@ export function PedidoCard({ p, onClick, onEdit, onDuplicate, onDelete, onPrint,
       </div>
       
       <div className="flex items-center justify-between mt-auto pt-3 border-t">
-        <span className={`text-[11px] font-medium ${atrasado ? "text-destructive" : "text-muted-foreground"}`}>
-          {dataBR(p.entrega)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[11px] font-medium ${atrasado ? "text-destructive" : "text-muted-foreground"}`}>
+            {dataBR(p.entrega)}
+          </span>
+          {p.anexos && p.anexos.length > 0 && (
+            <span className="inline-flex items-center text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md" title={`${p.anexos.length} anexos`}>
+              <Paperclip className="size-3 mr-0.5" />
+              {p.anexos.length}
+            </span>
+          )}
+        </div>
         <span className="text-xs font-semibold">{moeda(p.valorTotal)}</span>
       </div>
 
