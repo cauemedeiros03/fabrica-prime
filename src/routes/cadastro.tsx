@@ -250,7 +250,7 @@ function CadastroPage() {
                   required
                   value={celular}
                   onChange={(e) => setCelular(formatCelular(e.target.value))}
-                  placeholder="(11) 99999-9999"
+                  placeholder="(99) 99999-9999"
                   className="mt-1.5 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all"
                 />
               </div>
