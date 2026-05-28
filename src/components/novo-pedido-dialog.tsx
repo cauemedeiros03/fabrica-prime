@@ -162,6 +162,17 @@ export function NovoPedidoDialog({
     if (open) setForm(initialForm);
   }, [open, initialForm]);
 
+  // Dirty state: true se o usuário alterou algum campo
+  const isDirty = useMemo(() => {
+    return JSON.stringify(form) !== JSON.stringify(initialForm);
+  }, [form, initialForm]);
+
+  // Fechamento seguro: dispara alerta se o form estiver sujo
+  const handleClose = useCallback(() => {
+    if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
+    onOpenChange(false);
+  }, [isDirty, onOpenChange]);
+
   const restante = Math.max(0, (form.valor_total || 0) - (form.valor_pago || 0));
   const set = <K extends keyof NovoPedidoInput>(k: K, v: NovoPedidoInput[K]) =>
     setForm((s) => ({ ...s, [k]: v }));
@@ -188,7 +199,7 @@ export function NovoPedidoDialog({
   const saving = create.isPending || update.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto">
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-3xl rounded-2xl bg-card border shadow-[var(--shadow-elevated)] my-8"
@@ -202,7 +213,7 @@ export function NovoPedidoDialog({
               {isEdit ? "Atualize os dados do pedido" : "Cadastre um novo pedido na produção"}
             </p>
           </div>
-          <button onClick={() => onOpenChange(false)} className="size-8 grid place-items-center rounded-lg hover:bg-accent">
+          <button onClick={handleClose} className="size-8 grid place-items-center rounded-lg hover:bg-accent">
             <X className="size-4" />
           </button>
         </div>
@@ -410,7 +421,7 @@ export function NovoPedidoDialog({
           <div className="flex items-center justify-end gap-2 pt-2 border-t">
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
             >
               Cancelar
