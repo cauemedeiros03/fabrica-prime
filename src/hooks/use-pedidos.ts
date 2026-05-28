@@ -110,7 +110,21 @@ export function usePedidos() {
         console.error("Erro na busca de pedidos (usePedidos):", error);
         throw error;
       }
-      return (data as unknown as Row[]).map(mapRow);
+
+      const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+      const agora = Date.now();
+
+      // Arquivamento automático: pedidos na etapa "entregue" há mais de 7 dias
+      // são ocultados do Kanban ativo. Os dados NÃO são deletados do banco —
+      // continuam acessíveis para relatórios financeiros e histórico.
+      const ativos = (data as unknown as Row[]).filter((r) => {
+        if (r.etapa !== "entregue") return true;
+        // Usa created_at como referência (updated_at nem sempre existe no schema)
+        const dataRef = new Date(r.created_at).getTime();
+        return agora - dataRef < SETE_DIAS_MS;
+      });
+
+      return ativos.map(mapRow);
     },
   });
 }
