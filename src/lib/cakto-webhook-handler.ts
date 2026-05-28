@@ -177,7 +177,9 @@ async function checkAndRegisterIdempotency(
   rawPayload: object
 ): Promise<{ alreadyProcessed: boolean }> {
   // Tenta inserir — se já existir, a constraint UNIQUE retorna erro
-  const { error } = await supabaseAdmin.from("webhook_events").insert({
+  // Cast para `any` porque `webhook_events` ainda não está nos tipos gerados pelo Supabase.
+  // Após criar a tabela e rodar `supabase gen types typescript`, remover o cast.
+  const { error } = await (supabaseAdmin as any).from("webhook_events").insert({
     transaction_id: transactionId,
     event_type: eventType,
     status,
