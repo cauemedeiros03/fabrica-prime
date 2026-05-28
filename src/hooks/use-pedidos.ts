@@ -289,6 +289,7 @@ export function useCreatePedido() {
         prioridade: input.prioridade,
         valor_total: Number(input.valor_total) || 0,
         valor_pago: Number(input.valor_pago) || 0,
+        numero: `PED-${Date.now().toString(36).toUpperCase()}`,
         user_id: user.id,
         anexos: input.anexos || [],
       };
@@ -388,6 +389,7 @@ export function useDuplicatePedido() {
           prioridade: p.prioridade,
           valor_total: Number(p.valor_total) || 0,
           valor_pago: 0,
+          numero: `PED-${Date.now().toString(36).toUpperCase()}`,
           user_id: user.id,
           anexos: p.anexos || [],
         })
