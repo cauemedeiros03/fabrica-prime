@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR, type StatusEtapa, type Pedido } from "@/lib/mock-data";
 import { usePedidos, useDeletePedido, useDuplicatePedido, useUpdatePedidoEtapa, useAddPagamento, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
+import { PedidoViewerDialog } from "@/components/pedido-viewer-dialog";
 import { Filter, Download, Search, Pencil, Trash2, Loader2, X, Copy, LayoutGrid, List, MessageCircle, ChevronLeft, ChevronRight, FileText, Printer } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ function PedidosPage() {
   const updateEtapa = useUpdatePedidoEtapa();
   const addPagamento = useAddPagamento();
   const [edit, setEdit] = useState<EditState>(null);
+  const [viewing, setViewing] = useState<(typeof pedidos)[number] | null>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
   const [quitarSaldo, setQuitarSaldo] = useState<{ id: string; numero: string; saldo: number } | null>(null);
 
@@ -400,7 +402,7 @@ function PedidosPage() {
                                   wrapperProps={{...provided.draggableProps, style: provided.draggableProps.style}}
                                   dragHandleProps={provided.dragHandleProps}
                                   isDragging={snapshot.isDragging}
-                                  onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                                onClick={() => !snapshot.isDragging && setViewing(p)}
                                   onEdit={() => editar(p)}
                                   onDuplicate={async () => {
                                       try {
@@ -541,6 +543,12 @@ function PedidosPage() {
       )}
 
       <NovoPedidoDialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} initial={edit} />
+
+      <PedidoViewerDialog
+        pedido={viewing}
+        onClose={() => setViewing(null)}
+        onEdit={viewing ? () => { editar(viewing); setViewing(null); } : undefined}
+      />
 
       {confirmar && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4" onClick={() => setConfirmar(null)}>
