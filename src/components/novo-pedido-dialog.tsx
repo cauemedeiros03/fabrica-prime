@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { X, Loader2, Paperclip, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
@@ -6,6 +6,49 @@ import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/
 import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
 import { ClienteDialog } from "@/components/cliente-dialog";
 import { supabase } from "@/integrations/supabase/client";
+
+// Funções puras fora do componente — não são recriadas a cada render
+function getFileNameFromUrl(url: string): string {
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split("/");
+    return parts[parts.length - 1].split("?")[0];
+  } catch {
+    return "Arquivo";
+  }
+}
+
+function isImageUrl(url: string): boolean {
+  const name = getFileNameFromUrl(url).toLowerCase();
+  return [".jpg", ".jpeg", ".png", ".gif", ".webp"].some((ext) => name.endsWith(ext));
+}
+
+const EMPTY_FORM: NovoPedidoInput = {
+  cliente_id: undefined,
+  cliente_nome: "",
+  telefone: "",
+  email: "",
+  cidade: "",
+  produto: "",
+  tipo: "",
+  material: "",
+  cor: "",
+  observacoes: "",
+  entrega: "",
+  prioridade: "media",
+  etapa: "pedido-recebido",
+  valor_total: 0,
+  valor_pago: 0,
+  cpf: "",
+  cep: "",
+  endereco: "",
+  numero_endereco: "",
+  complemento: "",
+  bairro: "",
+  instagram: "",
+  origem: "",
+  anexos: [],
+};
 
 type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
 
@@ -22,54 +65,22 @@ export function NovoPedidoDialog({
   const create = useCreatePedido();
   const update = useUpdatePedido();
 
-  const empty: NovoPedidoInput = {
-    cliente_id: undefined,
-    cliente_nome: "",
-    telefone: "",
-    email: "",
-    cidade: "",
-    produto: "",
-    tipo: "",
-    material: "",
-    cor: "",
-    observacoes: "",
-    entrega: "",
-    prioridade: "media",
-    etapa: "pedido-recebido",
-    valor_total: 0,
-    valor_pago: 0,
-    cpf: "",
-    cep: "",
-    endereco: "",
-    numero_endereco: "",
-    complemento: "",
-    bairro: "",
-    instagram: "",
-    origem: "",
-    anexos: [],
-  };
-  const [form, setForm] = useState<NovoPedidoInput>(empty);
+  // useMemo garante que o objeto de reset só muda quando `initial` muda,
+  // impedindo o useEffect abaixo de disparar em loop infinito.
+  const initialForm = useMemo<NovoPedidoInput>(
+    () => (initial ? { ...EMPTY_FORM, ...initial } : EMPTY_FORM),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initial?.id]
+  );
+
+  const [form, setForm] = useState<NovoPedidoInput>(initialForm);
   const [novoCliente, setNovoCliente] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
-  const getFileNameFromUrl = (url: string) => {
-    try {
-      const decoded = decodeURIComponent(url);
-      const parts = decoded.split("/");
-      const lastPart = parts[parts.length - 1];
-      return lastPart.split("?")[0];
-    } catch (e) {
-      return "Arquivo";
-    }
-  };
+  // getFileNameFromUrl e isImageUrl agora são funções puras fora do componente (acima)
 
-  const isImageUrl = (url: string) => {
-    const name = getFileNameFromUrl(url).toLowerCase();
-    return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".webp");
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -77,53 +88,51 @@ export function NovoPedidoDialog({
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  };
+  }, []);
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       await uploadFiles(e.dataTransfer.files);
     }
-  };
+  // uploadFiles é estável via useCallback abaixo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       await uploadFiles(files);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const uploadFiles = async (files: FileList) => {
+  const uploadFiles = useCallback(async (files: FileList) => {
     setIsUploading(true);
     const newUrls: string[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const fileType = file.type;
-      const isImg = fileType.startsWith("image/");
-      const isPdf = fileType === "application/pdf";
-      
+      const isImg = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf";
+
       if (!isImg && !isPdf) {
         toast.error(`Formato não suportado: ${file.name}. Envie imagens (JPG/PNG) ou PDF.`);
         continue;
       }
 
       const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
       const filePath = `pedidos/${fileName}`;
 
       try {
-        const { error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("anexos-pedidos")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+          .upload(filePath, file, { cacheControl: "3600", upsert: false });
 
-        if (error) throw error;
+        if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
           .from("anexos-pedidos")
@@ -133,29 +142,25 @@ export function NovoPedidoDialog({
         toast.success(`Upload concluído: ${file.name}`);
       } catch (err: any) {
         console.error("Erro no upload:", err);
-        toast.error(`Erro ao enviar ${file.name}: ${err.message || "Erro desconhecido"}`);
+        toast.error(`Erro ao enviar ${file.name}: ${err?.message || "Erro desconhecido"}`);
       }
     }
 
     if (newUrls.length > 0) {
-      setForm((s) => ({
-        ...s,
-        anexos: [...(s.anexos || []), ...newUrls],
-      }));
+      setForm((s) => ({ ...s, anexos: [...(s.anexos || []), ...newUrls] }));
     }
     setIsUploading(false);
-  };
+  }, []);
 
-  const removeAnexo = (urlToRemove: string) => {
-    setForm((s) => ({
-      ...s,
-      anexos: (s.anexos || []).filter((url) => url !== urlToRemove),
-    }));
-  };
+  const removeAnexo = useCallback((urlToRemove: string) => {
+    setForm((s) => ({ ...s, anexos: (s.anexos || []).filter((url) => url !== urlToRemove) }));
+  }, []);
 
+  // Reseta o formulário sempre que o dialog abre ou o pedido editado muda.
+  // Depende de `initialForm` (estável via useMemo) — sem risco de loop infinito.
   useEffect(() => {
-    if (open) setForm(initial ? { ...empty, ...initial } : empty);
-  }, [open, initial]);
+    if (open) setForm(initialForm);
+  }, [open, initialForm]);
 
   const restante = Math.max(0, (form.valor_total || 0) - (form.valor_pago || 0));
   const set = <K extends keyof NovoPedidoInput>(k: K, v: NovoPedidoInput[K]) =>

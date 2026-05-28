@@ -318,7 +318,7 @@ export function useUpdatePedido() {
         const { error: ec } = await supabase
           .from("clientes")
           .update({
-            nome: input.cliente_nome,
+            nome: input.cliente_nome || "Cliente sem nome",
             telefone: input.telefone || null,
             email: input.email || null,
             cidade: input.cidade || null,
