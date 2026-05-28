@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCheck, PackagePlus, AlertTriangle, Wallet, CheckCircle2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bell, CheckCheck, PackagePlus, AlertTriangle, Wallet, CheckCircle2, Trash2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { usePedidos } from "@/hooks/use-pedidos";
-import { usePagamentos } from "@/hooks/use-pagamentos";
-import { buildNotifications, getReadIds, setReadIds, tempo, type Notif } from "@/lib/notifications";
+import { toast } from "sonner";
+
+import {
+  buildNotifications,
+  getReadIds,
+  setReadIds,
+  getDismissedIds,
+  setDismissedIds,
+  tempo,
+  type Notif,
+} from "@/lib/notifications";
 
 const ICON: Record<Notif["tipo"], React.ComponentType<{ className?: string }>> = {
   novo: PackagePlus,
@@ -25,12 +34,22 @@ export function NotificationsPanel() {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { data: pedidos = [] } = usePedidos();
-  const { data: pagamentos = [] } = usePagamentos();
-  const [readIds, setRead] = useState<Set<string>>(() => getReadIds());
 
-  const notifs = useMemo(() => buildNotifications(pedidos, pagamentos), [pedidos, pagamentos]);
+  const [readIds, setRead] = useState<Set<string>>(() => getReadIds());
+  const [dismissedIds, setDismissed] = useState<Set<string>>(() => getDismissedIds());
+
+  // Todas as notificações geradas dos pedidos
+  const allNotifs = useMemo(() => buildNotifications(pedidos), [pedidos]);
+
+  // Filtra as descartadas ("limpas")
+  const notifs = useMemo(
+    () => allNotifs.filter((n) => !dismissedIds.has(n.id)),
+    [allNotifs, dismissedIds]
+  );
+
   const naoLidas = notifs.filter((n) => !readIds.has(n.id)).length;
 
+  // Fecha ao clicar fora do popover
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -39,17 +58,52 @@ export function NotificationsPanel() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const marcarTodas = () => {
+  const marcarTodas = useCallback(() => {
     const all = new Set(notifs.map((n) => n.id));
     setRead(all);
     setReadIds(all);
-  };
-  const marcarUma = (id: string) => {
+  }, [notifs]);
+
+  const marcarUma = useCallback((id: string) => {
     const next = new Set(readIds);
     next.add(id);
     setRead(next);
     setReadIds(next);
-  };
+  }, [readIds]);
+
+  /**
+   * Limpar todas as notificações:
+   * 1. Descarta os IDs visíveis no localStorage (dismissed)
+   * 2. Também marca como lidas (garante badge zerado)
+   * 3. Atualização otimista imediata do estado local
+   * 4. Toast de confirmação
+   *
+   * Nota: As notificações são derivadas dos pedidos (não têm tabela própria).
+   * O "descarte" é persistido no localStorage e filtra a lista na próxima renderização.
+   */
+  const handleClearNotifications = useCallback(() => {
+    try {
+      if (notifs.length === 0) return;
+
+      // Mescla os IDs atuais com os já descartados
+      const newDismissed = new Set([...dismissedIds, ...notifs.map((n) => n.id)]);
+      const newRead = new Set([...readIds, ...notifs.map((n) => n.id)]);
+
+      // Atualização otimista — a UI reage imediatamente
+      setDismissed(newDismissed);
+      setRead(newRead);
+
+      // Persiste no localStorage
+      setDismissedIds(newDismissed);
+      setReadIds(newRead);
+
+      toast.success("Notificações limpas com sucesso");
+      setOpen(false);
+    } catch (err) {
+      console.error("[Notificações] Erro ao limpar:", err);
+      toast.error("Não foi possível limpar as notificações");
+    }
+  }, [notifs, dismissedIds, readIds]);
 
   return (
     <div ref={ref} className="relative">
@@ -68,20 +122,47 @@ export function NotificationsPanel() {
 
       {open && (
         <div className="absolute right-0 top-11 w-[22rem] max-w-[92vw] rounded-xl border bg-popover shadow-[var(--shadow-elevated)] z-50 overflow-hidden">
+          {/* CABEÇALHO */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div>
               <p className="text-sm font-semibold">Notificações</p>
               <p className="text-[11px] text-muted-foreground">{naoLidas} não lidas</p>
             </div>
+
             {notifs.length > 0 && (
-              <button onClick={marcarTodas} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-                <CheckCheck className="size-3.5" /> Marcar todas
-              </button>
+              <div className="flex items-center gap-1">
+                {/* Marcar todas como lidas */}
+                <button
+                  onClick={marcarTodas}
+                  title="Marcar todas como lidas"
+                  className="h-7 px-2 text-xs text-primary hover:bg-primary/10 rounded-md inline-flex items-center gap-1 transition-colors"
+                >
+                  <CheckCheck className="size-3.5" />
+                  Marcar
+                </button>
+
+                {/* Separador visual */}
+                <span className="w-px h-4 bg-border" />
+
+                {/* Limpar todas */}
+                <button
+                  onClick={handleClearNotifications}
+                  title="Limpar todas as notificações"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md inline-flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="size-3.5" />
+                  Limpar
+                </button>
+              </div>
             )}
           </div>
+
+          {/* LISTA */}
           <div className="max-h-[28rem] overflow-auto divide-y">
             {notifs.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">Nenhuma novidade por aqui.</div>
+              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                Nenhuma novidade por aqui.
+              </div>
             )}
             {notifs.map((n) => {
               const Icon = ICON[n.tipo];

@@ -1,5 +1,5 @@
 import type { Pedido } from "@/lib/mock-data";
-import type { Pagamento } from "@/hooks/use-pagamentos";
+
 
 export type Notif = {
   id: string;
@@ -10,7 +10,7 @@ export type Notif = {
   data: string; // ISO
 };
 
-export function buildNotifications(pedidos: Pedido[], pagamentos: Pagamento[] = []): Notif[] {
+export function buildNotifications(pedidos: Pedido[]): Notif[] {
   const out: Notif[] = [];
   const agora = Date.now();
   const seteDias = 1000 * 60 * 60 * 24 * 7;
@@ -47,16 +47,7 @@ export function buildNotifications(pedidos: Pedido[], pagamentos: Pagamento[] = 
       });
     }
   }
-  for (const pg of pagamentos.slice(0, 30)) {
-    out.push({
-      id: `pag-${pg.id}`,
-      tipo: "pagamento",
-      titulo: `Pagamento recebido`,
-      descricao: `R$ ${Number(pg.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}${pg.forma ? ` · ${pg.forma}` : ""}`,
-      pedidoId: pg.pedido_id,
-      data: pg.pago_em || pg.created_at,
-    });
-  }
+
   return out.sort((a, b) => +new Date(b.data) - +new Date(a.data)).slice(0, 30);
 }
 
@@ -72,6 +63,21 @@ export function getReadIds(): Set<string> {
 export function setReadIds(ids: Set<string>) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify([...ids]));
+}
+
+/** IDs de notificações descartadas ("limpas") — não aparecem mais na lista */
+const DISMISSED_KEY = "marcena.notif.dismissed";
+export function getDismissedIds(): Set<string> {
+  if (typeof localStorage === "undefined") return new Set();
+  try {
+    return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+export function setDismissedIds(ids: Set<string>) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(DISMISSED_KEY, JSON.stringify([...ids]));
 }
 
 export function tempo(iso: string) {
