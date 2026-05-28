@@ -176,8 +176,9 @@ export function NovoPedidoDialog({
         toast.success("Pedido criado com sucesso");
       }
       onOpenChange(false);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro inesperado";
+    } catch (err: any) {
+      console.error("ERRO SUPABASE:", err);
+      const msg = err?.message || err?.details || JSON.stringify(err);
       toast.error("Não foi possível salvar", { description: msg });
     }
   };
