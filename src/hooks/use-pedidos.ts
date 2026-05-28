@@ -237,7 +237,7 @@ export function useCreatePedido() {
         const { data: cli, error: e1 } = await supabase
           .from("clientes")
           .insert({
-            nome: input.cliente_nome,
+            nome: input.cliente_nome || "Cliente sem nome",
             telefone: input.telefone || null,
             email: input.email || null,
             cidade: input.cidade || null,
@@ -259,7 +259,7 @@ export function useCreatePedido() {
         const { error: e1 } = await supabase
           .from("clientes")
           .update({
-            nome: input.cliente_nome,
+            nome: input.cliente_nome || "Cliente sem nome",
             telefone: input.telefone || null,
             email: input.email || null,
             cidade: input.cidade || null,
@@ -279,17 +279,17 @@ export function useCreatePedido() {
 
       const payload = {
         cliente_id: clienteId,
-        produto: input.produto,
+        produto: input.produto || "Produto não informado",
         tipo: input.tipo || null,
         material: input.material || null,
         cor: input.cor || null,
         observacoes: input.observacoes || null,
         entrega: input.entrega || null,
-        etapa: input.etapa,
-        prioridade: input.prioridade,
+        etapa: input.etapa || "pedido-recebido",
+        prioridade: input.prioridade || "media",
         valor_total: Number(input.valor_total) || 0,
         valor_pago: Number(input.valor_pago) || 0,
-        numero: `PED-${Date.now().toString(36).toUpperCase()}`,
+        numero: String(Math.floor(100000 + Math.random() * 900000)),
         user_id: user.id,
         anexos: input.anexos || [],
       };
@@ -338,7 +338,7 @@ export function useUpdatePedido() {
       const { error } = await supabase
         .from("pedidos")
         .update({
-          produto: input.produto,
+          produto: input.produto || "Produto não informado",
           tipo: input.tipo || null,
           material: input.material || null,
           cor: input.cor || null,
@@ -379,17 +379,17 @@ export function useDuplicatePedido() {
         .from("pedidos")
         .insert({
           cliente_id: p.cliente_id,
-          produto: p.produto,
+          produto: p.produto || "Produto não informado",
           tipo: p.tipo,
           material: p.material,
           cor: p.cor,
           observacoes: p.observacoes,
           entrega: p.entrega,
           etapa: "pedido-recebido",
-          prioridade: p.prioridade,
+          prioridade: p.prioridade || "media",
           valor_total: Number(p.valor_total) || 0,
           valor_pago: 0,
-          numero: `PED-${Date.now().toString(36).toUpperCase()}`,
+          numero: String(Math.floor(100000 + Math.random() * 900000)),
           user_id: user.id,
           anexos: p.anexos || [],
         })

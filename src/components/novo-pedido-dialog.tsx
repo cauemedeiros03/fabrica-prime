@@ -163,10 +163,6 @@ export function NovoPedidoDialog({
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.cliente_nome || !form.produto || form.valor_total <= 0) {
-      toast.error("Preencha cliente, produto e valor total");
-      return;
-    }
     try {
       if (isEdit) {
         await update.mutateAsync({ ...form, id: initial!.id as string });
