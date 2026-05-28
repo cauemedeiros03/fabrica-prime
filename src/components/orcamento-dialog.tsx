@@ -354,11 +354,9 @@ Qualquer dúvida, estou à disposição!`;
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="w-full max-w-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden"
-        // BLOQUEIO: impede fechamento ao clicar fora do modal
-        onInteractOutside={(e) => {
-          e.preventDefault();
-          handleClose();
-        }}
+        // BLOQUEIO: impede fechamento ao clicar fora do modal (Regra RADIX UI)
+        onInteractOutside={(e) => { e.preventDefault(); }}
+        onPointerDownOutside={(e) => { e.preventDefault(); }}
         onEscapeKeyDown={(e) => {
           e.preventDefault();
           handleClose();

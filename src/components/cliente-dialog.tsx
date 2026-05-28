@@ -100,8 +100,6 @@ export function ClienteDialog({
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto"
-      // BLOQUEIO: clique no backdrop não fecha diretamente, passa pelo handleClose
-      onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
