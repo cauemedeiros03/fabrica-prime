@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, forwardRef, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, forwardRef, type FormEvent } from "react";
 import { Loader2, Printer, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 
 export interface Orcamento {
   id: string;
@@ -34,8 +35,8 @@ interface OrcamentoDialogProps {
 
 export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDialogProps) {
   const { user } = useAuth();
-  
-  const emptyForm = {
+
+  const emptyForm = useMemo(() => ({
     clienteNome: "",
     clienteTelefone: "",
     clienteCidade: "",
@@ -44,7 +45,19 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     produtoMedidas: "",
     valorSugerido: 0,
     validadeDias: 15,
-  };
+  }), []);
+
+  // Estado base de referência para o dirty check (muda conforme initialData)
+  const baseForm = useMemo(() => initialData ? ({
+    clienteNome: initialData.clienteNome || "",
+    clienteTelefone: initialData.clienteTelefone || "",
+    clienteCidade: initialData.clienteCidade || "",
+    produtoDescricao: initialData.produtoDescricao || "",
+    produtoMaterial: initialData.produtoMaterial || "",
+    produtoMedidas: initialData.produtoMedidas || "",
+    valorSugerido: initialData.valorSugerido || 0,
+    validadeDias: initialData.validadeDias || 15,
+  }) : emptyForm, [initialData, emptyForm]);
 
   const [form, setForm] = useState(emptyForm);
   const [salvando, setSalvando] = useState(false);
@@ -52,6 +65,25 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   const [printData, setPrintData] = useState<Orcamento | null>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Dirty state: true se o usuário alterou qualquer campo
+  const isDirty = useMemo(() =>
+    form.clienteNome !== baseForm.clienteNome ||
+    form.clienteTelefone !== baseForm.clienteTelefone ||
+    form.clienteCidade !== baseForm.clienteCidade ||
+    form.produtoDescricao !== baseForm.produtoDescricao ||
+    form.produtoMaterial !== baseForm.produtoMaterial ||
+    form.produtoMedidas !== baseForm.produtoMedidas ||
+    Number(form.valorSugerido) !== Number(baseForm.valorSugerido) ||
+    Number(form.validadeDias) !== Number(baseForm.validadeDias),
+    [form, baseForm]
+  );
+
+  // Fechamento seguro: dispara alerta se o form estiver sujo
+  const handleClose = useCallback(() => {
+    if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
+    onOpenChange(false);
+  }, [isDirty, onOpenChange]);
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -63,22 +95,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
 
   useEffect(() => {
     if (open) {
-      if (initialData) {
-        setForm({
-          clienteNome: initialData.clienteNome || "",
-          clienteTelefone: initialData.clienteTelefone || "",
-          clienteCidade: initialData.clienteCidade || "",
-          produtoDescricao: initialData.produtoDescricao || "",
-          produtoMaterial: initialData.produtoMaterial || "",
-          produtoMedidas: initialData.produtoMedidas || "",
-          valorSugerido: initialData.valorSugerido || 0,
-          validadeDias: initialData.validadeDias || 15,
-        });
-      } else {
-        setForm(emptyForm);
-      }
+      setForm(baseForm);
     }
-  }, [open, initialData]);
+  }, [open, baseForm]);
 
   // Carrega configurações da marcenaria para o cabeçalho do PDF
   useEffect(() => {
@@ -333,14 +352,34 @@ Qualquer dúvida, estou à disposição!`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="text-lg font-semibold tracking-tight text-amber-600 dark:text-amber-400">
-            Formulário de Orçamento Rápido
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-1">
-            Gere propostas comerciais sem impactar o Kanban ou o Financeiro
-          </DialogDescription>
+      <DialogContent
+        className="w-full max-w-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden"
+        // BLOQUEIO: impede fechamento ao clicar fora do modal
+        onInteractOutside={(e) => {
+          e.preventDefault();
+          handleClose();
+        }}
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+          handleClose();
+        }}
+      >
+        <DialogHeader className="px-6 py-4 border-b flex flex-row items-start justify-between">
+          <div>
+            <DialogTitle className="text-lg font-semibold tracking-tight text-amber-600 dark:text-amber-400">
+              Formulário de Orçamento Rápido
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Gere propostas comerciais sem impactar o Kanban ou o Financeiro
+            </DialogDescription>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="size-8 grid place-items-center rounded-lg hover:bg-accent shrink-0 mt-0.5"
+          >
+            <X className="size-4" />
+          </button>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
@@ -458,7 +497,7 @@ Qualquer dúvida, estou à disposição!`;
           <div className="flex items-center justify-end gap-2 pt-4 border-t flex-wrap">
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
             >
               Cancelar

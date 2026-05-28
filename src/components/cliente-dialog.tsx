@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { X, Loader2, Phone, Mail, MapPin, CreditCard, Wallet, FileText, Building, Instagram, Tag } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,12 +30,43 @@ export function ClienteDialog({
   const create = useCreateCliente();
   const update = useUpdateCliente();
 
-  const empty: ClienteInput = { nome: "", telefone: "", email: "", cidade: "", observacoes: "" };
-  const [form, setForm] = useState<ClienteInput>(empty);
+  const initialForm = useMemo<ClienteInput>(
+    () => initial ?? { nome: defaultName ?? "", telefone: "", email: "", cidade: "", observacoes: "" },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initial?.id, defaultName]
+  );
+
+  const [form, setForm] = useState<ClienteInput>(initialForm);
 
   useEffect(() => {
-    if (open) setForm(initial ?? { ...empty, nome: defaultName ?? "" });
-  }, [open, initial, defaultName]);
+    if (open) setForm(initialForm);
+  }, [open, initialForm]);
+
+  // Verifica se o usuário digitou alguma coisa (form "sujo")
+  const isDirty = useMemo(() => {
+    const ref = initialForm;
+    return (
+      form.nome !== ref.nome ||
+      (form.telefone || "") !== (ref.telefone || "") ||
+      (form.email || "") !== (ref.email || "") ||
+      (form.cidade || "") !== (ref.cidade || "") ||
+      (form.observacoes || "") !== (ref.observacoes || "") ||
+      (form.cpf || "") !== (ref.cpf || "") ||
+      (form.instagram || "") !== (ref.instagram || "") ||
+      (form.origem || "") !== (ref.origem || "") ||
+      (form.cep || "") !== (ref.cep || "") ||
+      (form.endereco || "") !== (ref.endereco || "") ||
+      (form.numero || "") !== (ref.numero || "") ||
+      (form.complemento || "") !== (ref.complemento || "") ||
+      (form.bairro || "") !== (ref.bairro || "")
+    );
+  }, [form, initialForm]);
+
+  // Função de fechamento seguro: alerta se houver dados não salvos
+  const handleClose = useCallback(() => {
+    if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
+    onOpenChange(false);
+  }, [isDirty, onOpenChange]);
 
   const set = <K extends keyof ClienteInput>(k: K, v: ClienteInput[K]) =>
     setForm((s) => ({ ...s, [k]: v }));
@@ -69,7 +100,8 @@ export function ClienteDialog({
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto"
-      onClick={() => onOpenChange(false)}
+      // BLOQUEIO: clique no backdrop não fecha diretamente, passa pelo handleClose
+      onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -85,7 +117,7 @@ export function ClienteDialog({
             </p>
           </div>
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
             className="size-8 grid place-items-center rounded-lg hover:bg-accent"
           >
             <X className="size-4" />
