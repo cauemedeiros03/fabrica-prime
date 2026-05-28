@@ -277,24 +277,25 @@ export function useCreatePedido() {
         if (e1) throw e1;
       }
 
+      const payload = {
+        cliente_id: clienteId,
+        produto: input.produto,
+        tipo: input.tipo || null,
+        material: input.material || null,
+        cor: input.cor || null,
+        observacoes: input.observacoes || null,
+        entrega: input.entrega || null,
+        etapa: input.etapa,
+        prioridade: input.prioridade,
+        valor_total: Number(input.valor_total) || 0,
+        valor_pago: Number(input.valor_pago) || 0,
+        user_id: user.id,
+        anexos: input.anexos || [],
+      };
+
       const { data: pedido, error: e2 } = await supabase
         .from("pedidos")
-        .insert({
-          cliente_id: clienteId,
-          produto: input.produto,
-          tipo: input.tipo || null,
-          material: input.material || null,
-          cor: input.cor || null,
-          observacoes: input.observacoes || null,
-          entrega: input.entrega || null,
-          etapa: input.etapa,
-          prioridade: input.prioridade,
-          valor_total: input.valor_total,
-          valor_pago: input.valor_pago,
-          numero: "",
-          user_id: user.id,
-          anexos: input.anexos || [],
-        })
+        .insert(payload)
         .select("id")
         .single();
       if (e2) throw e2;
@@ -344,8 +345,8 @@ export function useUpdatePedido() {
           entrega: input.entrega || null,
           etapa: input.etapa,
           prioridade: input.prioridade,
-          valor_total: input.valor_total,
-          valor_pago: input.valor_pago,
+          valor_total: Number(input.valor_total) || 0,
+          valor_pago: Number(input.valor_pago) || 0,
           anexos: input.anexos,
         })
         .eq("id", id)
@@ -385,9 +386,8 @@ export function useDuplicatePedido() {
           entrega: p.entrega,
           etapa: "pedido-recebido",
           prioridade: p.prioridade,
-          valor_total: p.valor_total,
+          valor_total: Number(p.valor_total) || 0,
           valor_pago: 0,
-          numero: "",
           user_id: user.id,
           anexos: p.anexos || [],
         })
@@ -423,13 +423,15 @@ export function useAddPagamento() {
     mutationFn: async ({ pedido_id, valor }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
       // increment valor_pago atomically via re-read
-      const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_total").eq("id", pedido_id).eq("user_id", user.id).single();
+      const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_pago").eq("id", pedido_id).eq("user_id", user.id).single();
       if (pErr) {
         console.error('Erro Supabase ao ler pedido:', pErr);
         throw pErr;
       }
       
-      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: p.valor_total }).eq("id", pedido_id).eq("user_id", user.id);
+      const novoValorPago = Number(p.valor_pago || 0) + Number(valor);
+      
+      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: novoValorPago }).eq("id", pedido_id).eq("user_id", user.id);
       if (updateErr) {
         console.error('Erro Supabase ao atualizar pedido:', updateErr);
         throw updateErr;
