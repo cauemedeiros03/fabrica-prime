@@ -58,10 +58,9 @@ export function PedidoCard({
       {/* Linha com alça de arrasto (apenas o ícone grip) + info do pedido       */}
       <div className="flex items-start gap-2 px-3 pt-3 pb-1">
         {/* ALÇA DE ARRASTO: dragHandleProps ficam APENAS no ícone grip */}
+        {/* CRÍTICO: não sobrescreva onPointerDown após o spread — o DnD usa esse evento para iniciar o arrasto */}
         <div
           {...dragHandleProps}
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-          onPointerDown={(e) => e.stopPropagation()}
           className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
           title="Arraste para mover"
         >
