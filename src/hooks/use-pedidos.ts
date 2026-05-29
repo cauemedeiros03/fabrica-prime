@@ -118,12 +118,12 @@ export function usePedidos() {
 }
 
 /**
- * Hook auxiliar: retorna a data de referência para arquivamento automático.
- * Para pedidos na etapa 'entregue', usa `atualizadoEm` (updated_at),
- * que reflete o momento real em que o pedido foi concluído — não a data
- * prevista de entrega. Isso evita que pedidos entregues antes do prazo
- * desapareçam do Kanban prematuramente.
+ * Flag global que indica se há uma mutação de etapa em andamento.
+ * Usada pelo useRealtimeSync para não invalidar o cache durante
+ * o período de Optimistic UI, evitando race conditions.
  */
+export let isDraggingMutation = false;
+
 export function getDataReferenciaArquivamento(p: { etapa: string; atualizadoEm?: string; criadoEm: string }): number {
   // Usa updated_at se disponível, senão created_at como fallback seguro
   return p.atualizadoEm ? +new Date(p.atualizadoEm) : +new Date(p.criadoEm);
@@ -151,36 +151,42 @@ export function useUpdatePedidoEtapa() {
         if (eHist) console.warn("Erro ao registrar histórico de etapa:", eHist);
       });
     },
-    // ── onMutate: roda ANTES do mutationFn ────────────────────────────────────
-    // 1. Captura snapshot e etapaAnterior ANTES de qualquer mudança no cache.
-    // 2. Cancela refetches pendentes (não podem sobrescrever o update otimístico).
-    // 3. Aplica update imutável no cache (novo array, sem mutar o anterior).
+    // ── onMutate: roda ANTES do mutationFn ─────────────────────────────────────────────
+    // 1. Ativa flag para o Realtime não sobrescrever o estado otimístico.
+    // 2. Captura snapshot e etapaAnterior ANTES de qualquer mudança no cache.
+    // 3. Cancela refetches pendentes (não podem sobrescrever o update otimístico).
+    // 4. Aplica update imuttável no cache (novo array, sem mutar o anterior).
     onMutate: async ({ id, etapa }) => {
+      // Ativa o flag: bloqueia invalidações do Realtime durante o drag
+      isDraggingMutation = true;
       await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });
       const snapshot = qc.getQueryData<ReturnType<typeof mapRow>[]>(["pedidos", user?.id]);
       // Etapa real (pré-mudança) — passada ao mutationFn via variáveis
       const etapaAnterior = (snapshot?.find(p => p.id === id)?.etapa ?? null) as StatusEtapa | null;
-      // Update imutável: cria novo array sem mutar pedidos existentes
+      // Update imuttável: cria novo array sem mutar pedidos existentes
       const agora = new Date().toISOString();
       qc.setQueryData(["pedidos", user?.id], (old: ReturnType<typeof mapRow>[] | undefined) =>
         old ? old.map(p => p.id === id ? { ...p, etapa, atualizadoEm: agora } : p) : []
       );
       return { snapshot, etapaAnterior };
     },
-    // ── onError: rollback imutável do cache ───────────────────────────────────
+    // ── onError: rollback imutável do cache ───────────────────────────────────────────
     onError: (_err, _vars, ctx) => {
       if (ctx?.snapshot) {
         qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
       }
     },
-    // ── onSuccess: invalida com delay para evitar race condition ──────────────
-    // Aguarda 500ms antes de refazer a query para garantir que o banco já
-    // persistiu a mudança antes da releitura (evita sobrescrever o update).
+    // ── onSuccess: invalida a query após o banco confirmar ──────────────────────
     onSuccess: (_d, vars) => {
-      setTimeout(() => {
-        qc.invalidateQueries({ queryKey: ["pedidos"] });
-        qc.invalidateQueries({ queryKey: ["etapas_pedido", vars.id] });
-      }, 500);
+      // Invalida para sincronizar com dados frescos do banco.
+      // O flag isDraggingMutation será desativado em onSettled.
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["etapas_pedido", vars.id] });
+    },
+    // ── onSettled: sempre desativa o flag (sucesso ou erro) ────────────────────
+    onSettled: () => {
+      // Libera o Realtime para processar invalidações novamente
+      isDraggingMutation = false;
     },
   });
 }
