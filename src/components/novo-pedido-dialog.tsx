@@ -77,6 +77,7 @@ export function NovoPedidoDialog({
   const [novoCliente, setNovoCliente] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // getFileNameFromUrl e isImageUrl agora são funções puras fora do componente (acima)
 
@@ -179,12 +180,58 @@ export function NovoPedidoDialog({
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    if (!form.produto?.trim()) {
+      toast.error("O nome do produto é obrigatório.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
+      let finalClienteId = form.cliente_id;
+
+      // Se não há cliente selecionado, mas há nome preenchido,
+      // cadastra o cliente atomicamente antes de salvar o pedido.
+      if (!finalClienteId && form.cliente_nome?.trim()) {
+        const { data: newCliente, error: clienteError } = await supabase
+          .from("clientes")
+          .insert({
+            nome: form.cliente_nome.trim(),
+            telefone: form.telefone,
+            email: form.email,
+            cidade: form.cidade,
+            cpf: form.cpf,
+            cep: form.cep,
+            endereco: form.endereco,
+            numero: form.numero_endereco,
+            complemento: form.complemento,
+            bairro: form.bairro,
+            instagram: form.instagram,
+            origem: form.origem,
+          })
+          .select("id")
+          .single();
+
+        if (clienteError) {
+          throw new Error(`Erro ao cadastrar cliente: ${clienteError.message}`);
+        }
+        finalClienteId = newCliente.id;
+        
+        // Atualiza no form (caso falhe o pedido, o ID já está guardado)
+        set("cliente_id", finalClienteId);
+      } else if (!finalClienteId && !form.cliente_nome?.trim()) {
+        toast.error("Por favor, selecione ou informe o nome de um cliente.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = { ...form, cliente_id: finalClienteId };
+
       if (isEdit) {
-        await update.mutateAsync({ ...form, id: initial!.id as string });
+        await update.mutateAsync({ ...payload, id: initial!.id as string });
         toast.success("Pedido atualizado");
       } else {
-        await create.mutateAsync(form);
+        await create.mutateAsync(payload);
         toast.success("Pedido criado com sucesso");
       }
       onOpenChange(false);
@@ -192,11 +239,13 @@ export function NovoPedidoDialog({
       console.error("ERRO SUPABASE:", err);
       const msg = err?.message || err?.details || JSON.stringify(err);
       toast.error("Não foi possível salvar", { description: msg });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (!open) return null;
-  const saving = create.isPending || update.isPending;
+  const saving = create.isPending || update.isPending || isSubmitting;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto">
