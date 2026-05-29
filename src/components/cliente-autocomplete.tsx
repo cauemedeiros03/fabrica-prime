@@ -46,7 +46,22 @@ export function ClienteAutocomplete({ value, onSelect, onCreateNew, disabled }: 
 
   return (
     <div ref={ref} className="relative">
-      <label className="text-xs font-medium">Cliente *</label>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium">Cliente *</label>
+        {!disabled && onCreateNew && (
+          <button
+            type="button"
+            onClick={() => {
+              onCreateNew(query.trim());
+              setOpen(false);
+            }}
+            className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
+          >
+            <UserPlus className="size-3" />
+            + Novo Cliente
+          </button>
+        )}
+      </div>
       <div className="mt-1 relative">
         <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input

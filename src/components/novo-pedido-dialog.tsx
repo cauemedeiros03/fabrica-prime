@@ -439,7 +439,7 @@ export function NovoPedidoDialog({
       </div>
 
       <ClienteDialog
-        open={!!novoCliente}
+        open={novoCliente !== null}
         onOpenChange={(v) => !v && setNovoCliente(null)}
         defaultName={novoCliente ?? ""}
         onCreated={async (id) => {
