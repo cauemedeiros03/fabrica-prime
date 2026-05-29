@@ -11,10 +11,7 @@ export function useRealtimeSync() {
       .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, () => {
         qc.invalidateQueries({ queryKey: ["pedidos"] });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "pagamentos" }, () => {
-        qc.invalidateQueries({ queryKey: ["pagamentos"] });
-        qc.invalidateQueries({ queryKey: ["pedidos"] });
-      })
+
       .on("postgres_changes", { event: "*", schema: "public", table: "etapas_pedido" }, () => {
         qc.invalidateQueries({ queryKey: ["etapas_pedido"] });
       })

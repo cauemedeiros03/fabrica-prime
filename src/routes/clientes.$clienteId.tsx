@@ -5,7 +5,6 @@ import { ClienteDialog } from "@/components/cliente-dialog";
 import {
   useCliente,
   usePedidosCliente,
-  usePagamentosCliente,
   useDeleteCliente,
   type ClienteInput,
 } from "@/hooks/use-clientes";
@@ -33,7 +32,6 @@ function ClienteDetalhePage() {
   const { clienteId } = Route.useParams();
   const { data: c, isLoading } = useCliente(clienteId);
   const { data: pedidos = [] } = usePedidosCliente(clienteId);
-  const { data: pagamentos = [] } = usePagamentosCliente(clienteId);
   const del = useDeleteCliente();
 
   const [edit, setEdit] = useState<(ClienteInput & { id: string }) | null>(null);
@@ -192,34 +190,8 @@ function ClienteDetalhePage() {
           )}
         </section>
 
-        {/* Pagamentos + Observações */}
+        {/* Observações */}
         <div className="space-y-5">
-          <section className="rounded-2xl border bg-card shadow-[var(--shadow-soft)] overflow-hidden">
-            <div className="px-5 py-4 border-b">
-              <h2 className="font-semibold tracking-tight">Pagamentos</h2>
-              <p className="text-xs text-muted-foreground">{pagamentos.length} registro(s)</p>
-            </div>
-            {pagamentos.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                Nenhum pagamento registrado.
-              </div>
-            ) : (
-              <ul className="divide-y max-h-80 overflow-y-auto">
-                {pagamentos.map((pg) => (
-                  <li key={pg.id} className="px-5 py-3 text-sm">
-                    <div className="flex justify-between items-baseline gap-2">
-                      <span className="font-medium tabular-nums">{moeda(pg.valor)}</span>
-                      <span className="text-xs text-muted-foreground">{dataBR(pg.pago_em)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {pg.pedido_numero} · {pg.forma ?? "—"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
           {c.observacoes && (
             <section className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
               <div className="flex items-center gap-2 mb-2">

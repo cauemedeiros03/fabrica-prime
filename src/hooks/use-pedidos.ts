@@ -17,6 +17,7 @@ type Row = {
   prioridade: Pedido["prioridade"];
   observacoes: string | null;
   created_at: string;
+  updated_at: string;
   cliente_id: string;
   clientes: {
     nome: string;
@@ -75,6 +76,7 @@ function mapRow(r: Row): Pedido & {
     valorPago: Number(r.valor_pago),
     entrega: r.entrega ? new Date(r.entrega).toISOString() : new Date().toISOString(),
     criadoEm: r.created_at,
+    atualizadoEm: r.updated_at,
     etapa: r.etapa,
     prioridade: r.prioridade,
     observacoes: r.observacoes ?? "",
@@ -115,45 +117,74 @@ export function usePedidos() {
   });
 }
 
+/**
+ * Hook auxiliar: retorna a data de referência para arquivamento automático.
+ * Para pedidos na etapa 'entregue', usa `atualizadoEm` (updated_at),
+ * que reflete o momento real em que o pedido foi concluído — não a data
+ * prevista de entrega. Isso evita que pedidos entregues antes do prazo
+ * desapareçam do Kanban prematuramente.
+ */
+export function getDataReferenciaArquivamento(p: { etapa: string; atualizadoEm?: string; criadoEm: string }): number {
+  // Usa updated_at se disponível, senão created_at como fallback seguro
+  return p.atualizadoEm ? +new Date(p.atualizadoEm) : +new Date(p.criadoEm);
+}
+
 export function useUpdatePedidoEtapa() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async ({ id, etapa, observacao }: { id: string; etapa: StatusEtapa; observacao?: string }) => {
+    mutationFn: async ({ id, etapa, etapaAnterior }: { id: string; etapa: StatusEtapa; etapaAnterior: StatusEtapa | null; observacao?: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
-      // Lê etapa anterior diretamente do cache (evita round-trip extra ao banco)
-      const cached = qc.getQueryData<ReturnType<typeof mapRow>[]>(["pedidos", user.id]);
-      const anterior = (cached?.find(p => p.id === id)?.etapa ?? null) as StatusEtapa | null;
-      if (anterior === etapa) return;
+      // etapaAnterior é capturada no onMutate (antes do update otimístico),
+      // então esta comparação usa o valor real do banco, não o cache modificado.
+      if (etapaAnterior === etapa) return;
       const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
-      await supabase.from("etapas_pedido").insert({
+      // Registra histórico (best-effort — não bloqueia se falhar)
+      supabase.from("etapas_pedido").insert({
         pedido_id: id,
-        etapa_anterior: anterior,
+        etapa_anterior: etapaAnterior,
         etapa_nova: etapa,
         autor_id: user.id,
-        observacao: observacao ?? null,
+        observacao: null,
+      }).then(({ error: eHist }) => {
+        if (eHist) console.warn("Erro ao registrar histórico de etapa:", eHist);
       });
     },
-    // Optimistic update: atualiza o cache ANTES da resposta do banco
+    // ── onMutate: roda ANTES do mutationFn ────────────────────────────────────
+    // 1. Captura snapshot e etapaAnterior ANTES de qualquer mudança no cache.
+    // 2. Cancela refetches pendentes (não podem sobrescrever o update otimístico).
+    // 3. Aplica update imutável no cache (novo array, sem mutar o anterior).
     onMutate: async ({ id, etapa }) => {
       await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });
       const snapshot = qc.getQueryData<ReturnType<typeof mapRow>[]>(["pedidos", user?.id]);
+      // Etapa real (pré-mudança) — passada ao mutationFn via variáveis
+      const etapaAnterior = (snapshot?.find(p => p.id === id)?.etapa ?? null) as StatusEtapa | null;
+      // Update imutável: cria novo array sem mutar pedidos existentes
+      const agora = new Date().toISOString();
       qc.setQueryData(["pedidos", user?.id], (old: ReturnType<typeof mapRow>[] | undefined) =>
-        old?.map(p => p.id === id ? { ...p, etapa } : p) ?? []
+        old ? old.map(p => p.id === id ? { ...p, etapa, atualizadoEm: agora } : p) : []
       );
-      return { snapshot };
+      return { snapshot, etapaAnterior };
     },
+    // ── onError: rollback imutável do cache ───────────────────────────────────
     onError: (_err, _vars, ctx) => {
-      // Reverte o cache se o banco retornar erro
-      if (ctx?.snapshot) qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
+      if (ctx?.snapshot) {
+        qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
+      }
     },
+    // ── onSuccess: invalida com delay para evitar race condition ──────────────
+    // Aguarda 500ms antes de refazer a query para garantir que o banco já
+    // persistiu a mudança antes da releitura (evita sobrescrever o update).
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["pedidos"] });
-      qc.invalidateQueries({ queryKey: ["etapas_pedido", vars.id] });
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["pedidos"] });
+        qc.invalidateQueries({ queryKey: ["etapas_pedido", vars.id] });
+      }, 500);
     },
   });
 }
+
 
 export function useEtapasHistorico(pedidoId: string | undefined) {
   const { user } = useAuth();

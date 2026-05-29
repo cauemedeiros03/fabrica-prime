@@ -35,6 +35,10 @@ export interface Pedido {
   valorPago: number;
   entrega: string; // ISO
   criadoEm: string;
+  /** updated_at do Supabase — data real da última alteração do pedido.
+   *  Usado pelo filtro de arquivamento automático no Kanban (7 dias em "entregue").
+   *  Opcional para compatibilidade com dados mock. */
+  atualizadoEm?: string;
   etapa: StatusEtapa;
   prioridade: Prioridade;
   clientes?: { nome: string } | null;

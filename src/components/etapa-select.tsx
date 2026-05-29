@@ -19,7 +19,8 @@ export function EtapaSelect({ pedido, className = "", variant = "default" }: Pro
   const onChange = async (nova: StatusEtapa) => {
     if (nova === etapa) return;
     try {
-      await update.mutateAsync({ id: pedidoId, etapa: nova });
+      // etapaAnterior capturado aqui (antes do onMutate alterar o cache)
+      await update.mutateAsync({ id: pedidoId, etapa: nova, etapaAnterior: etapa as StatusEtapa });
       const novaLabel = ETAPAS.find((e) => e.id === nova)?.label ?? nova;
       const pedidoAtualizado = { ...pedido, etapa: nova };
       
@@ -36,6 +37,7 @@ export function EtapaSelect({ pedido, className = "", variant = "default" }: Pro
       });
     }
   };
+
 
   const baseStyle =
     variant === "badge" && atual

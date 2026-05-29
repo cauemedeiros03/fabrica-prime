@@ -3,7 +3,6 @@ import { useMemo, useState, useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, type StatusEtapa } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
-import { usePagamentos } from "@/hooks/use-pagamentos";
 import {
   TrendingUp,
   Package,
@@ -159,20 +158,16 @@ function aggregate(pedidos: { valorTotal: number; criadoEm: string }[], periodo:
 
 function PainelPage() {
   const { data: PEDIDOS = [], isLoading: lp, error: ep } = usePedidos();
-  const { data: PAGAMENTOS = [], isLoading: lpg, error: epg } = usePagamentos();
   const [periodo, setPeriodo] = useState<Periodo>("12m");
   const navigate = useNavigate();
-  const isLoading = lp || lpg;
+  const isLoading = lp;
 
   // Efeitos para expor quaisquer erros de requisição no console
   useEffect(() => {
     if (ep) {
       console.error("Erro ao buscar pedidos no Painel:", ep);
     }
-    if (epg) {
-      console.error("Erro ao buscar pagamentos no Painel:", epg);
-    }
-  }, [ep, epg]);
+  }, [ep]);
 
   const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
   const atrasados = PEDIDOS.filter((p) => new Date(p.entrega) < new Date() && p.etapa !== "entregue");

@@ -7,7 +7,6 @@ import { AddPagamentoDialog } from "@/components/add-pagamento-dialog";
 import {
   usePedido,
   useEtapasHistorico,
-  usePagamentosPedido,
   useDeletePedido,
   useDuplicatePedido,
   useReagendarEntrega,
@@ -45,7 +44,6 @@ function PedidoDetalhePage() {
   const navigate = useNavigate();
   const { data: p, isLoading } = usePedido(pedidoId);
   const { data: historico = [] } = useEtapasHistorico(pedidoId);
-  const { data: pagamentos = [] } = usePagamentosPedido(pedidoId);
   const del = useDeletePedido();
   const dup = useDuplicatePedido();
   const reagendar = useReagendarEntrega();

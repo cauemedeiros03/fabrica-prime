@@ -54,16 +54,22 @@ export function PedidoCard({
         ${isDragging ? "shadow-lg ring-2 ring-primary ring-offset-1 border-transparent z-50" : "hover:border-primary/40"}
       `}
     >
-      {/* ── ALÇA DE ARRASTO (drag handle isolado) ───────────────────────────── */}
-      {/* Os dragHandleProps ficam APENAS aqui, protegendo o restante do card   */}
-      <div
-        {...dragHandleProps}
-        onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-        className="flex items-start gap-2 p-4 pb-2 cursor-grab active:cursor-grabbing"
-        title="Arraste para mover"
-      >
-        <GripVertical className="size-3.5 text-muted-foreground/40 mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
+      {/* ── CABEÇALHO DO CARD ────────────────────────────────────────────────── */}
+      {/* Linha com alça de arrasto (apenas o ícone grip) + info do pedido       */}
+      <div className="flex items-start gap-2 px-3 pt-3 pb-1">
+        {/* ALÇA DE ARRASTO: dragHandleProps ficam APENAS no ícone grip */}
+        <div
+          {...dragHandleProps}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
+          title="Arraste para mover"
+        >
+          <GripVertical className="size-3.5 text-muted-foreground/40" />
+        </div>
+
+        {/* Conteúdo do header: clicável para abrir detalhes */}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
           <span className="text-xs font-semibold text-muted-foreground">{p.numero}</span>
           <h4 className="font-medium text-sm leading-tight mt-0.5 line-clamp-2">
             {p.produto}
@@ -74,8 +80,9 @@ export function PedidoCard({
             )}
           </h4>
         </div>
+
         <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0 mt-0.5 ${
             PRIORIDADE_COR[p.prioridade as keyof typeof PRIORIDADE_COR]
           }`}
         >

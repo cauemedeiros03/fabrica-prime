@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR, type StatusEtapa, type Pedido } from "@/lib/mock-data";
-import { usePedidos, useDeletePedido, useDuplicatePedido, useUpdatePedidoEtapa, useAddPagamento, type NovoPedidoInput } from "@/hooks/use-pedidos";
+import { usePedidos, useDeletePedido, useDuplicatePedido, useUpdatePedidoEtapa, useAddPagamento, getDataReferenciaArquivamento, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
 import { PedidoViewerDialog } from "@/components/pedido-viewer-dialog";
 import { Filter, Download, Search, Pencil, Trash2, Loader2, X, Copy, LayoutGrid, List, MessageCircle, ChevronLeft, ChevronRight, FileText, Printer } from "lucide-react";
@@ -260,13 +260,15 @@ function PedidosPage() {
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     const novaEtapa = destination.droppableId as StatusEtapa;
+    // Lê o pedido AGORA (antes do update otimístico alterar o array)
     const p = pedidos.find(x => x.id === draggableId);
+    const etapaAnterior = (p?.etapa ?? null) as StatusEtapa | null;
 
-    // mutate() — síncrono, compatível com onDragEnd do @hello-pangea/dnd.
-    // O optimistic update em useUpdatePedidoEtapa garante que a UI move
-    // o card imediatamente, sem esperar a resposta do banco.
+    // mutate() é síncrono e compatível com onDragEnd do @hello-pangea/dnd.
+    // etapaAnterior é passado explicitamente para que o mutationFn nunca leia
+    // do cache (que já pode ter sido alterado pelo onMutate otimístico).
     updateEtapa.mutate(
-      { id: draggableId, etapa: novaEtapa },
+      { id: draggableId, etapa: novaEtapa, etapaAnterior },
       {
         onSuccess: () => {
           const novaLabel = ETAPAS.find((x) => x.id === novaEtapa)?.label;
@@ -281,10 +283,11 @@ function PedidosPage() {
             if (saldo > 0) setQuitarSaldo({ id: p.id, numero: p.numero, saldo });
           }
         },
-        onError: () => toast.error("Erro ao atualizar etapa. Tente novamente."),
+        onError: () => toast.error("Erro ao mover pedido. Tente novamente."),
       }
     );
   };
+
 
   const handleQuitarSaldo = async () => {
     if (!quitarSaldo) return;
@@ -379,9 +382,13 @@ function PedidosPage() {
 
                 const pedidosEtapa = filtrados.filter(p => {
                   if (p.etapa !== etapa.id) return false;
-                  // Só arquiva pedidos na etapa "entregue" com mais de 7 dias
+                  // Auto-arquivamento: pedidos em 'entregue' há mais de 7 dias
+                  // são ocultados do Kanban ativo (sem deletar do banco).
+                  // Usa updated_at (atualizadoEm) — data real de conclusão —
+                  // e não a data prevista de entrega, evitando que o DnD
+                  // faça o card sumir imediatamente ao ser solto na coluna.
                   if (etapa.id === "entregue") {
-                    const dataRef = p.entrega ? +new Date(p.entrega) : +new Date(p.criadoEm);
+                    const dataRef = getDataReferenciaArquivamento(p);
                     return dataRef >= limiteArquivamento;
                   }
                   return true;

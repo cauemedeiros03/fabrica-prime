@@ -98,24 +98,7 @@ export function usePedidosCliente(clienteId: string | undefined) {
   });
 }
 
-export interface Pagamento {
-  id: string;
-  valor: number;
-  pago_em: string;
-  pedido_numero: string;
-  forma: string | null;
-}
 
-export function usePagamentosCliente(clienteId: string | undefined) {
-  return useQuery({
-    queryKey: ["pagamentos-cliente", clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      // Retorna array vazio devido à remoção da tabela pagamentos no banco de dados.
-      return [] as Pagamento[];
-    },
-  });
-}
 
 export function useCreateCliente() {
   const qc = useQueryClient();

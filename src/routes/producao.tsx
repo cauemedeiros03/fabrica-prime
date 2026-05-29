@@ -129,8 +129,10 @@ function ProducaoPage() {
     const pedido = pedidos.find((p) => p.id === arrastando);
     setArrastando(null);
     if (!pedido || pedido.etapa === etapa) return;
+    // etapaAnterior capturado antes do onMutate alterar o cache
+    const etapaAnterior = pedido.etapa;
     try {
-      await updateEtapa.mutateAsync({ id: pedido.id, etapa });
+      await updateEtapa.mutateAsync({ id: pedido.id, etapa, etapaAnterior });
       
       const novaLabel = ETAPAS.find((x) => x.id === etapa)?.label;
       const pedidoAtualizado = { ...pedido, etapa };
@@ -152,6 +154,7 @@ function ProducaoPage() {
       toast.error("Erro ao mover pedido", { description: err instanceof Error ? err.message : "" });
     }
   };
+
 
   return (
     <AppShell
