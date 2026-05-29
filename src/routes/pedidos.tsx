@@ -254,35 +254,36 @@ function PedidosPage() {
     setConfirmar(null);
   };
 
-  const handleDragEnd = async (result: DropResult) => {
+  const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-    
+
     const novaEtapa = destination.droppableId as StatusEtapa;
     const p = pedidos.find(x => x.id === draggableId);
-    
-    try {
-      await updateEtapa.mutateAsync({ id: draggableId, etapa: novaEtapa });
-      const novaLabel = ETAPAS.find((x) => x.id === novaEtapa)?.label;
-      const pedidoAtualizado = p ? { ...p, etapa: novaEtapa } : null;
-      
-      toast.success(`Status atualizado para ${novaLabel}`, {
-        action: pedidoAtualizado ? {
-          label: "Avisar Cliente",
-          onClick: () => sendWhatsAppMessage(pedidoAtualizado)
-        } : undefined
-      });
 
-      if (p && novaEtapa === "entregue") {
-         const saldo = p.valorTotal - p.valorPago;
-         if (saldo > 0) {
-           setQuitarSaldo({ id: p.id, numero: p.numero, saldo });
-         }
+    // mutate() — síncrono, compatível com onDragEnd do @hello-pangea/dnd.
+    // O optimistic update em useUpdatePedidoEtapa garante que a UI move
+    // o card imediatamente, sem esperar a resposta do banco.
+    updateEtapa.mutate(
+      { id: draggableId, etapa: novaEtapa },
+      {
+        onSuccess: () => {
+          const novaLabel = ETAPAS.find((x) => x.id === novaEtapa)?.label;
+          const pedidoAtualizado = p ? { ...p, etapa: novaEtapa } : null;
+          toast.success(`Status atualizado para ${novaLabel}`, {
+            action: pedidoAtualizado
+              ? { label: "Avisar Cliente", onClick: () => sendWhatsAppMessage(pedidoAtualizado) }
+              : undefined,
+          });
+          if (p && novaEtapa === "entregue") {
+            const saldo = p.valorTotal - p.valorPago;
+            if (saldo > 0) setQuitarSaldo({ id: p.id, numero: p.numero, saldo });
+          }
+        },
+        onError: () => toast.error("Erro ao atualizar etapa. Tente novamente."),
       }
-    } catch (err) {
-      toast.error("Erro ao atualizar etapa.");
-    }
+    );
   };
 
   const handleQuitarSaldo = async () => {
@@ -370,19 +371,43 @@ function PedidosPage() {
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="flex items-stretch gap-4 min-w-max h-[calc(100vh-280px)] min-h-[500px]">
               {ETAPAS.map((etapa) => {
-                const totalPedidosEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
-                let pedidosEtapa = filtrados.filter(p => p.etapa === etapa.id);
-                if (etapa.id === "entregue") {
-                  pedidosEtapa = pedidosEtapa.slice(0, 10);
-                }
+                // Filtro de arquivamento automático:
+                // Pedidos "entregue" com mais de 7 dias NÃO aparecem no Kanban ativo.
+                // Os dados continuam intactos no banco para relatórios.
+                const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+                const limiteArquivamento = Date.now() - SETE_DIAS_MS;
+
+                const pedidosEtapa = filtrados.filter(p => {
+                  if (p.etapa !== etapa.id) return false;
+                  // Só arquiva pedidos na etapa "entregue" com mais de 7 dias
+                  if (etapa.id === "entregue") {
+                    const dataRef = p.entrega ? +new Date(p.entrega) : +new Date(p.criadoEm);
+                    return dataRef >= limiteArquivamento;
+                  }
+                  return true;
+                });
+
+                // Conta total real (incluindo arquivados) para mostrar no badge
+                const totalNaEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
+                const arquivados = totalNaEtapa - pedidosEtapa.length;
                 return (
                   <div key={etapa.id} className="w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden">
                     <div className="p-4 border-b bg-card/50">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>
-                        <span className="text-xs font-medium bg-background border px-2 py-0.5 rounded-full">
-                          {etapa.id === "entregue" && totalPedidosEtapa > 10 ? `10 de ${totalPedidosEtapa}` : totalPedidosEtapa}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-medium bg-background border px-2 py-0.5 rounded-full">
+                            {pedidosEtapa.length}
+                          </span>
+                          {arquivados > 0 && (
+                            <span
+                              className="text-[10px] text-muted-foreground"
+                              title={`${arquivados} pedido(s) entregue(s) há mais de 7 dias arquivado(s) automaticamente`}
+                            >
+                              +{arquivados} arq.
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     

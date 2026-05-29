@@ -110,21 +110,7 @@ export function usePedidos() {
         console.error("Erro na busca de pedidos (usePedidos):", error);
         throw error;
       }
-
-      const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
-      const agora = Date.now();
-
-      // Arquivamento automático: pedidos na etapa "entregue" há mais de 7 dias
-      // são ocultados do Kanban ativo. Os dados NÃO são deletados do banco —
-      // continuam acessíveis para relatórios financeiros e histórico.
-      const ativos = (data as unknown as Row[]).filter((r) => {
-        if (r.etapa !== "entregue") return true;
-        // Usa created_at como referência (updated_at nem sempre existe no schema)
-        const dataRef = new Date(r.created_at).getTime();
-        return agora - dataRef < SETE_DIAS_MS;
-      });
-
-      return ativos.map(mapRow);
+      return (data as unknown as Row[]).map(mapRow);
     },
   });
 }
@@ -135,13 +121,9 @@ export function useUpdatePedidoEtapa() {
   return useMutation({
     mutationFn: async ({ id, etapa, observacao }: { id: string; etapa: StatusEtapa; observacao?: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
-      const { data: atual } = await supabase
-        .from("pedidos")
-        .select("etapa")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .single();
-      const anterior = (atual?.etapa as StatusEtapa | undefined) ?? null;
+      // Lê etapa anterior diretamente do cache (evita round-trip extra ao banco)
+      const cached = qc.getQueryData<ReturnType<typeof mapRow>[]>(["pedidos", user.id]);
+      const anterior = (cached?.find(p => p.id === id)?.etapa ?? null) as StatusEtapa | null;
       if (anterior === etapa) return;
       const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id).eq("user_id", user.id);
       if (error) throw error;
@@ -152,6 +134,19 @@ export function useUpdatePedidoEtapa() {
         autor_id: user.id,
         observacao: observacao ?? null,
       });
+    },
+    // Optimistic update: atualiza o cache ANTES da resposta do banco
+    onMutate: async ({ id, etapa }) => {
+      await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });
+      const snapshot = qc.getQueryData<ReturnType<typeof mapRow>[]>(["pedidos", user?.id]);
+      qc.setQueryData(["pedidos", user?.id], (old: ReturnType<typeof mapRow>[] | undefined) =>
+        old?.map(p => p.id === id ? { ...p, etapa } : p) ?? []
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      // Reverte o cache se o banco retornar erro
+      if (ctx?.snapshot) qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
