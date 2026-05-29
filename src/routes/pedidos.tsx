@@ -370,9 +370,14 @@ function PedidosPage() {
            <Loader2 className="size-6 animate-spin" />
          </div>
       ) : view === 'kanban' ? (
-        <div className="flex-1 overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8">
+        {/* Mobile: scroll horizontal com snap + overscroll contido para não conflitar com pull-to-refresh */}
+        <div
+          className="kanban-scroll flex-1 overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8"
+          style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
           <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="flex items-stretch gap-4 min-w-max h-[calc(100vh-280px)] min-h-[500px]">
+            {/* min-w-max garante scroll no desktop; no mobile cada coluna ocupa ~90vw com snap */}
+            <div className="flex items-stretch gap-3 md:gap-4 min-w-max md:min-w-max h-[calc(100svh-260px)] md:h-[calc(100vh-280px)] min-h-[400px] md:min-h-[500px] snap-x snap-mandatory md:snap-none">
               {ETAPAS.map((etapa) => {
                 // Filtro de arquivamento automático:
                 // Pedidos "entregue" com mais de 7 dias NÃO aparecem no Kanban ativo.
@@ -398,7 +403,8 @@ function PedidosPage() {
                 const totalNaEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
                 const arquivados = totalNaEtapa - pedidosEtapa.length;
                 return (
-                  <div key={etapa.id} className="w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden">
+                  {/* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */}
+                  <div key={etapa.id} className="w-[88vw] sm:w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
                     <div className="p-4 border-b bg-card/50">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>

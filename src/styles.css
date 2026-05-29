@@ -195,4 +195,16 @@
     backdrop-filter: blur(12px);
   }
   .text-balance { text-wrap: balance; }
+
+  /* ── Kanban mobile ──────────────────────────────────────────────────────── */
+  /* Permite scroll horizontal com o polegar sem interferir no DnD vertical   */
+  .kanban-scroll {
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Anula snap em breakpoints maiores (Tailwind não tem `snap-align-none`) */
+  .md\:snap-align-none {
+    scroll-snap-align: none;
+  }
 }

@@ -57,14 +57,14 @@ export function PedidoCard({
       {/* ── CABEÇALHO DO CARD ────────────────────────────────────────────────── */}
       {/* Linha com alça de arrasto (apenas o ícone grip) + info do pedido       */}
       <div className="flex items-start gap-2 px-3 pt-3 pb-1">
-        {/* ALÇA DE ARRASTO: dragHandleProps ficam APENAS no ícone grip */}
+        {/* ALÇA DE ARRASTO: área de toque maior no mobile, menor no desktop */}
         {/* CRÍTICO: não sobrescreva onPointerDown após o spread — o DnD usa esse evento para iniciar o arrasto */}
         <div
           {...dragHandleProps}
-          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted"
+          className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing p-2.5 sm:p-0.5 rounded hover:bg-muted -ml-1 sm:ml-0"
           title="Arraste para mover"
         >
-          <GripVertical className="size-3.5 text-muted-foreground/40" />
+          <GripVertical className="size-5 sm:size-3.5 text-muted-foreground/40" />
         </div>
 
         {/* Conteúdo do header: clicável para abrir detalhes */}
@@ -120,8 +120,9 @@ export function PedidoCard({
         </div>
       </div>
 
-      {/* ── BOTÕES DE AÇÃO (hover, zona segura com stopPropagation) ─────────── */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity bg-card/80 backdrop-blur-sm p-1 rounded-lg">
+      {/* ── BOTÕES DE AÇÃO ──────────────────────────────────────────────────── */}
+      {/* Mobile: sempre visível (não há hover em touch). Desktop: só no hover   */}
+      <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex gap-1 transition-opacity bg-card/80 backdrop-blur-sm p-1 rounded-lg">
         {/* BOTÃO VER — zona segura garantida com onPointerDown stopPropagation */}
         {onClick && (
           <button
