@@ -7,7 +7,6 @@ export interface Produto {
   nome: string;
   descricao: string | null;
   preco: number | null;
-  user_id: string;
   created_at: string;
 }
 
@@ -26,8 +25,7 @@ export function useProdutos() {
       if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("catalogo_produtos")
-        .select("id, user_id, nome, descricao, preco, created_at")
-        .eq("user_id", user.id)
+        .select("id, nome, descricao, preco, created_at")
         .order("nome", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((p) => ({
@@ -50,7 +48,6 @@ export function useCreateProduto() {
           nome: input.nome,
           descricao: input.descricao || null,
           preco: input.preco ?? null,
-          user_id: user.id,
         })
         .select("id")
         .single();
@@ -74,8 +71,7 @@ export function useUpdateProduto() {
           descricao: input.descricao || null,
           preco: input.preco ?? null,
         })
-        .eq("id", id)
-        .eq("user_id", user.id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -93,8 +89,7 @@ export function useDeleteProduto() {
       const { error } = await supabase
         .from("catalogo_produtos")
         .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["produtos"] }),
