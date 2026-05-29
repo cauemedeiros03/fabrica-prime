@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogo_produtos: {
+        Row: {
+          id: string
+          nome: string
+          descricao: string | null
+          preco: number | null
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          descricao?: string | null
+          preco?: number | null
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          descricao?: string | null
+          preco?: number | null
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           cidade: string | null
