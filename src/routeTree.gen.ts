@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosRouteImport } from './routes/termos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as ProducaoRouteImport } from './routes/producao'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as PedidosRouteImport } from './routes/pedidos'
@@ -40,6 +41,11 @@ const TermosRoute = TermosRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProdutosRoute = ProdutosRouteImport.update({
+  id: '/produtos',
+  path: '/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProducaoRoute = ProducaoRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof PedidosRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
+  '/produtos': typeof ProdutosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/pedidos': typeof PedidosRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
+  '/produtos': typeof ProdutosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/pedidos': typeof PedidosRouteWithChildren
   '/privacidade': typeof PrivacidadeRoute
   '/producao': typeof ProducaoRoute
+  '/produtos': typeof ProdutosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/termos': typeof TermosRoute
   '/api/webhook-cakto': typeof ApiWebhookCaktoRoute
@@ -234,6 +243,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/privacidade'
     | '/producao'
+    | '/produtos'
     | '/recuperar-senha'
     | '/termos'
     | '/api/webhook-cakto'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/privacidade'
     | '/producao'
+    | '/produtos'
     | '/recuperar-senha'
     | '/termos'
     | '/api/webhook-cakto'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/privacidade'
     | '/producao'
+    | '/produtos'
     | '/recuperar-senha'
     | '/termos'
     | '/api/webhook-cakto'
@@ -307,6 +319,7 @@ export interface RootRouteChildren {
   PedidosRoute: typeof PedidosRouteWithChildren
   PrivacidadeRoute: typeof PrivacidadeRoute
   ProducaoRoute: typeof ProducaoRoute
+  ProdutosRoute: typeof ProdutosRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   TermosRoute: typeof TermosRoute
   ApiWebhookCaktoRoute: typeof ApiWebhookCaktoRoute
@@ -328,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/recuperar-senha'
       fullPath: '/recuperar-senha'
       preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/produtos': {
+      id: '/produtos'
+      path: '/produtos'
+      fullPath: '/produtos'
+      preLoaderRoute: typeof ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/producao': {
@@ -512,6 +532,7 @@ const rootRouteChildren: RootRouteChildren = {
   PedidosRoute: PedidosRouteWithChildren,
   PrivacidadeRoute: PrivacidadeRoute,
   ProducaoRoute: ProducaoRoute,
+  ProdutosRoute: ProdutosRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   TermosRoute: TermosRoute,
   ApiWebhookCaktoRoute: ApiWebhookCaktoRoute,
@@ -521,13 +542,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

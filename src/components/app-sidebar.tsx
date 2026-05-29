@@ -16,6 +16,7 @@ import {
   CalendarClock,
   FileText,
   LogOut,
+  Package,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +39,7 @@ const categories = [
     title: "Logística e Vendas",
     items: [
       { to: "/clientes", label: "Clientes", icon: Users },
+      { to: "/produtos", label: "Produtos", icon: Package },
       { to: "/entregas", label: "Entregas", icon: Truck },
     ],
   },
