@@ -370,7 +370,7 @@ function PedidosPage() {
            <Loader2 className="size-6 animate-spin" />
          </div>
       ) : view === 'kanban' ? (
-        {/* Mobile: scroll horizontal com snap + overscroll contido para não conflitar com pull-to-refresh */}
+        /* Mobile: scroll horizontal com snap + overscroll contido para não conflitar com pull-to-refresh */
         <div
           className="kanban-scroll flex-1 overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8"
           style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
@@ -403,7 +403,7 @@ function PedidosPage() {
                 const totalNaEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
                 const arquivados = totalNaEtapa - pedidosEtapa.length;
                 return (
-                  {/* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */}
+                  /* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */
                   <div key={etapa.id} className="w-[88vw] sm:w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
                     <div className="p-4 border-b bg-card/50">
                       <div className="flex items-center justify-between mb-1">
