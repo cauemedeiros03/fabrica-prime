@@ -8,6 +8,7 @@ import {
   type ProdutoInput,
   type Produto,
 } from "@/hooks/use-produtos";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { moeda } from "@/lib/mock-data";
 import {
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/produtos")({
 });
 
 function ProdutosPage() {
+  const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,6 +41,7 @@ function ProdutosPage() {
   const [confirmar, setConfirmar] = useState<Produto | null>(null);
 
   const fetchProdutos = async () => {
+    if (!user?.id) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -64,8 +67,10 @@ function ProdutosPage() {
   };
 
   useEffect(() => {
-    fetchProdutos();
-  }, []);
+    if (user?.id) {
+      fetchProdutos();
+    }
+  }, [user?.id]);
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase();
