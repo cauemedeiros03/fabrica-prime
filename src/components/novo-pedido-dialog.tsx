@@ -78,6 +78,22 @@ export function NovoPedidoDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [catalogo, setCatalogo] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchCatalogo() {
+      try {
+        const { data, error } = await supabase.from('catalogo_produtos').select('*').order('nome');
+        if (error) throw error;
+        setCatalogo(data || []);
+      } catch (err) {
+        console.error("Erro ao buscar catálogo de produtos:", err);
+      }
+    }
+    if (open) {
+      fetchCatalogo();
+    }
+  }, [open]);
 
   // getFileNameFromUrl e isImageUrl agora são funções puras fora do componente (acima)
 
@@ -354,7 +370,28 @@ export function NovoPedidoDialog({
           </Section>
 
           <Section title="Produto">
-            <Field label="Nome do produto *" value={form.produto} onChange={(v) => set("produto", v)} />
+            <div>
+              <label className="text-xs font-medium">Nome do produto *</label>
+              <input
+                list="catalogo-produtos"
+                value={form.produto}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  set("produto", val);
+                  const selected = catalogo.find((c: any) => c.nome === val);
+                  if (selected && selected.preco) {
+                    set("valor_total", Number(selected.preco));
+                  }
+                }}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Selecione ou digite o nome..."
+              />
+              <datalist id="catalogo-produtos">
+                {catalogo.map((c: any) => (
+                  <option key={c.id} value={c.nome} />
+                ))}
+              </datalist>
+            </div>
             <Field label="Tipo do móvel" value={form.tipo || ""} onChange={(v) => set("tipo", v)} />
             <Field label="Material" value={form.material || ""} onChange={(v) => set("material", v)} />
             <Field label="Cor / acabamento" value={form.cor || ""} onChange={(v) => set("cor", v)} />

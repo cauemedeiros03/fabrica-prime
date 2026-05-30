@@ -2,13 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, FormEvent, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
-  useProdutos,
   useCreateProduto,
   useUpdateProduto,
   useDeleteProduto,
   type ProdutoInput,
   type Produto,
 } from "@/hooks/use-produtos";
+import { supabase } from "@/integrations/supabase/client";
 import { moeda } from "@/lib/mock-data";
 import {
   Plus,
@@ -28,13 +28,42 @@ export const Route = createFileRoute("/produtos")({
 });
 
 function ProdutosPage() {
-  const { data: produtos = [], isLoading } = useProdutos();
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const del = useDeleteProduto();
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<(ProdutoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<Produto | null>(null);
+
+  const fetchProdutos = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("catalogo_produtos")
+        .select("id, nome, descricao, preco, created_at")
+        .order("nome", { ascending: true });
+        
+      if (error) throw error;
+      
+      setProdutos(
+        (data || []).map((p) => ({
+          ...p,
+          preco: p.preco ? Number(p.preco) : null,
+        })) as Produto[]
+      );
+    } catch (err) {
+      console.error("Erro ao buscar produtos:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,10 +88,12 @@ function ProdutosPage() {
     try {
       await del.mutateAsync(confirmar.id);
       toast.success(`${confirmar.nome} removido`);
+      fetchProdutos();
     } catch (e) {
       toast.error("Não foi possível remover", {
         description: e instanceof Error ? e.message : "",
       });
+      console.error("Erro ao remover:", e);
     }
     setConfirmar(null);
   };
@@ -178,6 +209,7 @@ function ProdutosPage() {
           }
         }}
         initial={edit}
+        onSuccess={fetchProdutos}
       />
 
       {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
@@ -220,10 +252,12 @@ function ProdutoDialog({
   open,
   onOpenChange,
   initial,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: (ProdutoInput & { id: string }) | null;
+  onSuccess?: () => void;
 }) {
   const isEdit = !!initial;
   const create = useCreateProduto();
@@ -260,8 +294,10 @@ function ProdutoDialog({
         await create.mutateAsync(form);
         toast.success("Produto cadastrado");
       }
+      onSuccess?.();
       onOpenChange(false);
     } catch (err: any) {
+      console.error("Erro ao salvar produto:", err);
       toast.error("Erro ao salvar", { description: err?.message || "" });
     }
   };
