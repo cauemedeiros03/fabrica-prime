@@ -216,7 +216,19 @@ function ProdutosPage() {
           }
         }}
         initial={edit}
-        onSuccess={fetchProdutos}
+        onSuccess={(savedItem) => {
+          if (savedItem) {
+            setProdutos((prev) => {
+              const exists = prev.find((p) => p.id === savedItem.id);
+              if (exists) {
+                return prev.map((p) => (p.id === savedItem.id ? { ...p, ...savedItem } : p));
+              }
+              return [...prev, savedItem];
+            });
+          } else {
+            fetchProdutos();
+          }
+        }}
       />
 
       {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
@@ -264,7 +276,7 @@ function ProdutoDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: (ProdutoInput & { id: string }) | null;
-  onSuccess?: () => void;
+  onSuccess?: (item?: any) => void;
 }) {
   const isEdit = !!initial;
   const create = useCreateProduto();
@@ -297,11 +309,12 @@ function ProdutoDialog({
       if (isEdit && initial) {
         await update.mutateAsync({ ...form, id: initial.id });
         toast.success("Produto atualizado");
+        onSuccess?.({ ...form, id: initial.id });
       } else {
-        await create.mutateAsync(form);
+        const id = await create.mutateAsync(form);
         toast.success("Produto cadastrado");
+        onSuccess?.({ ...form, id, created_at: new Date().toISOString() });
       }
-      onSuccess?.();
       onOpenChange(false);
     } catch (err: any) {
       console.error("Erro ao salvar produto:", err);
