@@ -379,8 +379,13 @@ export function NovoPedidoDialog({
                   const val = e.target.value;
                   set("produto", val);
                   const selected = catalogo.find((c: any) => c.nome === val);
-                  if (selected && selected.preco) {
-                    set("valor_total", Number(selected.preco));
+                  if (selected) {
+                    if (selected.preco) {
+                      set("valor_total", Number(selected.preco));
+                    }
+                    if (selected.descricao) {
+                      set("observacoes", selected.descricao);
+                    }
                   }
                 }}
                 className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"

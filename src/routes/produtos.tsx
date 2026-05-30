@@ -46,6 +46,8 @@ function ProdutosPage() {
         .select("id, nome, descricao, preco, created_at")
         .order("nome", { ascending: true });
         
+      console.log('Produtos fetch:', data, error);
+        
       if (error) throw error;
       
       setProdutos(
