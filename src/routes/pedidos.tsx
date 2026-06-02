@@ -443,7 +443,8 @@ function PedidosPage() {
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
-                          className={`flex-1 p-3 overflow-y-auto transition-colors ${snapshot.isDraggingOver ? 'bg-accent/40' : ''}`}
+                          className={`flex-1 p-3 overflow-y-auto transition-colors ${snapshot.isDraggingOver ? 'bg-accent/40' : ''} ![transform:none]`}
+                          style={{ transform: "none" }}
                         >
                           {pedidosEtapa.map((p, index) => (
                             <Draggable key={p.id} draggableId={p.id} index={index}>

@@ -161,7 +161,7 @@ export function AppShell({
           onNovoOrcamento={() => setNovoOrcamento(true)}
           onOpenNav={() => setMobileNav(true)}
         />
-        <main className="flex-1 p-6 lg:p-8 animate-in fade-in duration-200">
+        <main className="flex-1 p-6 pt-20 lg:pt-8 lg:p-8 animate-in fade-in duration-200">
           {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
           {children}
         </main>
