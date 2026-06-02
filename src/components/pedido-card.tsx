@@ -16,6 +16,22 @@ interface PedidoCardProps {
   dragHandleProps?: any;
 }
 
+const areEqual = (prevProps: PedidoCardProps, nextProps: PedidoCardProps) => {
+  return (
+    prevProps.isDragging === nextProps.isDragging &&
+    prevProps.p.id === nextProps.p.id &&
+    prevProps.p.numero === nextProps.p.numero &&
+    prevProps.p.etapa === nextProps.p.etapa &&
+    prevProps.p.prioridade === nextProps.p.prioridade &&
+    prevProps.p.produto === nextProps.p.produto &&
+    prevProps.p.cliente === nextProps.p.cliente &&
+    prevProps.p.valorTotal === nextProps.p.valorTotal &&
+    prevProps.p.valorPago === nextProps.p.valorPago &&
+    prevProps.p.entrega === nextProps.p.entrega &&
+    prevProps.p.anexos?.length === nextProps.p.anexos?.length
+  );
+};
+
 export const PedidoCard = React.memo(function PedidoCard({
   p,
   onClick,
@@ -189,18 +205,4 @@ export const PedidoCard = React.memo(function PedidoCard({
   );
 }, areEqual);
 
-const areEqual = (prevProps: PedidoCardProps, nextProps: PedidoCardProps) => {
-  return (
-    prevProps.isDragging === nextProps.isDragging &&
-    prevProps.p.id === nextProps.p.id &&
-    prevProps.p.numero === nextProps.p.numero &&
-    prevProps.p.etapa === nextProps.p.etapa &&
-    prevProps.p.prioridade === nextProps.p.prioridade &&
-    prevProps.p.produto === nextProps.p.produto &&
-    prevProps.p.cliente === nextProps.p.cliente &&
-    prevProps.p.valorTotal === nextProps.p.valorTotal &&
-    prevProps.p.valorPago === nextProps.p.valorPago &&
-    prevProps.p.entrega === nextProps.p.entrega &&
-    prevProps.p.anexos?.length === nextProps.p.anexos?.length
-  );
-};
+
