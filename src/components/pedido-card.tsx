@@ -49,7 +49,7 @@ export function PedidoCard({
     <div
       ref={innerRef}
       {...wrapperProps}
-      // dragHandleProps NÃO está aqui — evita que o DnD consuma o onClick do card
+      {...dragHandleProps}
       className={`bg-card border rounded-xl mb-3 shadow-sm select-none group relative transition-colors
         ${isDragging ? "shadow-lg ring-2 ring-primary ring-offset-1 border-transparent z-50" : "hover:border-primary/40"}
       `}
@@ -60,7 +60,6 @@ export function PedidoCard({
         {/* ALÇA DE ARRASTO: área de toque maior no mobile, menor no desktop */}
         {/* CRÍTICO: não sobrescreva onPointerDown após o spread — o DnD usa esse evento para iniciar o arrasto */}
         <div
-          {...dragHandleProps}
           className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing p-2.5 sm:p-0.5 rounded hover:bg-muted -ml-1 sm:ml-0"
           title="Arraste para mover"
         >

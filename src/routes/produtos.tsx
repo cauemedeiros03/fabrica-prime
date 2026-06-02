@@ -216,18 +216,8 @@ function ProdutosPage() {
           }
         }}
         initial={edit}
-        onSuccess={(savedItem) => {
-          if (savedItem) {
-            setProdutos((prev) => {
-              const exists = prev.find((p) => p.id === savedItem.id);
-              if (exists) {
-                return prev.map((p) => (p.id === savedItem.id ? { ...p, ...savedItem } : p));
-              }
-              return [...prev, savedItem];
-            });
-          } else {
-            fetchProdutos();
-          }
+        onSuccess={() => {
+          fetchProdutos();
         }}
       />
 
