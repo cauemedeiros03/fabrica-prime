@@ -46,7 +46,7 @@ function ProdutosPage() {
     try {
       const { data, error } = await supabase
         .from("catalogo_produtos")
-        .select("id, nome, descricao, preco, created_at")
+        .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em")
         .order("nome", { ascending: true });
         
       console.log('Produtos fetch:', data, error);
@@ -88,6 +88,9 @@ function ProdutosPage() {
       nome: p.nome,
       descricao: p.descricao ?? "",
       preco: p.preco ?? undefined,
+      tipo_movel: p.tipo_movel ?? "",
+      material: p.material ?? "",
+      cor_acabamento: p.cor_acabamento ?? "",
     });
 
   const apagar = async () => {
@@ -177,6 +180,25 @@ function ProdutosPage() {
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={p.descricao || ""}>
                   {p.descricao || "Sem descrição"}
                 </p>
+                {(p.tipo_movel || p.material || p.cor_acabamento) && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {p.tipo_movel && (
+                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                        {p.tipo_movel}
+                      </span>
+                    )}
+                    {p.material && (
+                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                        {p.material}
+                      </span>
+                    )}
+                    {p.cor_acabamento && (
+                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                        {p.cor_acabamento}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
@@ -272,11 +294,27 @@ function ProdutoDialog({
   const create = useCreateProduto();
   const update = useUpdateProduto();
 
-  const [form, setForm] = useState<ProdutoInput>({ nome: "", descricao: "", preco: undefined });
+  const [form, setForm] = useState<ProdutoInput>({
+    nome: "",
+    descricao: "",
+    preco: undefined,
+    tipo_movel: "",
+    material: "",
+    cor_acabamento: "",
+  });
 
   useEffect(() => {
     if (open) {
-      setForm(initial ?? { nome: "", descricao: "", preco: undefined });
+      setForm(
+        initial ?? {
+          nome: "",
+          descricao: "",
+          preco: undefined,
+          tipo_movel: "",
+          material: "",
+          cor_acabamento: "",
+        }
+      );
     }
   }, [open, initial]);
 
@@ -358,6 +396,39 @@ function ProdutoDialog({
               onChange={(e) => set("preco", formatCurrencyInput(e.target.value))}
               className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
               placeholder="0,00"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Tipo do móvel</label>
+            <input
+              type="text"
+              value={form.tipo_movel || ""}
+              onChange={(e) => set("tipo_movel", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: Cadeira, Mesa, Armário"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Material</label>
+            <input
+              type="text"
+              value={form.material || ""}
+              onChange={(e) => set("material", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: MDF, Angelim-pedra, Ferro"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Cor / acabamento</label>
+            <input
+              type="text"
+              value={form.cor_acabamento || ""}
+              onChange={(e) => set("cor_acabamento", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: Verniz fosco, Off-white"
             />
           </div>
 

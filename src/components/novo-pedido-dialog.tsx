@@ -383,6 +383,9 @@ export function NovoPedidoDialog({
                       ...s,
                       produto: val,
                       valor_total: selected.preco ? Number(selected.preco) : s.valor_total,
+                      tipo: selected.tipo_movel || "",
+                      material: selected.material || "",
+                      cor: selected.cor_acabamento || "",
                       observacoes: selected.descricao || "",
                     }));
                   } else {

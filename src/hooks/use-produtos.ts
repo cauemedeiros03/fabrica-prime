@@ -7,13 +7,19 @@ export interface Produto {
   nome: string;
   descricao: string | null;
   preco: number | null;
-  created_at: string;
+  tipo_movel: string | null;
+  material: string | null;
+  cor_acabamento: string | null;
+  criado_em: string;
 }
 
 export interface ProdutoInput {
   nome: string;
   descricao?: string;
   preco?: number;
+  tipo_movel?: string;
+  material?: string;
+  cor_acabamento?: string;
 }
 
 export function useProdutos() {
@@ -25,7 +31,7 @@ export function useProdutos() {
       if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("catalogo_produtos")
-        .select("id, nome, descricao, preco, created_at")
+        .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em")
         .order("nome", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((p) => ({
@@ -48,6 +54,9 @@ export function useCreateProduto() {
           nome: input.nome,
           descricao: input.descricao || null,
           preco: input.preco ?? null,
+          tipo_movel: input.tipo_movel || null,
+          material: input.material || null,
+          cor_acabamento: input.cor_acabamento || null,
         })
         .select("id")
         .single();
@@ -70,6 +79,9 @@ export function useUpdateProduto() {
           nome: input.nome,
           descricao: input.descricao || null,
           preco: input.preco ?? null,
+          tipo_movel: input.tipo_movel || null,
+          material: input.material || null,
+          cor_acabamento: input.cor_acabamento || null,
         })
         .eq("id", id);
       if (error) throw error;

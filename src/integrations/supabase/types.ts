@@ -53,21 +53,30 @@ export type Database = {
           nome: string
           descricao: string | null
           preco: number | null
-          created_at: string
+          tipo_movel: string | null
+          material: string | null
+          cor_acabamento: string | null
+          criado_em: string
         }
         Insert: {
           id?: string
           nome: string
           descricao?: string | null
           preco?: number | null
-          created_at?: string
+          tipo_movel?: string | null
+          material?: string | null
+          cor_acabamento?: string | null
+          criado_em?: string
         }
         Update: {
           id?: string
           nome?: string
           descricao?: string | null
           preco?: number | null
-          created_at?: string
+          tipo_movel?: string | null
+          material?: string | null
+          cor_acabamento?: string | null
+          criado_em?: string
         }
         Relationships: []
       }
