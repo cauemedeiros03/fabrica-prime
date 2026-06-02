@@ -377,7 +377,7 @@ function PedidosPage() {
         >
           <DragDropContext onDragEnd={handleDragEnd}>
             {/* min-w-max garante scroll no desktop; no mobile cada coluna ocupa ~90vw com snap */}
-            <div className="flex items-stretch gap-3 md:gap-4 min-w-max md:min-w-max h-[calc(100svh-260px)] md:h-[calc(100vh-280px)] min-h-[400px] md:min-h-[500px] snap-x snap-mandatory md:snap-none">
+            <div className="flex flex-row flex-nowrap items-stretch gap-3 md:gap-4 min-w-max md:min-w-max h-[calc(100svh-260px)] md:h-[calc(100vh-280px)] min-h-[400px] md:min-h-[500px] snap-x snap-mandatory md:snap-none">
               {ETAPAS.map((etapa) => {
                 // Filtro de arquivamento automático:
                 // Pedidos "entregue" com mais de 7 dias NÃO aparecem no Kanban ativo.
@@ -404,7 +404,7 @@ function PedidosPage() {
                 const arquivados = totalNaEtapa - pedidosEtapa.length;
                 return (
                   /* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */
-                  <div key={etapa.id} className="w-[88vw] sm:w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
+                  <div key={etapa.id} className="w-[85vw] md:w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
                     <div className="p-4 border-b bg-card/50">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>

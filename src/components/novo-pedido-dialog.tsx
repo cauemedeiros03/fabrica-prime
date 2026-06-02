@@ -264,10 +264,10 @@ export function NovoPedidoDialog({
   const saving = create.isPending || update.isPending || isSubmitting;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl rounded-2xl bg-card border shadow-[var(--shadow-elevated)] my-8"
+        className="w-full h-full md:h-auto md:max-w-3xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col md:my-8"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div>
@@ -283,7 +283,7 @@ export function NovoPedidoDialog({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-6 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={onSubmit} className="px-6 py-5 space-y-6 flex-1 overflow-y-auto md:max-h-[75vh]">
           <Section title="Cliente">
             {!isEdit && (
               <div className="md:col-span-2">

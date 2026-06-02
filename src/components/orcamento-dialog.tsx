@@ -353,7 +353,7 @@ Qualquer dúvida, estou à disposição!`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-full max-w-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden"
+        className="w-full h-full md:h-auto md:max-w-2xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden flex flex-col"
         // BLOQUEIO: impede fechamento ao clicar fora do modal (Regra RADIX UI)
         onInteractOutside={(e) => { e.preventDefault(); }}
         onPointerDownOutside={(e) => { e.preventDefault(); }}
@@ -380,7 +380,7 @@ Qualquer dúvida, estou à disposição!`;
           </button>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 flex-1 overflow-y-auto md:max-h-[75vh]">
           {/* CLIENTE */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-2">Dados do Cliente</p>

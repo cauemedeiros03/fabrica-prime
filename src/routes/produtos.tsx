@@ -354,10 +354,10 @@ function ProdutoDialog({
   const saving = create.isPending || update.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl bg-card border shadow-[var(--shadow-elevated)]"
+        className="w-full h-full md:h-auto md:max-w-md md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div>
@@ -376,7 +376,7 @@ function ProdutoDialog({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={onSubmit} className="px-6 py-5 space-y-4 flex-1 overflow-y-auto md:flex-none">
           <div>
             <label className="text-xs font-medium">Nome do Produto *</label>
             <input

@@ -23,7 +23,7 @@ export function AppHeader({
   }, [dark]);
 
   return (
-    <header className="h-16 border-b bg-background/80 backdrop-blur-md sticky top-0 z-30 flex items-center gap-3 px-4 lg:px-6">
+    <header className="hidden lg:flex h-16 border-b bg-background/80 backdrop-blur-md sticky top-0 z-30 flex items-center gap-3 px-4 lg:px-6">
       {onOpenNav && (
         <button
           onClick={onOpenNav}

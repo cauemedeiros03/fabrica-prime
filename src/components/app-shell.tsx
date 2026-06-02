@@ -7,8 +7,9 @@ import { OrcamentoDialog } from "@/components/orcamento-dialog";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Menu } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppShell({
   title,
@@ -28,7 +29,27 @@ export function AppShell({
   const [novoPedido, setNovoPedido] = useState(false);
   const [novoOrcamento, setNovoOrcamento] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+  const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
   useRealtimeSync();
+
+  useEffect(() => {
+    async function loadConfig() {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from("configuracoes_marcenaria")
+          .select("nome_marcenaria")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data) {
+          setNomeMarcenaria(data.nome_marcenaria || null);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar nome marcenaria:", err);
+      }
+    }
+    loadConfig();
+  }, [user?.id]);
 
   // Paywall bypass checks (matches __root.tsx logic)
   const isAdmin = user?.email === "admin@marcena.com.br";
@@ -98,15 +119,18 @@ export function AppShell({
       {mobileNav && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setMobileNav(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 bg-sidebar shadow-2xl animate-in slide-in-from-left">
-            <button
-              onClick={() => setMobileNav(false)}
-              className="absolute right-3 top-3 size-8 grid place-items-center rounded-lg hover:bg-sidebar-accent z-10"
-              aria-label="Fechar"
-            >
-              <X className="size-4" />
-            </button>
-            <div className="block lg:hidden h-full [&>aside]:!flex [&>aside]:w-full">
+          <div className="absolute inset-y-0 left-0 w-[80vw] max-w-[320px] bg-sidebar shadow-2xl animate-in slide-in-from-left flex flex-col h-full border-r">
+            <div className="h-14 flex items-center justify-between px-4 border-b shrink-0 bg-sidebar">
+              <span className="font-bold text-sm truncate">{nomeMarcenaria || "Menu"}</span>
+              <button
+                onClick={() => setMobileNav(false)}
+                className="size-9 grid place-items-center rounded-lg hover:bg-sidebar-accent text-sidebar-foreground border"
+                aria-label="Fechar"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto [&>aside]:!flex [&>aside]:w-full [&>aside]:h-full [&>aside]:border-0">
               <AppSidebar />
             </div>
           </div>
@@ -114,6 +138,22 @@ export function AppShell({
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Navbar */}
+        <div className="lg:hidden h-14 border-b bg-card flex items-center justify-between px-4 sticky top-0 z-30 shadow-sm shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setMobileNav(true)}
+              className="size-9 grid place-items-center rounded-lg border hover:bg-accent transition shrink-0"
+              aria-label="Abrir menu"
+            >
+              <Menu className="size-5" />
+            </button>
+            <span className="font-bold text-sm tracking-tight truncate">
+              {nomeMarcenaria || "Sua bancada"}
+            </span>
+          </div>
+        </div>
+
         <AppHeader
           title={title}
           subtitle={subtitle}

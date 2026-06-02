@@ -1,3 +1,4 @@
+import React from "react";
 import { MessageCircle, Pencil, Copy, Trash2, Printer, Paperclip, Eye, GripVertical } from "lucide-react";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
@@ -15,7 +16,7 @@ interface PedidoCardProps {
   dragHandleProps?: any;
 }
 
-export function PedidoCard({
+export const PedidoCard = React.memo(function PedidoCard({
   p,
   onClick,
   onEdit,
@@ -53,6 +54,11 @@ export function PedidoCard({
       className={`bg-card border rounded-xl mb-3 shadow-sm select-none group relative transition-colors
         ${isDragging ? "shadow-lg ring-2 ring-primary ring-offset-1 border-transparent z-50" : "hover:border-primary/40"}
       `}
+      style={{
+        ...wrapperProps?.style,
+        ...dragHandleProps?.style,
+        touchAction: "pan-y",
+      }}
     >
       {/* ── CABEÇALHO DO CARD ────────────────────────────────────────────────── */}
       {/* Linha com alça de arrasto (apenas o ícone grip) + info do pedido       */}
@@ -181,4 +187,20 @@ export function PedidoCard({
       </div>
     </div>
   );
-}
+}, areEqual);
+
+const areEqual = (prevProps: PedidoCardProps, nextProps: PedidoCardProps) => {
+  return (
+    prevProps.isDragging === nextProps.isDragging &&
+    prevProps.p.id === nextProps.p.id &&
+    prevProps.p.numero === nextProps.p.numero &&
+    prevProps.p.etapa === nextProps.p.etapa &&
+    prevProps.p.prioridade === nextProps.p.prioridade &&
+    prevProps.p.produto === nextProps.p.produto &&
+    prevProps.p.cliente === nextProps.p.cliente &&
+    prevProps.p.valorTotal === nextProps.p.valorTotal &&
+    prevProps.p.valorPago === nextProps.p.valorPago &&
+    prevProps.p.entrega === nextProps.p.entrega &&
+    prevProps.p.anexos?.length === nextProps.p.anexos?.length
+  );
+};
