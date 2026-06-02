@@ -429,13 +429,22 @@ function PedidosPage() {
                       renderClone={(provided, snapshot, rubric) => {
                         const pedidoClone = pedidosEtapa[rubric.source.index];
                         return (
-                          <PedidoCard
-                            p={pedidoClone}
-                            innerRef={provided.innerRef}
-                            wrapperProps={{ ...provided.draggableProps }}
-                            dragHandleProps={provided.dragHandleProps}
-                            isDragging={snapshot.isDragging}
-                          />
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              touchAction: "none",
+                              WebkitUserSelect: "none",
+                              userSelect: "none",
+                            }}
+                          >
+                            <PedidoCard
+                              p={pedidoClone}
+                              isDragging={snapshot.isDragging}
+                            />
+                          </div>
                         );
                       }}
                     >
@@ -452,7 +461,7 @@ function PedidosPage() {
                                 <PedidoCard
                                   p={p}
                                   innerRef={provided.innerRef}
-                                  wrapperProps={{ ...provided.draggableProps }}
+                                  wrapperProps={provided.draggableProps}
                                   dragHandleProps={provided.dragHandleProps}
                                   isDragging={snapshot.isDragging}
                                   onClick={() => !snapshot.isDragging && setViewing(p)}

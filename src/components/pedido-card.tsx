@@ -17,8 +17,28 @@ interface PedidoCardProps {
 }
 
 const areEqual = (prevProps: PedidoCardProps, nextProps: PedidoCardProps) => {
+  // Se o estado de arrasto mudou ou está ativamente arrastando, precisamos atualizar para aplicar transformações
+  if (prevProps.isDragging !== nextProps.isDragging || nextProps.isDragging) {
+    return false;
+  }
+
+  // Verifica se as propriedades de estilo de arrasto mudaram
+  const s1 = prevProps.wrapperProps?.style;
+  const s2 = nextProps.wrapperProps?.style;
+  if (s1 !== s2) {
+    if (!s1 || !s2) return false;
+    if (
+      s1.transform !== s2.transform ||
+      s1.transition !== s2.transition ||
+      s1.position !== s2.position ||
+      s1.top !== s2.top ||
+      s1.left !== s2.left
+    ) {
+      return false;
+    }
+  }
+
   return (
-    prevProps.isDragging === nextProps.isDragging &&
     prevProps.p.id === nextProps.p.id &&
     prevProps.p.numero === nextProps.p.numero &&
     prevProps.p.etapa === nextProps.p.etapa &&
