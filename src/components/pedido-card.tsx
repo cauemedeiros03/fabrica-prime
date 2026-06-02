@@ -73,7 +73,13 @@ export const PedidoCard = React.memo(function PedidoCard({
       style={{
         ...wrapperProps?.style,
         ...dragHandleProps?.style,
-        touchAction: "pan-y",
+        // 'none' é necessário para que o @hello-pangea/dnd capture
+        // o ponteiro no mobile sem que o browser intercepte o gesto.
+        // O scroll da coluna funciona porque o DnD só bloqueia o touch
+        // no próprio elemento enquanto o arrasto está ativo.
+        touchAction: "none",
+        WebkitUserSelect: "none",
+        userSelect: "none",
       }}
     >
       {/* ── CABEÇALHO DO CARD ────────────────────────────────────────────────── */}

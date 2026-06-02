@@ -404,7 +404,7 @@ function PedidosPage() {
                 const arquivados = totalNaEtapa - pedidosEtapa.length;
                 return (
                   /* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */
-                  <div key={etapa.id} className="w-[85vw] md:w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
+                  <div key={etapa.id} className="w-[85vw] min-w-[85vw] max-w-[85vw] md:w-[300px] md:min-w-[300px] md:max-w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
                     <div className="p-4 border-b bg-card/50">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>
@@ -424,7 +424,21 @@ function PedidosPage() {
                       </div>
                     </div>
                     
-                    <Droppable droppableId={etapa.id}>
+                    <Droppable
+                      droppableId={etapa.id}
+                      renderClone={(provided, snapshot, rubric) => {
+                        const pedidoClone = pedidosEtapa[rubric.source.index];
+                        return (
+                          <PedidoCard
+                            p={pedidoClone}
+                            innerRef={provided.innerRef}
+                            wrapperProps={{ ...provided.draggableProps }}
+                            dragHandleProps={provided.dragHandleProps}
+                            isDragging={snapshot.isDragging}
+                          />
+                        );
+                      }}
+                    >
                       {(provided, snapshot) => (
                         <div
                           ref={provided.innerRef}
@@ -437,19 +451,19 @@ function PedidosPage() {
                                 <PedidoCard
                                   p={p}
                                   innerRef={provided.innerRef}
-                                  wrapperProps={{...provided.draggableProps, style: provided.draggableProps.style}}
+                                  wrapperProps={{ ...provided.draggableProps }}
                                   dragHandleProps={provided.dragHandleProps}
                                   isDragging={snapshot.isDragging}
-                                onClick={() => !snapshot.isDragging && setViewing(p)}
+                                  onClick={() => !snapshot.isDragging && setViewing(p)}
                                   onEdit={() => editar(p)}
                                   onDuplicate={async () => {
-                                      try {
-                                        const id = await dup.mutateAsync(p.id);
-                                        toast.success(`Pedido duplicado a partir de ${p.numero}`);
-                                        navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
-                                      } catch (e) {
-                                        toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
-                                      }
+                                    try {
+                                      const id = await dup.mutateAsync(p.id);
+                                      toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                                      navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                                    } catch (e) {
+                                      toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                                    }
                                   }}
                                   onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
                                   onPrint={() => setPrintPedido(p)}
