@@ -486,7 +486,7 @@ export function useAddPagamento() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async ({ pedido_id, valor }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
+    mutationFn: async ({ pedido_id, valor, forma, pago_em, observacao }: { pedido_id: string; valor: number; forma?: string; pago_em?: string; observacao?: string }) => {
       if (!user) throw new Error("Usuário não autenticado");
       // increment valor_pago atomically via re-read
       const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_pago").eq("id", pedido_id).eq("user_id", user.id).single();
