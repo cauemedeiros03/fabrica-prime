@@ -28,6 +28,7 @@ function ProducaoPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [arrastando, setArrastando] = useState<string | null>(null);
+  const [activeEtapaTab, setActiveEtapaTab] = useState<StatusEtapa>("pedido-recebido");
   
   const [edit, setEdit] = useState<(NovoPedidoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
@@ -137,17 +138,12 @@ function ProducaoPage() {
     setQuitarSaldo(null);
   };
 
-  const onDragStart = (id: string) => setArrastando(id);
-  const onDrop = async (e: DragEvent, etapa: StatusEtapa) => {
-    e.preventDefault();
-    if (!arrastando) return;
-    const pedido = pedidosAtivos.find((p) => p.id === arrastando);
-    setArrastando(null);
+  const handleUpdateEtapa = async (id: string, etapa: StatusEtapa) => {
+    const pedido = pedidosAtivos.find((p) => p.id === id);
     if (!pedido || pedido.etapa === etapa) return;
-    // etapaAnterior capturado antes do onMutate alterar o cache
     const etapaAnterior = pedido.etapa;
     try {
-      await updateEtapa.mutateAsync({ id: pedido.id, etapa, etapaAnterior });
+      await updateEtapa.mutateAsync({ id, etapa, etapaAnterior });
       
       const novaLabel = ETAPAS.find((x) => x.id === etapa)?.label;
       const pedidoAtualizado = { ...pedido, etapa };
@@ -170,6 +166,20 @@ function ProducaoPage() {
     }
   };
 
+  const onDragStart = (id: string) => setArrastando(id);
+  const onDrop = (e: DragEvent, etapa: StatusEtapa) => {
+    e.preventDefault();
+    if (!arrastando) return;
+    const orderId = arrastando;
+    setArrastando(null);
+    handleUpdateEtapa(orderId, etapa);
+  };
+
+
+  const getItensEtapa = (etapaId: StatusEtapa) => {
+    const itensEtapa = pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === String(etapaId).toLowerCase());
+    return String(etapaId).toLowerCase() === "entregue" ? itensEtapa.slice(0, 10) : itensEtapa;
+  };
 
   return (
     <AppShell
@@ -177,59 +187,137 @@ function ProducaoPage() {
       subtitle={isLoading ? "Carregando…" : "Arraste os cards entre as etapas ou use o seletor para atualizar"}
       breadcrumbs={[{ label: "Produção" }]}
     >
-      <div className="overflow-x-auto -mx-6 lg:-mx-8 px-6 lg:px-8 pb-2">
-        <div className="flex gap-4 min-w-max">
-          {ETAPAS.map((etapa) => {
-            const itensEtapa = pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === String(etapa.id).toLowerCase());
-            const totalItens = itensEtapa.length;
-            const itens = String(etapa.id).toLowerCase() === "entregue" ? itensEtapa.slice(0, 10) : itensEtapa;
-            return (
-              <div
-                key={etapa.id}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => onDrop(e, etapa.id)}
-                className="w-72 shrink-0 rounded-2xl bg-muted/40 border p-3"
-              >
-                <div className="flex items-center justify-between px-1.5 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="size-2 rounded-full" style={{ backgroundColor: etapa.cor }} />
-                    <p className="text-sm font-semibold tracking-tight">{etapa.label}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {etapa.id === "entregue" && totalItens > 10 ? `10 de ${totalItens}` : totalItens}
-                  </span>
-                </div>
-
-                <div className="space-y-2 min-h-[40px]">
-                  {itens.map((p) => (
-                    <PedidoCard
-                      key={p.id}
-                      p={p}
-                      wrapperProps={{
-                        draggable: true,
-                        onDragStart: () => onDragStart(p.id)
-                      }}
-                      onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
-                      onEdit={() => editar(p)}
-                      onDuplicate={async () => {
-                          try {
-                            const id = await dup.mutateAsync(p.id);
-                            toast.success(`Pedido duplicado a partir de ${p.numero}`);
-                            navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
-                          } catch (e) {
-                            toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
-                          }
-                      }}
-                      onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
-                      onPrint={() => setPrintPedido(p)}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+      {isLoading ? (
+        <div className="grid place-items-center py-20 text-muted-foreground">
+          <Loader2 className="size-6 animate-spin" />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* MODO MOBILE: Abas + Lista Vertical Sem Drag & Drop */}
+          <div className="block md:hidden">
+            {/* Abas horizontais de status */}
+            <div className="flex flex-row overflow-x-auto gap-2 pb-2.5 scrollbar-none border-b -mx-6 px-6 mb-4">
+              {ETAPAS.map((etapa) => {
+                const itens = getItensEtapa(etapa.id);
+                const isActive = activeEtapaTab === etapa.id;
+                return (
+                  <button
+                    key={etapa.id}
+                    onClick={() => setActiveEtapaTab(etapa.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-card hover:bg-accent text-muted-foreground border-border"
+                    }`}
+                  >
+                    <span
+                      className="size-2 rounded-full shrink-0"
+                      style={{ backgroundColor: isActive ? undefined : etapa.cor }}
+                    />
+                    <span>{etapa.label}</span>
+                    <span
+                      className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-destructive text-white"
+                      }`}
+                    >
+                      {itens.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Lista vertical de cartões */}
+            <div className="space-y-3 pb-8">
+              {getItensEtapa(activeEtapaTab).length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground bg-card/30 rounded-2xl border border-dashed">
+                  Nenhum pedido nesta etapa.
+                </div>
+              ) : (
+                getItensEtapa(activeEtapaTab).map((p) => (
+                  <PedidoCard
+                    key={p.id}
+                    p={p}
+                    onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                    onEdit={() => editar(p)}
+                    onDuplicate={async () => {
+                      try {
+                        const id = await dup.mutateAsync(p.id);
+                        toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                        navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                      } catch (e) {
+                        toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                      }
+                    }}
+                    onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
+                    onPrint={() => setPrintPedido(p)}
+                    onUpdateEtapa={(novaEtapa) => handleUpdateEtapa(p.id, novaEtapa)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* MODO DESKTOP: Painel de colunas completo para Desktop */}
+          <div className="hidden md:block">
+            <div className="overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8">
+              <div className="flex gap-4 min-w-max">
+                {ETAPAS.map((etapa) => {
+                  const itensEtapa = pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === String(etapa.id).toLowerCase());
+                  const totalItens = itensEtapa.length;
+                  const itens = String(etapa.id).toLowerCase() === "entregue" ? itensEtapa.slice(0, 10) : itensEtapa;
+                  return (
+                    <div
+                      key={etapa.id}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => onDrop(e, etapa.id)}
+                      className="w-72 shrink-0 rounded-2xl bg-muted/40 border p-3"
+                    >
+                      <div className="flex items-center justify-between px-1.5 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full" style={{ backgroundColor: etapa.cor }} />
+                          <p className="text-sm font-semibold tracking-tight">{etapa.label}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {etapa.id === "entregue" && totalItens > 10 ? `10 de ${totalItens}` : totalItens}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 min-h-[40px]">
+                        {itens.map((p) => (
+                          <PedidoCard
+                            key={p.id}
+                            p={p}
+                            wrapperProps={{
+                              draggable: true,
+                              onDragStart: () => onDragStart(p.id)
+                            }}
+                            onClick={() => navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: p.id } })}
+                            onEdit={() => editar(p)}
+                            onDuplicate={async () => {
+                              try {
+                                const id = await dup.mutateAsync(p.id);
+                                toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                                navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                              } catch (e) {
+                                toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                              }
+                            }}
+                            onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
+                            onPrint={() => setPrintPedido(p)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <NovoPedidoDialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)} initial={edit} />
 
