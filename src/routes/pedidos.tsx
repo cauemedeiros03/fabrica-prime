@@ -427,7 +427,8 @@ function PedidosPage() {
                     <Droppable
                       droppableId={etapa.id}
                       renderClone={(provided, snapshot, rubric) => {
-                        const pedidoClone = pedidosEtapa[rubric.source.index];
+                        const pedidoClone = pedidos.find(x => x.id === rubric.draggableId);
+                        if (!pedidoClone) return null;
                         return (
                           <div
                             ref={provided.innerRef}
@@ -458,26 +459,35 @@ function PedidosPage() {
                           {pedidosEtapa.map((p, index) => (
                             <Draggable key={p.id} draggableId={p.id} index={index}>
                               {(provided, snapshot) => (
-                                <PedidoCard
-                                  p={p}
-                                  innerRef={provided.innerRef}
-                                  wrapperProps={provided.draggableProps}
-                                  dragHandleProps={provided.dragHandleProps}
-                                  isDragging={snapshot.isDragging}
-                                  onClick={() => !snapshot.isDragging && setViewing(p)}
-                                  onEdit={() => editar(p)}
-                                  onDuplicate={async () => {
-                                    try {
-                                      const id = await dup.mutateAsync(p.id);
-                                      toast.success(`Pedido duplicado a partir de ${p.numero}`);
-                                      navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
-                                    } catch (e) {
-                                      toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
-                                    }
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    touchAction: "none",
+                                    WebkitUserSelect: "none",
+                                    userSelect: "none",
                                   }}
-                                  onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
-                                  onPrint={() => setPrintPedido(p)}
-                                />
+                                >
+                                  <PedidoCard
+                                    p={p}
+                                    isDragging={snapshot.isDragging}
+                                    onClick={() => !snapshot.isDragging && setViewing(p)}
+                                    onEdit={() => editar(p)}
+                                    onDuplicate={async () => {
+                                      try {
+                                        const id = await dup.mutateAsync(p.id);
+                                        toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                                        navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                                      } catch (e) {
+                                        toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                                      }
+                                    }}
+                                    onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
+                                    onPrint={() => setPrintPedido(p)}
+                                  />
+                                </div>
                               )}
                             </Draggable>
                           ))}
