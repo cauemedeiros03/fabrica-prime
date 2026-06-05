@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Pedido, StatusEtapa, Prioridade } from "@/lib/mock-data";
+import { ETAPAS, type Pedido, type StatusEtapa, type Prioridade } from "@/lib/mock-data";
 import { useAuth } from "@/hooks/use-auth";
 
 type Row = {
@@ -34,6 +34,7 @@ type Row = {
     origem: string | null;
   } | null;
   anexos: string[] | null;
+  historico_producao: any[] | null;
 };
 
 function mapRow(r: Row): Pedido & {
@@ -49,6 +50,7 @@ function mapRow(r: Row): Pedido & {
   bairro?: string;
   instagram?: string;
   origem?: string;
+  historico_producao?: any[];
 } {
   const c = r.clientes;
   const addressParts = c
@@ -93,6 +95,7 @@ function mapRow(r: Row): Pedido & {
     origem: c?.origem ?? "",
     clientes: c ? { nome: c.nome } : null,
     anexos: Array.isArray(r.anexos) ? (r.anexos as string[]) : [],
+    historico_producao: Array.isArray(r.historico_producao) ? r.historico_producao : [],
   };
 }
 
@@ -138,18 +141,30 @@ export function useUpdatePedidoEtapa() {
       // etapaAnterior é capturada no onMutate (antes do update otimístico),
       // então esta comparação usa o valor real do banco, não o cache modificado.
       if (etapaAnterior === etapa) return;
-      const { error } = await supabase.from("pedidos").update({ etapa }).eq("id", id).eq("user_id", user.id);
+
+      const etapaLabel = ETAPAS.find(e => e.id === etapa)?.label || etapa;
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      const { data: pData, error: pErr } = await (supabase
+        .from("pedidos") as any)
+        .select("historico_producao")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single();
+      if (pErr) throw pErr;
+
+      const currentHist = Array.isArray(pData?.historico_producao) ? pData.historico_producao : [];
+      const newEntry = { etapa: etapaLabel, data: dataStr };
+      const updatedHist = [...currentHist, newEntry];
+
+      const { error } = await (supabase
+        .from("pedidos") as any)
+        .update({ etapa, historico_producao: updatedHist })
+        .eq("id", id)
+        .eq("user_id", user.id);
       if (error) throw error;
-      // Registra histórico (best-effort — não bloqueia se falhar)
-      supabase.from("etapas_pedido").insert({
-        pedido_id: id,
-        etapa_anterior: etapaAnterior,
-        etapa_nova: etapa,
-        autor_id: user.id,
-        observacao: null,
-      }).then(({ error: eHist }) => {
-        if (eHist) console.warn("Erro ao registrar histórico de etapa:", eHist);
-      });
     },
     // ── onMutate: roda ANTES do mutationFn ─────────────────────────────────────────────
     // 1. Ativa flag para o Realtime não sobrescrever o estado otimístico.
@@ -194,19 +209,31 @@ export function useUpdatePedidoEtapa() {
 
 export function useEtapasHistorico(pedidoId: string | undefined) {
   const { user } = useAuth();
-  return useQuery({
+  return useQuery<{ id: string; etapa_anterior: string | null; etapa_nova: string; observacao: string | null; created_at: string }[]>({
     queryKey: ["etapas_pedido", pedidoId, user?.id],
     enabled: !!pedidoId && !!user?.id,
     staleTime: 30_000,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase
-        .from("etapas_pedido")
-        .select("id, etapa_anterior, etapa_nova, observacao, created_at")
-        .eq("pedido_id", pedidoId!)
-        .order("created_at", { ascending: true }); // cronológico: mais antigo primeiro
+      const { data, error } = await (supabase
+        .from("pedidos") as any)
+        .select("historico_producao")
+        .eq("id", pedidoId!)
+        .eq("user_id", user.id)
+        .single();
       if (error) throw error;
-      return data as { id: string; etapa_anterior: string | null; etapa_nova: string; observacao: string | null; created_at: string }[];
+
+      const rawHist = Array.isArray(data?.historico_producao) ? data.historico_producao : [];
+      return rawHist.map((entry: any, index: number) => {
+        const matchingEtapa = ETAPAS.find(e => e.label === entry.etapa || e.id === entry.etapa);
+        return {
+          id: String(index),
+          etapa_anterior: null,
+          etapa_nova: matchingEtapa ? matchingEtapa.id : entry.etapa,
+          observacao: null,
+          created_at: entry.data,
+        };
+      });
     },
   });
 }
@@ -330,6 +357,13 @@ export function useCreatePedido() {
         if (e1) throw e1;
       }
 
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      const targetEtapa = input.etapa || "pedido-recebido";
+      const etapaLabel = ETAPAS.find(e => e.id === targetEtapa)?.label || targetEtapa;
+
       const payload = {
         cliente_id: clienteId,
         produto: input.produto || "Produto não informado",
@@ -338,32 +372,24 @@ export function useCreatePedido() {
         cor: input.cor || null,
         observacoes: input.observacoes || null,
         entrega: input.entrega || null,
-        etapa: input.etapa || "pedido-recebido",
+        etapa: targetEtapa,
         prioridade: input.prioridade || "media",
         valor_total: Number(input.valor_total) || 0,
         valor_pago: Number(input.valor_pago) || 0,
         numero: String(Math.floor(100000 + Math.random() * 900000)),
         user_id: user.id,
         anexos: input.anexos || [],
+        historico_producao: [
+          { etapa: etapaLabel, data: dataStr }
+        ],
       };
 
-      const { data: pedido, error: e2 } = await supabase
-        .from("pedidos")
+      const { data: pedido, error: e2 } = await (supabase
+        .from("pedidos") as any)
         .insert(payload)
         .select("id")
         .single();
       if (e2) throw e2;
-
-      // Registra a etapa inicial no log de histórico (best-effort)
-      supabase.from("etapas_pedido").insert({
-        pedido_id: pedido.id,
-        etapa_anterior: null,
-        etapa_nova: payload.etapa,
-        autor_id: user.id,
-        observacao: "Pedido criado",
-      }).then(({ error: eH }) => {
-        if (eH) console.warn("Erro ao registrar etapa inicial:", eH);
-      });
 
       return pedido.id;
     },
@@ -399,8 +425,29 @@ export function useUpdatePedido() {
           .eq("user_id", user.id);
         if (ec) throw ec;
       }
-      const { error } = await supabase
-        .from("pedidos")
+
+      // Fetch current order stage and history
+      const { data: pData, error: pErr } = await (supabase
+        .from("pedidos") as any)
+        .select("etapa, historico_producao")
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      let updatedHist = pData?.historico_producao;
+      if (!pErr && pData) {
+        if (pData.etapa !== input.etapa) {
+          const currentHist = Array.isArray(pData.historico_producao) ? pData.historico_producao : [];
+          const etapaLabel = ETAPAS.find(e => e.id === input.etapa)?.label || input.etapa;
+          const now = new Date();
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          updatedHist = [...currentHist, { etapa: etapaLabel, data: dataStr }];
+        }
+      }
+
+      const { error } = await (supabase
+        .from("pedidos") as any)
         .update({
           produto: input.produto || "Produto não informado",
           tipo: input.tipo || null,
@@ -413,6 +460,7 @@ export function useUpdatePedido() {
           valor_total: Number(input.valor_total) || 0,
           valor_pago: Number(input.valor_pago) || 0,
           anexos: input.anexos,
+          historico_producao: updatedHist,
         })
         .eq("id", id)
         .eq("user_id", user.id);
@@ -421,6 +469,7 @@ export function useUpdatePedido() {
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
       qc.invalidateQueries({ queryKey: ["pedido", v.id] });
+      qc.invalidateQueries({ queryKey: ["etapas_pedido", v.id] });
       qc.invalidateQueries({ queryKey: ["clientes"] });
     },
   });
@@ -439,8 +488,14 @@ export function useDuplicatePedido() {
         .eq("user_id", user.id)
         .single();
       if (error) throw error;
-      const { data: novo, error: e2 } = await supabase
-        .from("pedidos")
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      const etapaLabel = ETAPAS.find(e => e.id === "pedido-recebido")?.label || "Pedido Recebido";
+
+      const { data: novo, error: e2 } = await (supabase
+        .from("pedidos") as any)
         .insert({
           cliente_id: p.cliente_id,
           produto: p.produto || "Produto não informado",
@@ -456,6 +511,9 @@ export function useDuplicatePedido() {
           numero: String(Math.floor(100000 + Math.random() * 900000)),
           user_id: user.id,
           anexos: p.anexos || [],
+          historico_producao: [
+            { etapa: etapaLabel, data: dataStr }
+          ],
         })
         .select("id")
         .single();
@@ -539,7 +597,6 @@ export function useDeletePedido() {
 
       // Deleta pagamentos associados primeiro para evitar erro de integridade (chave estrangeira)
       await supabase.from("pagamentos").delete().eq("pedido_id", id);
-      await supabase.from("etapas_pedido").delete().eq("pedido_id", id);
       const { error } = await supabase.from("pedidos").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
     },

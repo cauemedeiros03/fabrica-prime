@@ -15,8 +15,6 @@ export function useRealtimeSync() {
         // mutação já cuida da invalidação no momento certo — após o banco confirmar.
         if (isDraggingMutation) return;
         qc.invalidateQueries({ queryKey: ["pedidos"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "etapas_pedido" }, () => {
         qc.invalidateQueries({ queryKey: ["etapas_pedido"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "clientes" }, () => {
