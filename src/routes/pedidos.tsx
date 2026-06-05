@@ -181,13 +181,27 @@ function PedidosPage() {
 
   const filtrados = useMemo(() => {
     return pedidos.filter((p) => {
+      // Cláusula defensiva estrita: ignorar pedidos cancelados, excluídos ou inativos
+      const etapaLower = String(p.etapa || "").toLowerCase();
+      if (
+        etapaLower === "cancelado" ||
+        etapaLower === "cancelada" ||
+        etapaLower === "excluido" ||
+        etapaLower === "excluído" ||
+        p.excluido === true ||
+        p.deleted === true ||
+        p.ativo === false
+      ) {
+        return false;
+      }
+
       const matchQ = [p.cliente, p.produto, p.numero, p.tipo, p.cidade]
         .join(" ").toLowerCase().includes(q.toLowerCase());
       if (!matchQ) return false;
-      if (etapaFiltro) return p.etapa === etapaFiltro;
-      if (filtro === "atrasados") return new Date(p.entrega) < new Date() && p.etapa !== "entregue";
-      if (filtro === "em-producao") return !["entregue", "pronto-entrega"].includes(p.etapa);
-      if (filtro === "entregues") return p.etapa === "entregue";
+      if (etapaFiltro) return etapaLower === String(etapaFiltro).toLowerCase();
+      if (filtro === "atrasados") return new Date(p.entrega) < new Date() && etapaLower !== "entregue";
+      if (filtro === "em-producao") return !["entregue", "pronto-entrega"].includes(etapaLower);
+      if (filtro === "entregues") return etapaLower === "entregue";
       if (filtro === "semana") {
         const d = +new Date(p.entrega) - +new Date();
         return d > 0 && d < 1000 * 60 * 60 * 24 * 7;
@@ -389,10 +403,9 @@ function PedidosPage() {
                   if (p.etapa !== etapa.id) return false;
                   // Auto-arquivamento: pedidos em 'entregue' há mais de 7 dias
                   // são ocultados do Kanban ativo (sem deletar do banco).
-                  // Usa updated_at (atualizadoEm) — data real de conclusão —
-                  // e não a data prevista de entrega, evitando que o DnD
-                  // faça o card sumir imediatamente ao ser solto na coluna.
-                  if (etapa.id === "entregue") {
+                  // Se o filtro ativo for especificamente "entregues", mostramos todos sem arquivar.
+                  if (String(etapa.id).toLowerCase() === "entregue") {
+                    if (filtro === "entregues" || String(etapaFiltro).toLowerCase() === "entregue") return true;
                     const dataRef = getDataReferenciaArquivamento(p);
                     return dataRef >= limiteArquivamento;
                   }

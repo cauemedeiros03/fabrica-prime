@@ -36,10 +36,25 @@ function FinanceiroPage() {
   const createDespesa = useCreateDespesa();
   const deleteDespesa = useDeleteDespesa();
 
-  const recebido = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
-  const aReceber = PEDIDOS.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
+  const pedidosAtivos = useMemo(() => {
+    return PEDIDOS.filter((p) => {
+      const etapaLower = String(p.etapa || "").toLowerCase();
+      return !(
+        etapaLower === "cancelado" ||
+        etapaLower === "cancelada" ||
+        etapaLower === "excluido" ||
+        etapaLower === "excluído" ||
+        p.excluido === true ||
+        p.deleted === true ||
+        p.ativo === false
+      );
+    });
+  }, [PEDIDOS]);
+
+  const recebido = pedidosAtivos.reduce((s, p) => s + p.valorPago, 0);
+  const aReceber = pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
   const faturado = recebido + aReceber;
-  const pendentes = PEDIDOS.filter((p) => p.valorPago < p.valorTotal);
+  const pendentes = pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
 
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -51,7 +66,7 @@ function FinanceiroPage() {
       const year = d.getFullYear();
       const month = d.getMonth();
       
-      const receita = PEDIDOS.reduce((acc, p) => {
+      const receita = pedidosAtivos.reduce((acc, p) => {
         const pDate = new Date(p.criadoEm);
         if (pDate.getFullYear() === year && pDate.getMonth() === month) {
           return acc + p.valorTotal;
@@ -74,7 +89,7 @@ function FinanceiroPage() {
       });
     }
     return result;
-  }, [PEDIDOS, despesas]);
+  }, [pedidosAtivos, despesas]);
 
   const handleSalvarDespesa = async (e: React.FormEvent) => {
     e.preventDefault();

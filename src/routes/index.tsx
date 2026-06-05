@@ -169,16 +169,31 @@ function PainelPage() {
     }
   }, [ep]);
 
-  const emProducao = PEDIDOS.filter((p) => !["entregue", "pronto-entrega"].includes(p.etapa));
-  const atrasados = PEDIDOS.filter((p) => new Date(p.entrega) < new Date() && p.etapa !== "entregue");
-  const concluidos = PEDIDOS.filter((p) => p.etapa === "entregue");
-  const receitaTotal = PEDIDOS.reduce((s, p) => s + p.valorTotal, 0);
-  const recebidoTotal = PEDIDOS.reduce((s, p) => s + p.valorPago, 0);
+  const pedidosAtivos = useMemo(() => {
+    return PEDIDOS.filter((p) => {
+      const etapaLower = String(p.etapa || "").toLowerCase();
+      return !(
+        etapaLower === "cancelado" ||
+        etapaLower === "cancelada" ||
+        etapaLower === "excluido" ||
+        etapaLower === "excluído" ||
+        p.excluido === true ||
+        p.deleted === true ||
+        p.ativo === false
+      );
+    });
+  }, [PEDIDOS]);
+
+  const emProducao = pedidosAtivos.filter((p) => !["entregue", "pronto-entrega"].includes(String(p.etapa).toLowerCase()));
+  const atrasados = pedidosAtivos.filter((p) => new Date(p.entrega) < new Date() && String(p.etapa).toLowerCase() !== "entregue");
+  const concluidos = pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === "entregue");
+  const receitaTotal = pedidosAtivos.reduce((s, p) => s + p.valorTotal, 0);
+  const recebidoTotal = pedidosAtivos.reduce((s, p) => s + p.valorPago, 0);
   const aReceber = receitaTotal - recebidoTotal;
 
   // Filtrar os pedidos para incluir apenas os status válidos
   const chartPedidos = useMemo(() => {
-    return PEDIDOS.filter((p) => {
+    return pedidosAtivos.filter((p) => {
       const status = String(p.etapa || "").toLowerCase();
       return (
         status === "entregue" ||
@@ -188,7 +203,7 @@ function PainelPage() {
         status === "finalizado"
       );
     });
-  }, [PEDIDOS]);
+  }, [pedidosAtivos]);
 
   const chartData = useMemo(() => aggregate(chartPedidos, periodo), [chartPedidos, periodo]);
   const receitaPeriodo = chartData.reduce((s, x) => s + x.receita, 0);
@@ -196,11 +211,11 @@ function PainelPage() {
   const etapasAgg = ETAPAS.map((e) => ({
     id: e.id,
     nome: e.label.split(" ")[0],
-    qtd: PEDIDOS.filter((p) => p.etapa === e.id).length,
+    qtd: pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === String(e.id).toLowerCase()).length,
   }));
 
-  const proximas = [...PEDIDOS]
-    .filter((p) => p.etapa !== "entregue")
+  const proximas = [...pedidosAtivos]
+    .filter((p) => String(p.etapa).toLowerCase() !== "entregue")
     .sort((a, b) => +new Date(a.entrega) - +new Date(b.entrega))
     .slice(0, 5);
 

@@ -485,6 +485,19 @@ export function useAddPagamento() {
         throw updateErr;
       }
     },
+    onMutate: async ({ pedido_id, valor }) => {
+      await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });
+      const snapshot = qc.getQueryData<any[]>(["pedidos", user?.id]);
+      qc.setQueryData(["pedidos", user?.id], (old: any[] | undefined) =>
+        old ? old.map(p => p.id === pedido_id ? { ...p, valorPago: Number(p.valorPago || 0) + Number(valor) } : p) : []
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) {
+        qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
+      }
+    },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["pagamentos"] });
       qc.invalidateQueries({ queryKey: ["pagamentos", v.pedido_id] });
@@ -509,10 +522,27 @@ export function useDeletePedido() {
       if (checkError) throw checkError;
       if (!checkData) throw new Error("Pedido não encontrado ou sem permissão");
 
+      // Deleta pagamentos associados primeiro para evitar erro de integridade (chave estrangeira)
+      await supabase.from("pagamentos").delete().eq("pedido_id", id);
       await supabase.from("etapas_pedido").delete().eq("pedido_id", id);
       const { error } = await supabase.from("pedidos").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });
+      const snapshot = qc.getQueryData<any[]>(["pedidos", user?.id]);
+      qc.setQueryData(["pedidos", user?.id], (old: any[] | undefined) =>
+        old ? old.filter(p => p.id !== id) : []
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) {
+        qc.setQueryData(["pedidos", user?.id], ctx.snapshot);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+    },
   });
 }

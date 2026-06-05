@@ -5,7 +5,7 @@ import { usePedidos, useUpdatePedidoEtapa, useDuplicatePedido, useDeletePedido, 
 import { PedidoCard } from "@/components/pedido-card";
 import { NovoPedidoDialog } from "@/components/novo-pedido-dialog";
 import { AddPagamentoDialog } from "@/components/add-pagamento-dialog";
-import { useState, type DragEvent, useRef, useEffect } from "react";
+import { useState, type DragEvent, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { Loader2 } from "lucide-react";
@@ -41,6 +41,21 @@ function ProducaoPage() {
     contentRef: printRef,
     onAfterPrint: () => setPrintPedido(null),
   });
+
+  const pedidosAtivos = useMemo(() => {
+    return pedidos.filter((p) => {
+      const etapaLower = String(p.etapa || "").toLowerCase();
+      return !(
+        etapaLower === "cancelado" ||
+        etapaLower === "cancelada" ||
+        etapaLower === "excluido" ||
+        etapaLower === "excluído" ||
+        p.excluido === true ||
+        p.deleted === true ||
+        p.ativo === false
+      );
+    });
+  }, [pedidos]);
 
   useEffect(() => {
     async function loadConfig() {
@@ -126,7 +141,7 @@ function ProducaoPage() {
   const onDrop = async (e: DragEvent, etapa: StatusEtapa) => {
     e.preventDefault();
     if (!arrastando) return;
-    const pedido = pedidos.find((p) => p.id === arrastando);
+    const pedido = pedidosAtivos.find((p) => p.id === arrastando);
     setArrastando(null);
     if (!pedido || pedido.etapa === etapa) return;
     // etapaAnterior capturado antes do onMutate alterar o cache
@@ -165,9 +180,9 @@ function ProducaoPage() {
       <div className="overflow-x-auto -mx-6 lg:-mx-8 px-6 lg:px-8 pb-2">
         <div className="flex gap-4 min-w-max">
           {ETAPAS.map((etapa) => {
-            const itensEtapa = pedidos.filter((p) => p.etapa === etapa.id);
+            const itensEtapa = pedidosAtivos.filter((p) => String(p.etapa).toLowerCase() === String(etapa.id).toLowerCase());
             const totalItens = itensEtapa.length;
-            const itens = etapa.id === "entregue" ? itensEtapa.slice(0, 10) : itensEtapa;
+            const itens = String(etapa.id).toLowerCase() === "entregue" ? itensEtapa.slice(0, 10) : itensEtapa;
             return (
               <div
                 key={etapa.id}
