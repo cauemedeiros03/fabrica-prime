@@ -43,6 +43,9 @@ export interface Pedido {
   prioridade: Prioridade;
   clientes?: { nome: string } | null;
   anexos?: string[];
+  excluido?: boolean;
+  deleted?: boolean;
+  ativo?: boolean;
 }
 
 const hoje = new Date();
