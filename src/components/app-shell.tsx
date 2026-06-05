@@ -31,6 +31,8 @@ export function AppShell({
   const [mobileNav, setMobileNav] = useState(false);
   const [nomeMarcenaria, setNomeMarcenaria] = useState<string | null>(null);
   useRealtimeSync();
+  const pathname = location.pathname;
+  const showMobileActions = pathname === "/" || pathname === "/pedidos";
 
   useEffect(() => {
     async function loadConfig() {
@@ -180,22 +182,24 @@ export function AppShell({
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
             
             {/* Quick Actions Bar */}
-            <div className="flex flex-row gap-2 w-full mt-4">
-              <button
-                onClick={() => setNovoPedido(true)}
-                className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition-all shadow-[var(--shadow-glow)] cursor-pointer"
-              >
-                <Plus className="size-4 shrink-0" />
-                <span>Novo pedido</span>
-              </button>
-              <button
-                onClick={() => setNovoOrcamento(true)}
-                className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer"
-              >
-                <FileText className="size-4 shrink-0" />
-                <span>Gerar Orçamento</span>
-              </button>
-            </div>
+            {showMobileActions && (
+              <div className="flex flex-row gap-2 w-full mt-4">
+                <button
+                  onClick={() => setNovoPedido(true)}
+                  className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition-all shadow-[var(--shadow-glow)] cursor-pointer"
+                >
+                  <Plus className="size-4 shrink-0" />
+                  <span>Novo pedido</span>
+                </button>
+                <button
+                  onClick={() => setNovoOrcamento(true)}
+                  className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <FileText className="size-4 shrink-0" />
+                  <span>Gerar Orçamento</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}

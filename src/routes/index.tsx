@@ -64,7 +64,9 @@ function Stat({
           <Icon className="size-4" />
         </div>
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">{valor}</p>
+      <p className="mt-3 text-xl xs:text-2xl sm:text-3xl font-semibold tracking-tight truncate" title={valor}>
+        {valor}
+      </p>
       {delta && (
         <div
           className={`mt-1 inline-flex items-center gap-1 text-xs ${
