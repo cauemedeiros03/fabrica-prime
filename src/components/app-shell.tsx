@@ -7,7 +7,7 @@ import { OrcamentoDialog } from "@/components/orcamento-dialog";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import { Loader2, X, Menu } from "lucide-react";
+import { Loader2, X, Menu, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -113,7 +113,10 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar />
+      <AppSidebar 
+        onNovoPedido={() => setNovoPedido(true)} 
+        onNovoOrcamento={() => setNovoOrcamento(true)} 
+      />
 
       {/* Mobile drawer */}
       {mobileNav && (
@@ -131,7 +134,16 @@ export function AppShell({
               </button>
             </div>
             <div className="flex-grow overflow-y-auto [&>aside]:!flex [&>aside]:w-full [&>aside]:h-full [&>aside]:border-0">
-              <AppSidebar />
+              <AppSidebar 
+                onNovoPedido={() => {
+                  setNovoPedido(true);
+                  setMobileNav(false);
+                }} 
+                onNovoOrcamento={() => {
+                  setNovoOrcamento(true);
+                  setMobileNav(false);
+                }} 
+              />
             </div>
           </div>
         </div>
@@ -162,6 +174,30 @@ export function AppShell({
           onOpenNav={() => setMobileNav(true)}
         />
         <main className="flex-1 p-6 pt-20 lg:pt-8 lg:p-8 animate-in fade-in duration-200">
+          {/* Mobile-only page header & quick actions */}
+          <div className="lg:hidden mb-5">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">{title}</h2>
+            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+            
+            {/* Quick Actions Bar */}
+            <div className="flex flex-row gap-2 w-full mt-4">
+              <button
+                onClick={() => setNovoPedido(true)}
+                className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition-all shadow-[var(--shadow-glow)] cursor-pointer"
+              >
+                <Plus className="size-4 shrink-0" />
+                <span>Novo pedido</span>
+              </button>
+              <button
+                onClick={() => setNovoOrcamento(true)}
+                className="flex-grow h-10 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer"
+              >
+                <FileText className="size-4 shrink-0" />
+                <span>Gerar Orçamento</span>
+              </button>
+            </div>
+          </div>
+
           {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
           {children}
         </main>

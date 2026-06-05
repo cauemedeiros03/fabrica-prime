@@ -17,6 +17,7 @@ import {
   FileText,
   LogOut,
   Package,
+  Plus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,7 +68,13 @@ const categories = [
   },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({
+  onNovoPedido,
+  onNovoOrcamento,
+}: {
+  onNovoPedido?: () => void;
+  onNovoOrcamento?: () => void;
+} = {}) {
   const { pathname } = useLocation();
   const search = useRouterState({ select: (s) => s.location.search as Record<string, string> });
   const { user, profile } = useAuth();
@@ -224,6 +231,29 @@ export function AppSidebar() {
 
       {/* Categories & Links (Scrollable area) */}
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* Mobile-only Quick Actions with high visual emphasis */}
+        {(onNovoPedido || onNovoOrcamento) && (
+          <div className="lg:hidden flex flex-col gap-2 pb-4 border-b border-sidebar-border">
+            {onNovoPedido && (
+              <button
+                onClick={onNovoPedido}
+                className="w-full h-10 px-3.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-[var(--shadow-glow)]"
+              >
+                <Plus className="size-4" />
+                <span>Criar Novo Pedido</span>
+              </button>
+            )}
+            {onNovoOrcamento && (
+              <button
+                onClick={onNovoOrcamento}
+                className="w-full h-10 px-3.5 inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-sm font-semibold hover:bg-amber-500/20 active:scale-[0.98] transition-all"
+              >
+                <FileText className="size-4" />
+                <span>Gerar Orçamento</span>
+              </button>
+            )}
+          </div>
+        )}
         {categories.map((category) => (
           <div key={category.title} className="space-y-1.5">
             <h3 className="text-xs font-semibold tracking-wider text-gray-400 dark:text-gray-500 uppercase px-2.5 mb-2">
