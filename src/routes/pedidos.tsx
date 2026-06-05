@@ -63,6 +63,13 @@ function PedidosPage() {
   const [config, setConfig] = useState<any>(null);
   const [printPedido, setPrintPedido] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const [activeEtapaTab, setActiveEtapaTab] = useState<StatusEtapa>("pedido-recebido");
+
+  useEffect(() => {
+    if (etapaFiltro) {
+      setActiveEtapaTab(etapaFiltro);
+    }
+  }, [etapaFiltro]);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -268,21 +275,12 @@ function PedidosPage() {
     setConfirmar(null);
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    const { source, destination, draggableId } = result;
-    if (!destination) return;
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-
-    const novaEtapa = destination.droppableId as StatusEtapa;
-    // Lê o pedido AGORA (antes do update otimístico alterar o array)
-    const p = pedidos.find(x => x.id === draggableId);
+  const handleUpdateEtapa = (id: string, novaEtapa: StatusEtapa) => {
+    const p = pedidos.find(x => x.id === id);
     const etapaAnterior = (p?.etapa ?? null) as StatusEtapa | null;
 
-    // mutate() é síncrono e compatível com onDragEnd do @hello-pangea/dnd.
-    // etapaAnterior é passado explicitamente para que o mutationFn nunca leia
-    // do cache (que já pode ter sido alterado pelo onMutate otimístico).
     updateEtapa.mutate(
-      { id: draggableId, etapa: novaEtapa, etapaAnterior },
+      { id, etapa: novaEtapa, etapaAnterior },
       {
         onSuccess: () => {
           const novaLabel = ETAPAS.find((x) => x.id === novaEtapa)?.label;
@@ -302,6 +300,15 @@ function PedidosPage() {
     );
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    const novaEtapa = destination.droppableId as StatusEtapa;
+    handleUpdateEtapa(draggableId, novaEtapa);
+  };
+
 
   const handleQuitarSaldo = async () => {
     if (!quitarSaldo) return;
@@ -316,6 +323,24 @@ function PedidosPage() {
       toast.error("Erro ao quitar saldo", { description: e instanceof Error ? e.message : "" });
     }
     setQuitarSaldo(null);
+  };
+
+  const getPedidosEtapa = (etapaId: StatusEtapa) => {
+    const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+    const limiteArquivamento = Date.now() - SETE_DIAS_MS;
+
+    return filtrados.filter(p => {
+      if (p.etapa !== etapaId) return false;
+      // Auto-arquivamento: pedidos em 'entregue' há mais de 7 dias
+      // são ocultados do Kanban ativo (sem deletar do banco).
+      // Se o filtro ativo for especificamente "entregues", mostramos todos sem arquivar.
+      if (String(etapaId).toLowerCase() === "entregue") {
+        if (filtro === "entregues" || String(etapaFiltro).toLowerCase() === "entregue") return true;
+        const dataRef = getDataReferenciaArquivamento(p);
+        return dataRef >= limiteArquivamento;
+      }
+      return true;
+    });
   };
 
   const subtitle = isLoading
@@ -336,8 +361,8 @@ function PedidosPage() {
           </button>
         </div>
       )}
-      <div className="flex flex-col xl:flex-row xl:items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 mb-6">
+        <div className="relative flex-1 max-w-md w-full">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             value={q}
@@ -346,8 +371,10 @@ function PedidosPage() {
             className="w-full h-10 pl-9 pr-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm flex-wrap shrink-0">
+        
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          {/* Filtros rápidos: scroll horizontal no mobile para evitar quebra */}
+          <div className="flex gap-1 p-1 rounded-lg bg-muted text-sm overflow-x-auto scrollbar-none shrink-0 max-w-full">
             {(["todos", "em-producao", "atrasados", "entregues", "semana", "pagamento"] as FiltroChave[]).map((k) => (
               <button
                 key={k}
@@ -361,21 +388,23 @@ function PedidosPage() {
             ))}
           </div>
           
-          <div className="h-10 ml-auto xl:ml-2 p-1 bg-muted rounded-lg flex items-center shrink-0">
-             <button onClick={() => setView('kanban')} className={`p-1.5 rounded-md transition ${view === 'kanban' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-               <LayoutGrid className="size-4" />
-             </button>
-             <button onClick={() => setView('list')} className={`p-1.5 rounded-md transition ${view === 'list' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-               <List className="size-4" />
-             </button>
-          </div>
+          <div className="flex items-center gap-2 justify-between sm:justify-start">
+            <div className="h-10 p-1 bg-muted rounded-lg flex items-center shrink-0">
+               <button onClick={() => setView('kanban')} className={`p-1.5 rounded-md transition ${view === 'kanban' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                 <LayoutGrid className="size-4" />
+               </button>
+               <button onClick={() => setView('list')} className={`p-1.5 rounded-md transition ${view === 'list' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                 <List className="size-4" />
+               </button>
+            </div>
 
-          <button
-            onClick={exportarCSV}
-            className="h-10 px-3 inline-flex items-center gap-2 rounded-lg border bg-card text-sm font-medium hover:bg-accent shrink-0"
-          >
-            <Download className="size-4" /> Exportar
-          </button>
+            <button
+              onClick={exportarCSV}
+              className="h-10 px-3 inline-flex items-center justify-center gap-2 rounded-lg border bg-card text-sm font-medium hover:bg-accent shrink-0 flex-1 sm:flex-initial"
+            >
+              <Download className="size-4" /> Exportar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -384,136 +413,185 @@ function PedidosPage() {
            <Loader2 className="size-6 animate-spin" />
          </div>
       ) : view === 'kanban' ? (
-        /* Mobile: scroll horizontal com snap + overscroll contido para não conflitar com pull-to-refresh */
-        <div
-          className="kanban-scroll flex-1 overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8"
-          style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-        >
-          <DragDropContext onDragEnd={handleDragEnd}>
-            {/* min-w-max garante scroll no desktop; no mobile cada coluna ocupa ~90vw com snap */}
-            <div className="flex flex-row flex-nowrap items-stretch gap-3 md:gap-4 min-w-max md:min-w-max h-[calc(100svh-260px)] md:h-[calc(100vh-280px)] min-h-[400px] md:min-h-[500px] snap-x snap-mandatory md:snap-none">
+        <>
+          {/* MODO MOBILE: Abas + Lista Vertical Sem Drag & Drop */}
+          <div className="block md:hidden">
+            {/* Abas horizontais de status */}
+            <div className="flex flex-row overflow-x-auto gap-2 pb-2.5 scrollbar-none border-b -mx-6 px-6 mb-4">
               {ETAPAS.map((etapa) => {
-                // Filtro de arquivamento automático:
-                // Pedidos "entregue" com mais de 7 dias NÃO aparecem no Kanban ativo.
-                // Os dados continuam intactos no banco para relatórios.
-                const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
-                const limiteArquivamento = Date.now() - SETE_DIAS_MS;
-
-                const pedidosEtapa = filtrados.filter(p => {
-                  if (p.etapa !== etapa.id) return false;
-                  // Auto-arquivamento: pedidos em 'entregue' há mais de 7 dias
-                  // são ocultados do Kanban ativo (sem deletar do banco).
-                  // Se o filtro ativo for especificamente "entregues", mostramos todos sem arquivar.
-                  if (String(etapa.id).toLowerCase() === "entregue") {
-                    if (filtro === "entregues" || String(etapaFiltro).toLowerCase() === "entregue") return true;
-                    const dataRef = getDataReferenciaArquivamento(p);
-                    return dataRef >= limiteArquivamento;
-                  }
-                  return true;
-                });
-
-                // Conta total real (incluindo arquivados) para mostrar no badge
-                const totalNaEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
-                const arquivados = totalNaEtapa - pedidosEtapa.length;
+                const pedidosEtapa = getPedidosEtapa(etapa.id);
+                const isActive = activeEtapaTab === etapa.id;
                 return (
-                  /* Mobile: ~88vw por coluna com snap; desktop: 300px fixo */
-                  <div key={etapa.id} className="w-[85vw] min-w-[85vw] max-w-[85vw] md:w-[300px] md:min-w-[300px] md:max-w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden snap-start snap-always md:snap-align-none">
-                    <div className="p-4 border-b bg-card/50">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium bg-background border px-2 py-0.5 rounded-full">
-                            {pedidosEtapa.length}
-                          </span>
-                          {arquivados > 0 && (
-                            <span
-                              className="text-[10px] text-muted-foreground"
-                              title={`${arquivados} pedido(s) entregue(s) há mais de 7 dias arquivado(s) automaticamente`}
-                            >
-                              +{arquivados} arq.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Droppable
-                      droppableId={etapa.id}
-                      renderClone={(provided, snapshot, rubric) => {
-                        const pedidoClone = pedidos.find(x => x.id === rubric.draggableId);
-                        if (!pedidoClone) return null;
-                        return (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{
-                              ...provided.draggableProps.style,
-                              touchAction: "none",
-                              WebkitUserSelect: "none",
-                              userSelect: "none",
-                            }}
-                          >
-                            <PedidoCard
-                              p={pedidoClone}
-                              isDragging={snapshot.isDragging}
-                            />
-                          </div>
-                        );
-                      }}
+                  <button
+                    key={etapa.id}
+                    onClick={() => setActiveEtapaTab(etapa.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-card hover:bg-accent text-muted-foreground border-border"
+                    }`}
+                  >
+                    <span
+                      className="size-2 rounded-full shrink-0"
+                      style={{ backgroundColor: isActive ? undefined : etapa.cor }}
+                    />
+                    <span>{etapa.label}</span>
+                    <span
+                      className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-destructive text-white"
+                      }`}
                     >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`flex-1 p-3 overflow-y-auto transition-colors ${snapshot.isDraggingOver ? 'bg-accent/40' : ''} ![transform:none]`}
-                          style={{ transform: "none" }}
-                        >
-                          {pedidosEtapa.map((p, index) => (
-                            <Draggable key={p.id} draggableId={p.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  style={{
-                                    ...provided.draggableProps.style,
-                                    touchAction: "none",
-                                    WebkitUserSelect: "none",
-                                    userSelect: "none",
-                                  }}
-                                >
-                                  <PedidoCard
-                                    p={p}
-                                    isDragging={snapshot.isDragging}
-                                    onClick={() => !snapshot.isDragging && setViewing(p)}
-                                    onEdit={() => editar(p)}
-                                    onDuplicate={async () => {
-                                      try {
-                                        const id = await dup.mutateAsync(p.id);
-                                        toast.success(`Pedido duplicado a partir de ${p.numero}`);
-                                        navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
-                                      } catch (e) {
-                                        toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
-                                      }
-                                    }}
-                                    onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
-                                    onPrint={() => setPrintPedido(p)}
-                                  />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
+                      {pedidosEtapa.length}
+                    </span>
+                  </button>
                 );
               })}
             </div>
-          </DragDropContext>
-        </div>
+
+            {/* Lista vertical de cartões */}
+            <div className="space-y-3 pb-8">
+              {getPedidosEtapa(activeEtapaTab).length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted-foreground bg-card/30 rounded-2xl border border-dashed">
+                  Nenhum pedido nesta etapa.
+                </div>
+              ) : (
+                getPedidosEtapa(activeEtapaTab).map((p) => (
+                  <PedidoCard
+                    key={p.id}
+                    p={p}
+                    onClick={() => setViewing(p)}
+                    onEdit={() => editar(p)}
+                    onDuplicate={async () => {
+                      try {
+                        const id = await dup.mutateAsync(p.id);
+                        toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                        navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                      } catch (e) {
+                        toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                      }
+                    }}
+                    onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
+                    onPrint={() => setPrintPedido(p)}
+                    onUpdateEtapa={(novaEtapa) => handleUpdateEtapa(p.id, novaEtapa)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* MODO DESKTOP: Kanban Horizontal com Drag & Drop completo */}
+          <div className="hidden md:block">
+            <div
+              className="kanban-scroll flex-1 overflow-x-auto pb-4 -mx-6 px-6 lg:-mx-8 lg:px-8"
+              style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+            >
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="flex flex-row flex-nowrap items-stretch gap-3 md:gap-4 min-w-max md:min-w-max h-[calc(100svh-260px)] md:h-[calc(100vh-280px)] min-h-[400px] md:min-h-[500px]">
+                  {ETAPAS.map((etapa) => {
+                    const pedidosEtapa = getPedidosEtapa(etapa.id);
+                    const totalNaEtapa = filtrados.filter(p => p.etapa === etapa.id).length;
+                    const arquivados = totalNaEtapa - pedidosEtapa.length;
+                    return (
+                      <div key={etapa.id} className="w-[300px] min-w-[300px] max-w-[300px] flex flex-col shrink-0 bg-muted/30 rounded-2xl border overflow-hidden">
+                        <div className="p-4 border-b bg-card/50">
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-semibold text-sm" style={{ color: etapa.cor }}>{etapa.label}</h3>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium bg-background border px-2 py-0.5 rounded-full">
+                                {pedidosEtapa.length}
+                              </span>
+                              {arquivados > 0 && (
+                                <span
+                                  className="text-[10px] text-muted-foreground"
+                                  title={`${arquivados} pedido(s) entregue(s) há mais de 7 dias arquivado(s) automaticamente`}
+                                >
+                                  +{arquivados} arq.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Droppable
+                          droppableId={etapa.id}
+                          renderClone={(provided, snapshot, rubric) => {
+                            const pedidoClone = pedidos.find(x => x.id === rubric.draggableId);
+                            if (!pedidoClone) return null;
+                            return (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  touchAction: "none",
+                                  WebkitUserSelect: "none",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <PedidoCard
+                                  p={pedidoClone}
+                                  isDragging={snapshot.isDragging}
+                                />
+                              </div>
+                            );
+                          }}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className={`flex-1 p-3 overflow-y-auto transition-colors ${snapshot.isDraggingOver ? 'bg-accent/40' : ''}`}
+                            >
+                              {pedidosEtapa.map((p, index) => (
+                                <Draggable key={p.id} draggableId={p.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      style={{
+                                        ...provided.draggableProps.style,
+                                        touchAction: "none",
+                                        WebkitUserSelect: "none",
+                                        userSelect: "none",
+                                      }}
+                                    >
+                                      <PedidoCard
+                                        p={p}
+                                        isDragging={snapshot.isDragging}
+                                        onClick={() => !snapshot.isDragging && setViewing(p)}
+                                        onEdit={() => editar(p)}
+                                        onDuplicate={async () => {
+                                          try {
+                                            const id = await dup.mutateAsync(p.id);
+                                            toast.success(`Pedido duplicado a partir de ${p.numero}`);
+                                            navigate({ to: "/pedidos/$pedidoId", params: { pedidoId: id } });
+                                          } catch (e) {
+                                            toast.error("Erro ao duplicar", { description: e instanceof Error ? e.message : "" });
+                                          }
+                                        }}
+                                        onDelete={() => setConfirmar({ id: p.id, numero: p.numero })}
+                                        onPrint={() => setPrintPedido(p)}
+                                      />
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DragDropContext>
+            </div>
+          </div>
+        </>
       ) : (
         <div className="space-y-4">
           <div className="rounded-2xl border bg-card overflow-hidden shadow-[var(--shadow-soft)]">

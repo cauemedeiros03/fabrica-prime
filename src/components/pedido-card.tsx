@@ -1,6 +1,6 @@
 import React from "react";
 import { MessageCircle, Pencil, Copy, Trash2, Printer, Paperclip, Eye, GripVertical } from "lucide-react";
-import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
+import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR, type StatusEtapa } from "@/lib/mock-data";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface PedidoCardProps {
@@ -14,6 +14,7 @@ interface PedidoCardProps {
   innerRef?: any;
   wrapperProps?: any;
   dragHandleProps?: any;
+  onUpdateEtapa?: (novaEtapa: StatusEtapa) => void;
 }
 
 const areEqual = (prevProps: PedidoCardProps, nextProps: PedidoCardProps) => {
@@ -63,6 +64,7 @@ export const PedidoCard = React.memo(function PedidoCard({
   innerRef,
   wrapperProps,
   dragHandleProps,
+  onUpdateEtapa,
 }: PedidoCardProps) {
   const atrasado = p.entrega && new Date(p.entrega) < new Date() && p.etapa !== "entregue";
   const saldo = (p.valorTotal ?? 0) - (p.valorPago ?? 0);
@@ -82,13 +84,16 @@ export const PedidoCard = React.memo(function PedidoCard({
     e.stopPropagation();
   };
 
+  const currentIndex = ETAPAS.findIndex((e) => e.id === p.etapa);
+  const proximaEtapa = currentIndex !== -1 && currentIndex < ETAPAS.length - 1 ? ETAPAS[currentIndex + 1] : null;
+
   return (
     <div
       ref={innerRef}
       {...wrapperProps}
       {...dragHandleProps}
-      className={`bg-card border rounded-xl mb-3 shadow-sm select-none group relative transition-colors
-        ${isDragging ? "shadow-lg ring-2 ring-primary ring-offset-1 border-transparent z-50" : "hover:border-primary/40"}
+      className={`bg-card border rounded-xl mb-3 shadow-sm select-none group relative transition-colors md:cursor-grab active:md:cursor-grabbing
+        ${isDragging ? "shadow-lg ring-2 ring-primary ring-offset-1 border-transparent z-50 md:cursor-grabbing" : "hover:border-primary/40"}
       `}
       style={{
         ...wrapperProps?.style,
@@ -227,6 +232,38 @@ export const PedidoCard = React.memo(function PedidoCard({
           </button>
         )}
       </div>
+
+      {/* ── AÇÕES DE MUDANÇA DE ETAPA (APENAS MOBILE) ──────────────────────── */}
+      {onUpdateEtapa && (
+        <div 
+          className="px-4 pb-3 pt-2.5 border-t flex items-center justify-between gap-2 bg-muted/20"
+          onClick={(e) => e.stopPropagation()} 
+          onPointerDown={safePointerDown}
+        >
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground hidden xs:inline shrink-0">Etapa:</span>
+            <select
+              value={p.etapa}
+              onChange={(e) => onUpdateEtapa(e.target.value as StatusEtapa)}
+              className="text-xs h-8 w-full max-w-[155px] rounded-lg border bg-card text-card-foreground px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 font-medium cursor-pointer"
+            >
+              {ETAPAS.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {proximaEtapa && (
+            <button
+              onClick={() => onUpdateEtapa(proximaEtapa.id)}
+              className="h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition-all inline-flex items-center gap-1 shadow-sm shrink-0"
+            >
+              <span>Avançar</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }, areEqual);
