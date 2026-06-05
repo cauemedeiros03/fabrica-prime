@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { moeda, dataBR } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
-import { CheckCircle2, AlertCircle, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
+import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useDespesas, useCreateDespesa, useDeleteDespesa } from "@/hooks/use-despesas";
 import { toast } from "sonner";
@@ -54,7 +54,6 @@ function FinanceiroPage() {
 
   const recebido = pedidosAtivos.reduce((s, p) => s + p.valorPago, 0);
   const aReceber = pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
-  const faturado = recebido + aReceber;
   const pendentes = pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
 
   const despesasTotal = useMemo(() => {
@@ -366,10 +365,16 @@ function FinanceiroPage() {
                   </label>
                   <input
                     type="number"
+                    min="0"
                     step="0.01"
                     required
                     value={newValor}
-                    onChange={(e) => setNewValor(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "-") e.preventDefault();
+                    }}
+                    onChange={(e) =>
+                      setNewValor(String(Math.max(0, Number(e.target.value) || 0)))
+                    }
                     placeholder="0.00"
                     className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                   />
