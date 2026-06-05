@@ -4,7 +4,7 @@ import { moeda, dataBR } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { CheckCircle2, AlertCircle, Clock, Trash2, Loader2 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDespesas, useCreateDespesa, useDeleteDespesa } from "@/hooks/use-despesas";
 import { toast } from "sonner";
 
@@ -18,8 +18,12 @@ export const Route = createFileRoute("/financeiro")({
 
 function FinanceiroPage() {
   const { filtro } = Route.useSearch();
-  const { data: PEDIDOS = [] } = usePedidos();
+  const { data: PEDIDOS = [], refetch } = usePedidos();
   const { data: despesas = [] } = useDespesas();
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const [activeTab, setActiveTab] = useState<"receber" | "despesas">("receber");
   const [openNewDespesa, setOpenNewDespesa] = useState(false);
