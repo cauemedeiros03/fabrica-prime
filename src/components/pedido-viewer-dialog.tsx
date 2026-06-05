@@ -113,10 +113,29 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
                 <Mail className="size-3.5 shrink-0" /> {p.email}
               </p>
             )}
-            {p.cidade && (
-              <p className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="size-3.5 shrink-0" /> {p.cidade}
-              </p>
+            {(p.endereco || p.cidade || p.cep) && (
+              <div className="flex items-start gap-2 text-muted-foreground pt-1">
+                <MapPin className="size-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
+                <div className="text-xs leading-relaxed whitespace-pre-line">
+                  {p.endereco ? (
+                    <>
+                      <span className="font-semibold text-foreground">{p.endereco}</span>
+                      {p.numero_endereco && `, ${p.numero_endereco}`}
+                      {p.complemento && ` (${p.complemento})`}
+                      {p.bairro && <><br />{p.bairro}</>}
+                      {(p.cidade || p.cep) && (
+                        <>
+                          <br />
+                          {p.cidade}
+                          {p.cep && ` - CEP: ${p.cep}`}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    p.cidade
+                  )}
+                </div>
+              </div>
             )}
             {p.entrega && (
               <div className="flex items-center gap-2 pt-2 border-t">
