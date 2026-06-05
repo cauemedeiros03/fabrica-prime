@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { moeda, dataBR } from "@/lib/mock-data";
 import { usePedidos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
-import { CheckCircle2, AlertCircle, Clock, Trash2, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useDespesas, useCreateDespesa, useDeleteDespesa } from "@/hooks/use-despesas";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export const Route = createFileRoute("/financeiro")({
 
 function FinanceiroPage() {
   const { filtro } = Route.useSearch();
+  const navigate = useNavigate();
   const { data: PEDIDOS = [], refetch } = usePedidos();
   const { data: despesas = [] } = useDespesas();
 
@@ -55,6 +56,12 @@ function FinanceiroPage() {
   const aReceber = pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
   const faturado = recebido + aReceber;
   const pendentes = pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
+
+  const despesasTotal = useMemo(() => {
+    return despesas.reduce((acc, d) => acc + Number(d.valor), 0);
+  }, [despesas]);
+
+  const saldoLiquido = recebido - despesasTotal;
 
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -133,19 +140,41 @@ function FinanceiroPage() {
   };
 
   return (
-    <AppShell title="Financeiro" subtitle={filtro === "pendentes" ? `${pendentes.length} pagamentos pendentes` : "Controle completo de receitas e recebíveis"}>
-      {filtro === "pendentes" && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border bg-accent/30 px-3 py-2 text-sm">
-          <Clock className="size-4 text-warning-foreground" />
-          <span>Filtro ativo:</span>
-          <span className="font-medium">Pagamentos pendentes</span>
+    <AppShell title="Financeiro" subtitle={filtro === "pendentes" ? `${pendentes.length} pagamentos pendentes` : "Controle completo de receitas, recebíveis e despesas"}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          {filtro === "pendentes" ? (
+            <div className="flex items-center gap-2 rounded-lg border bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20 px-3 py-1.5 text-xs font-medium w-fit">
+              <Clock className="size-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Exibindo pagamentos pendentes</span>
+              <button 
+                onClick={() => navigate({ to: "/financeiro", search: {} })}
+                className="ml-1 text-muted-foreground hover:text-foreground underline text-xs font-normal"
+              >
+                Limpar
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Visão consolidada do fluxo de caixa e recebimentos de pedidos.
+            </p>
+          )}
         </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          onClick={() => setOpenNewDespesa(true)}
+          className="h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-medium transition shadow-[var(--shadow-soft)] w-full sm:w-auto shrink-0"
+        >
+          <Plus className="size-4" />
+          <span>Lançar Gasto</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { l: "Recebido", v: recebido, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
           { l: "A receber", v: aReceber, i: Clock, c: "text-warning-foreground", bg: "bg-warning/20" },
-          { l: "Total faturado", v: faturado, i: AlertCircle, c: "text-info", bg: "bg-info/10" },
+          { l: "Despesas / Custos", v: despesasTotal, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10" },
+          { l: "Saldo Líquido / Lucro", v: saldoLiquido, i: Wallet, c: saldoLiquido >= 0 ? "text-info" : "text-destructive", bg: saldoLiquido >= 0 ? "bg-info/10" : "bg-destructive/10" },
         ].map((s) => (
           <div key={s.l} className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
             <div className="flex items-center justify-between">
@@ -154,7 +183,9 @@ function FinanceiroPage() {
                 <s.i className="size-4" />
               </div>
             </div>
-            <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">{moeda(s.v)}</p>
+            <p className="mt-3 text-lg sm:text-xl md:text-2xl font-semibold tracking-tight tabular-nums truncate" title={moeda(s.v)}>
+              {moeda(s.v)}
+            </p>
           </div>
         ))}
       </div>
@@ -187,12 +218,10 @@ function FinanceiroPage() {
       <div className="rounded-2xl border bg-card mt-4 shadow-[var(--shadow-soft)] overflow-hidden">
         <div className="p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b">
           <div>
-            <p className="font-semibold tracking-tight">
-              {activeTab === "receber" ? "Pagamentos pendentes" : "Fluxo de Caixa / Despesas"}
-            </p>
+            <p className="font-semibold tracking-tight">Fluxo de Caixa / Movimentações</p>
             <p className="text-xs text-muted-foreground">
               {activeTab === "receber"
-                ? `${pendentes.length} pedidos com saldo em aberto`
+                ? `${pendentes.length} pagamentos pendentes de clientes`
                 : `${despesas.length} despesa(s) registrada(s)`}
             </p>
           </div>
@@ -216,15 +245,6 @@ function FinanceiroPage() {
                 Despesas
               </button>
             </div>
-
-            {activeTab === "despesas" && (
-              <button
-                onClick={() => setOpenNewDespesa(true)}
-                className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition shrink-0"
-              >
-                + Lançar Gasto
-              </button>
-            )}
           </div>
         </div>
 
@@ -251,7 +271,7 @@ function FinanceiroPage() {
                         <span>Pago</span>
                         <span className="tabular-nums">{Math.round(pct)}%</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-1.5 bg-muted overflow-hidden rounded-full">
                         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
@@ -291,8 +311,8 @@ function FinanceiroPage() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {dataFormatada}
                         </td>
-                        <td className="px-4 py-3 text-right font-semibold text-destructive tabular-nums">
-                          -{moeda(Number(dsp.valor))}
+                        <td className="px-4 py-3 text-right font-semibold text-destructive/90 dark:text-red-400/90 tabular-nums">
+                          - {moeda(Number(dsp.valor))}
                         </td>
                         <td className="pl-4 pr-5 py-3 text-right">
                           <button
