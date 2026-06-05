@@ -350,7 +350,17 @@ function PedidoViewerContent({
                       className="flex items-center justify-between text-xs rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-2.5 py-1.5"
                     >
                       <span className="text-muted-foreground tabular-nums">
-                        {formatDateBR(pg.pago_em)}
+                        {(() => {
+                          const d = pg.pago_em;
+                          if (!d) return new Date().toLocaleDateString("pt-BR");
+                          if (typeof d === "string" && !d.includes("T")) {
+                            const parts = d.split("-");
+                            if (parts.length === 3) {
+                              return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])).toLocaleDateString("pt-BR");
+                            }
+                          }
+                          return new Date(d).toLocaleDateString("pt-BR");
+                        })()}
                         {pg.forma && (
                           <span className="ml-1.5 text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-medium text-muted-foreground">
                             {pg.forma}
