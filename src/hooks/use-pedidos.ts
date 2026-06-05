@@ -197,16 +197,16 @@ export function useEtapasHistorico(pedidoId: string | undefined) {
   return useQuery({
     queryKey: ["etapas_pedido", pedidoId, user?.id],
     enabled: !!pedidoId && !!user?.id,
+    staleTime: 30_000,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("etapas_pedido")
-        .select("id, etapa_anterior, etapa_nova, observacao, created_at, autor_id, pedidos!inner(user_id)")
+        .select("id, etapa_anterior, etapa_nova, observacao, created_at")
         .eq("pedido_id", pedidoId!)
-        .eq("pedidos.user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true }); // cronológico: mais antigo primeiro
       if (error) throw error;
-      return data;
+      return data as { id: string; etapa_anterior: string | null; etapa_nova: string; observacao: string | null; created_at: string }[];
     },
   });
 }
@@ -353,6 +353,17 @@ export function useCreatePedido() {
         .select("id")
         .single();
       if (e2) throw e2;
+
+      // Registra a etapa inicial no log de histórico (best-effort)
+      supabase.from("etapas_pedido").insert({
+        pedido_id: pedido.id,
+        etapa_anterior: null,
+        etapa_nova: payload.etapa,
+        autor_id: user.id,
+        observacao: "Pedido criado",
+      }).then(({ error: eH }) => {
+        if (eH) console.warn("Erro ao registrar etapa inicial:", eH);
+      });
 
       return pedido.id;
     },

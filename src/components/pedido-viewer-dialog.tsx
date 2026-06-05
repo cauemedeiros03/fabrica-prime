@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { X, Wallet, ClipboardList, Phone, Mail, MapPin, Calendar, Paperclip, FileText, Pencil, AlertTriangle, Plus, Loader2, History } from "lucide-react";
+import { X, Wallet, ClipboardList, Phone, Mail, MapPin, Calendar, Paperclip, FileText, Pencil, AlertTriangle, Plus, Loader2, History, Activity, CheckCircle2, Circle } from "lucide-react";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
-import { usePagamentosPedido, useAddPagamento } from "@/hooks/use-pedidos";
+import { usePagamentosPedido, useAddPagamento, useEtapasHistorico } from "@/hooks/use-pedidos";
 import { toast } from "sonner";
 
 // ─── Funções puras — sem recriação a cada render ───────────────────────────────
@@ -58,6 +58,9 @@ function PedidoViewerContent({
   const diasFalta = p.entrega
     ? Math.ceil((+new Date(p.entrega) - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
+
+  // ── Histórico de etapas ───────────────────────────────────────────────────
+  const { data: etapasLog = [], isLoading: loadingEtapas } = useEtapasHistorico(p.id);
 
   // ── Estado do formulário de novo pagamento ────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -364,6 +367,22 @@ function PedidoViewerContent({
             </div>
           </section>
 
+          {/* BLOCO: LINHA DO TEMPO DE PRODUÇÃO */}
+          <section className="rounded-xl border bg-muted/20 p-4 text-sm md:col-span-2">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="size-4 text-primary" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Linha do Tempo de Produção</h3>
+            </div>
+
+            {loadingEtapas ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ProducaoTimeline etapasLog={etapasLog} etapaAtual={p.etapa} />
+            )}
+          </section>
+
           {/* BLOCO: ESPECIFICAÇÕES DO PRODUTO */}
           <section className="rounded-xl border bg-muted/20 p-4 text-sm md:col-span-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Especificações do Produto</h3>
@@ -448,5 +467,126 @@ function Row({ label, value }: { label: string; value?: string | null }) {
       <dt className="text-muted-foreground shrink-0">{label}</dt>
       <dd className="text-right truncate font-medium">{value}</dd>
     </div>
+  );
+}
+
+// ─── Linha do Tempo de Produção ───────────────────────────────────────────────
+
+function formatDateTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+interface EtapaLogEntry {
+  id: string;
+  etapa_anterior: string | null;
+  etapa_nova: string;
+  observacao: string | null;
+  created_at: string;
+}
+
+function ProducaoTimeline({
+  etapasLog,
+  etapaAtual,
+}: {
+  etapasLog: EtapaLogEntry[];
+  etapaAtual: string;
+}) {
+  // Constrói a lista ordenada de todas as etapas do processo
+  const registradas = new Set(etapasLog.map((e) => e.etapa_nova));
+
+  // Índice atual dentro da sequência oficial de etapas
+  const idxAtual = ETAPAS.findIndex((e) => e.id === etapaAtual);
+
+  // Se não há nenhum histórico ainda, mostra apenas a etapa atual como "Iniciado"
+  if (etapasLog.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground italic">
+        Nenhuma transição de etapa registrada. As próximas mudanças aparecerão aqui.
+      </p>
+    );
+  }
+
+  return (
+    <ol className="relative space-y-0" aria-label="Linha do tempo de produção">
+      {ETAPAS.map((etapa, idx) => {
+        const logEntry = [...etapasLog].reverse().find((e) => e.etapa_nova === etapa.id);
+        const isCompleted = registradas.has(etapa.id) && idx <= idxAtual;
+        const isCurrent = etapa.id === etapaAtual;
+        const isPending = idx > idxAtual;
+        const isLast = idx === ETAPAS.length - 1;
+
+        return (
+          <li key={etapa.id} className="flex gap-3 min-h-[48px]">
+            {/* Coluna do ícone + linha vertical */}
+            <div className="flex flex-col items-center">
+              <div
+                className={`relative z-10 flex items-center justify-center size-6 rounded-full border-2 shrink-0 transition-all ${
+                  isCurrent
+                    ? "border-primary bg-primary shadow-sm shadow-primary/30"
+                    : isCompleted
+                    ? "border-emerald-500 bg-emerald-500"
+                    : "border-muted-foreground/25 bg-background"
+                }`}
+              >
+                {isCurrent ? (
+                  <span className="size-2 rounded-full bg-primary-foreground" />
+                ) : isCompleted ? (
+                  <CheckCircle2 className="size-3.5 text-white" />
+                ) : (
+                  <Circle className="size-3 text-muted-foreground/30" />
+                )}
+              </div>
+              {/* Linha vertical conectora */}
+              {!isLast && (
+                <div
+                  className={`w-px flex-1 mt-0.5 ${
+                    isCompleted && idx < idxAtual
+                      ? "bg-emerald-500/50"
+                      : "bg-border"
+                  }`}
+                />
+              )}
+            </div>
+
+            {/* Conteúdo textual */}
+            <div className={`pb-4 flex-1 ${isLast ? "pb-0" : ""}`}>
+              <p
+                className={`text-sm font-medium leading-tight ${
+                  isCurrent
+                    ? "text-primary"
+                    : isCompleted
+                    ? "text-foreground"
+                    : "text-muted-foreground/50"
+                }`}
+              >
+                {etapa.label}
+              </p>
+              {logEntry ? (
+                <p className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
+                  {formatDateTime(logEntry.created_at)}
+                  {logEntry.observacao && (
+                    <span className="ml-1.5 italic opacity-70">— {logEntry.observacao}</span>
+                  )}
+                </p>
+              ) : isCurrent ? (
+                <p className="text-[11px] text-primary/70 mt-0.5 font-medium">Em andamento</p>
+              ) : isPending ? (
+                <p className="text-[11px] text-muted-foreground/40 mt-0.5">Pendente</p>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
