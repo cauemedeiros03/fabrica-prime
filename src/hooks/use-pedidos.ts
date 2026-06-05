@@ -212,12 +212,19 @@ export function useEtapasHistorico(pedidoId: string | undefined) {
 }
 
 export function usePagamentosPedido(pedidoId: string | undefined) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: ["pagamentos", pedidoId],
-    enabled: !!pedidoId,
+    enabled: !!pedidoId && !!user?.id,
     queryFn: async () => {
-      // Tabela removida conforme solicitação. Retorna array vazio.
-      return [];
+      if (!pedidoId) return [];
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select("id, valor, forma, pago_em, observacao, created_at")
+        .eq("pedido_id", pedidoId)
+        .order("pago_em", { ascending: false });
+      if (error) throw error;
+      return data as { id: string; valor: number; forma: string | null; pago_em: string; observacao: string | null; created_at: string }[];
     },
   });
 }
@@ -472,18 +479,15 @@ export function useAddPagamento() {
       if (!user) throw new Error("Usuário não autenticado");
       // increment valor_pago atomically via re-read
       const { data: p, error: pErr } = await supabase.from("pedidos").select("valor_pago").eq("id", pedido_id).eq("user_id", user.id).single();
-      if (pErr) {
-        console.error('Erro Supabase ao ler pedido:', pErr);
-        throw pErr;
-      }
+      if (pErr) throw pErr;
       
       const novoValorPago = Number(p.valor_pago || 0) + Number(valor);
-      
-      const { error: updateErr } = await supabase.from("pedidos").update({ valor_pago: novoValorPago }).eq("id", pedido_id).eq("user_id", user.id);
-      if (updateErr) {
-        console.error('Erro Supabase ao atualizar pedido:', updateErr);
-        throw updateErr;
-      }
+      const { error: updateErr } = await supabase
+        .from("pagamentos")
+        .insert({ pedido_id, valor: Number(valor), forma: forma ?? null, pago_em: pago_em ?? new Date().toISOString().split("T")[0], observacao: observacao ?? null });
+      if (updateErr) throw updateErr;
+      const { error: paidErr } = await supabase.from("pedidos").update({ valor_pago: novoValorPago }).eq("id", pedido_id).eq("user_id", user.id);
+      if (paidErr) throw paidErr;
     },
     onMutate: async ({ pedido_id, valor }) => {
       await qc.cancelQueries({ queryKey: ["pedidos", user?.id] });

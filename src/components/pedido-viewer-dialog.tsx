@@ -1,7 +1,11 @@
-import { X, Wallet, ClipboardList, Phone, Mail, MapPin, Calendar, Paperclip, FileText, Pencil, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { X, Wallet, ClipboardList, Phone, Mail, MapPin, Calendar, Paperclip, FileText, Pencil, AlertTriangle, Plus, Loader2, History } from "lucide-react";
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
+import { usePagamentosPedido, useAddPagamento } from "@/hooks/use-pedidos";
+import { toast } from "sonner";
 
-// Funções puras — sem recriação a cada render
+// ─── Funções puras — sem recriação a cada render ───────────────────────────────
+
 function getFileNameFromUrl(url: string): string {
   try {
     const decoded = decodeURIComponent(url);
@@ -17,6 +21,16 @@ function isImageUrl(url: string): boolean {
   return [".jpg", ".jpeg", ".png", ".gif", ".webp"].some((ext) => name.endsWith(ext));
 }
 
+function formatDateBR(iso: string): string {
+  try {
+    return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
+  } catch {
+    return iso;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface PedidoViewerDialogProps {
   pedido: any | null;
   onClose: () => void;
@@ -26,16 +40,71 @@ interface PedidoViewerDialogProps {
 export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerDialogProps) {
   if (!p) return null;
 
+  return <PedidoViewerContent pedido={p} onClose={onClose} onEdit={onEdit} />;
+}
+
+// Componente separado para evitar hook condicional
+function PedidoViewerContent({
+  pedido: p,
+  onClose,
+  onEdit,
+}: {
+  pedido: any;
+  onClose: () => void;
+  onEdit?: () => void;
+}) {
   const etapa = ETAPAS.find((e) => e.id === p.etapa);
-  const saldo = (p.valorTotal ?? 0) - (p.valorPago ?? 0);
-  const pct = p.valorTotal > 0 ? Math.round((p.valorPago / p.valorTotal) * 100) : 0;
   const atrasado = p.entrega && new Date(p.entrega) < new Date() && p.etapa !== "entregue";
   const diasFalta = p.entrega
     ? Math.ceil((+new Date(p.entrega) - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  // ── Estado do formulário de novo pagamento ────────────────────────────────
+  const [showForm, setShowForm] = useState(false);
+  const [novoValor, setNovoValor] = useState("");
+  const [novaData, setNovaData] = useState(new Date().toISOString().split("T")[0]);
+  const [novaForma, setNovaForma] = useState("");
+
+  // ── Dados do histórico de pagamentos ─────────────────────────────────────
+  const { data: pagamentos = [], isLoading: loadingPag } = usePagamentosPedido(p.id);
+  const addPagamento = useAddPagamento();
+
+  // valor_pago local reativo: soma dos pagamentos registrados (fonte de verdade)
+  const valorPagoLocal = pagamentos.reduce((acc, pg) => acc + Number(pg.valor), 0);
+  // Usa o maior entre o que vem do pedido e a soma dos pagamentos (segurança)
+  const valorPago = Math.max(Number(p.valorPago ?? 0), valorPagoLocal);
+  const saldo = Math.max(0, (p.valorTotal ?? 0) - valorPago);
+  const pct = p.valorTotal > 0 ? Math.min(100, Math.round((valorPago / p.valorTotal) * 100)) : 0;
+
+  const handleSalvarPagamento = async () => {
+    const valor = Number(novoValor);
+    if (!valor || valor <= 0) {
+      toast.error("Informe um valor válido maior que zero.");
+      return;
+    }
+    if (valor > saldo + 0.01) {
+      toast.error("O valor informado é maior que o saldo devedor.");
+      return;
+    }
+    try {
+      await addPagamento.mutateAsync({
+        pedido_id: p.id,
+        valor,
+        forma: novaForma || undefined,
+        pago_em: novaData,
+      });
+      toast.success("Pagamento registrado com sucesso!");
+      setNovoValor("");
+      setNovaForma("");
+      setNovaData(new Date().toISOString().split("T")[0]);
+      setShowForm(false);
+    } catch (err: any) {
+      toast.error("Erro ao registrar pagamento", { description: err?.message ?? "" });
+    }
+  };
+
   return (
-    /* BACKDROP — sem onClick para não fechar ao clicar fora */
+    /* BACKDROP */
     <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto">
       <div
         onClick={(e) => e.stopPropagation()}
@@ -155,20 +224,22 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
             )}
           </section>
 
-          {/* BLOCO: FINANCEIRO */}
-          <section className="rounded-xl border bg-muted/20 p-4 text-sm">
-            <div className="flex items-center gap-2 mb-2">
+          {/* BLOCO: FINANCEIRO + HISTÓRICO DE PAGAMENTOS */}
+          <section className="rounded-xl border bg-muted/20 p-4 text-sm flex flex-col gap-3">
+            <div className="flex items-center gap-2">
               <Wallet className="size-4 text-primary" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Resumo Financeiro</h3>
             </div>
+
+            {/* Métricas */}
             <div className="space-y-2.5">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Valor total</span>
                 <span className="font-medium tabular-nums">{moeda(p.valorTotal)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Pago</span>
-                <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">{moeda(p.valorPago)}</span>
+                <span className="text-muted-foreground">Total pago</span>
+                <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">{moeda(valorPago)}</span>
               </div>
               <div className="flex justify-between border-t pt-2.5">
                 <span className="text-muted-foreground">Saldo devedor</span>
@@ -176,7 +247,7 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
                   {moeda(saldo)}
                 </span>
               </div>
-              <div className="mt-3">
+              <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
                   <span>Progresso de pagamento</span>
                   <span>{pct}%</span>
@@ -185,6 +256,111 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
                   <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
                 </div>
               </div>
+            </div>
+
+            {/* Botão + Registrar Pagamento (somente se houver saldo) */}
+            {saldo > 0 && (
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="mt-1 h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 text-primary text-xs font-medium hover:bg-primary/10 transition-colors w-full justify-center"
+              >
+                <Plus className="size-3.5" />
+                {showForm ? "Cancelar" : "Registrar Pagamento"}
+              </button>
+            )}
+
+            {/* Formulário inline de novo pagamento */}
+            {showForm && saldo > 0 && (
+              <div className="rounded-xl border bg-background p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Novo Pagamento</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-muted-foreground mb-1">Valor (R$) *</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={novoValor}
+                      onKeyDown={(e) => { if (e.key === "-") e.preventDefault(); }}
+                      onChange={(e) => setNovoValor(e.target.value)}
+                      className="w-full h-8 px-2 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-muted-foreground mb-1">Data *</label>
+                    <input
+                      type="date"
+                      value={novaData}
+                      onChange={(e) => setNovaData(e.target.value)}
+                      className="w-full h-8 px-2 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-muted-foreground mb-1">Forma de pagamento</label>
+                  <select
+                    value={novaForma}
+                    onChange={(e) => setNovaForma(e.target.value)}
+                    className="w-full h-8 px-2 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Pix">Pix</option>
+                    <option value="Cartão de crédito">Cartão de crédito</option>
+                    <option value="Cartão de débito">Cartão de débito</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Transferência">Transferência</option>
+                    <option value="Boleto">Boleto</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleSalvarPagamento}
+                  disabled={addPagamento.isPending}
+                  className="w-full h-8 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-60 transition"
+                >
+                  {addPagamento.isPending && <Loader2 className="size-3.5 animate-spin" />}
+                  {addPagamento.isPending ? "Salvando..." : "Salvar Pagamento"}
+                </button>
+              </div>
+            )}
+
+            {/* Histórico de Recebimentos */}
+            <div className="border-t pt-3 mt-1">
+              <div className="flex items-center gap-1.5 mb-2">
+                <History className="size-3.5 text-muted-foreground" />
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Histórico de Recebimentos
+                </p>
+              </div>
+
+              {loadingPag ? (
+                <div className="flex items-center justify-center py-3">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : pagamentos.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Nenhum pagamento registrado.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {pagamentos.map((pg) => (
+                    <li
+                      key={pg.id}
+                      className="flex items-center justify-between text-xs rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-2.5 py-1.5"
+                    >
+                      <span className="text-muted-foreground tabular-nums">
+                        {formatDateBR(pg.pago_em)}
+                        {pg.forma && (
+                          <span className="ml-1.5 text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-medium text-muted-foreground">
+                            {pg.forma}
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        + {moeda(Number(pg.valor))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
 
@@ -228,11 +404,7 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
                       className="relative group rounded-xl border bg-card hover:bg-accent/40 hover:border-primary/30 transition-all overflow-hidden aspect-video flex flex-col items-center justify-center p-2 shadow-sm cursor-pointer"
                     >
                       {isImg ? (
-                        <img
-                          src={url}
-                          alt={name}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
+                        <img src={url} alt={name} className="w-full h-full object-cover rounded-lg" />
                       ) : (
                         <div className="flex flex-col items-center justify-center text-center p-1">
                           <FileText className="size-7 text-destructive/80 mb-1" />
@@ -266,6 +438,8 @@ export function PedidoViewerDialog({ pedido: p, onClose, onEdit }: PedidoViewerD
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
