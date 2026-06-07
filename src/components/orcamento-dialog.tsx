@@ -376,7 +376,7 @@ Qualquer dúvida, estou à disposição!`;
               Formulário de Orçamento Rápido
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Gere propostas comerciais sem impactar o Kanban ou o Financeiro
+              Gere propostas comerciais sem impactar a Linha de Produção ou o Financeiro
             </DialogDescription>
           </div>
         </DialogHeader>
