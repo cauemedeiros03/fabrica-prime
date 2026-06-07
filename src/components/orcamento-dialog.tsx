@@ -84,6 +84,14 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
     onOpenChange(false);
   }, [isDirty, onOpenChange]);
+
+  const handleOpenChange = useCallback((v: boolean) => {
+    if (!v) {
+      handleClose();
+    } else {
+      onOpenChange(v);
+    }
+  }, [handleClose, onOpenChange]);
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -351,7 +359,7 @@ Qualquer dúvida, estou à disposição!`;
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="w-full h-full md:h-auto md:max-w-2xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden flex flex-col"
         // BLOQUEIO: impede fechamento ao clicar fora do modal (Regra RADIX UI)
@@ -371,13 +379,6 @@ Qualquer dúvida, estou à disposição!`;
               Gere propostas comerciais sem impactar o Kanban ou o Financeiro
             </DialogDescription>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="size-8 grid place-items-center rounded-lg hover:bg-accent shrink-0 mt-0.5"
-          >
-            <X className="size-4" />
-          </button>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 flex-1 overflow-y-auto md:max-h-[75vh]">
