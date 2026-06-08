@@ -19,6 +19,7 @@ type Row = {
   created_at: string;
   updated_at: string;
   cliente_id: string;
+  cliente_nome: string | null;
   clientes: {
     nome: string;
     telefone: string | null;
@@ -67,7 +68,7 @@ function mapRow(r: Row): Pedido & {
   return {
     id: r.id,
     numero: r.numero,
-    cliente: c?.nome ?? "—",
+    cliente: r.cliente_nome || c?.nome || "—",
     telefone: c?.telefone ?? "",
     cidade: c?.cidade ?? "",
     produto: r.produto,
@@ -716,18 +717,29 @@ export function useCreateVendaDireta() {
     mutationFn: async (input: NovaVendaDiretaInput) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // 1. Criar o cliente (ou usar padrão "Venda de Balcão")
-      const clienteNome = input.clienteNome?.trim() || "Venda de Balcão";
-      const { data: cli, error: e1 } = await supabase
+      // 1. Encontrar ou criar um cliente genérico "Venda de Balcão" para este usuário
+      let genericClienteId = "";
+      const { data: existingCli, error: getErr } = await supabase
         .from("clientes")
-        .insert({
-          nome: clienteNome,
-          user_id: user.id,
-        })
         .select("id")
-        .single();
-      if (e1) throw e1;
-      const clienteId = cli.id;
+        .eq("nome", "Venda de Balcão")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!getErr && existingCli) {
+        genericClienteId = existingCli.id;
+      } else {
+        const { data: newCli, error: insertErr } = await supabase
+          .from("clientes")
+          .insert({
+            nome: "Venda de Balcão",
+            user_id: user.id,
+          })
+          .select("id")
+          .single();
+        if (insertErr) throw insertErr;
+        genericClienteId = newCli.id;
+      }
 
       // 2. Preparar payload do pedido com etapa 'entregue'
       const now = new Date();
@@ -736,7 +748,8 @@ export function useCreateVendaDireta() {
       const createdAtStr = `${input.data}T${timeStr}.000Z`;
 
       const payload = {
-        cliente_id: clienteId,
+        cliente_id: genericClienteId,
+        cliente_nome: input.clienteNome?.trim() || "Venda de Balcão",
         produto: input.descricao || "Venda de Balcão",
         etapa: "entregue" as const,
         prioridade: "media" as const,
@@ -806,6 +819,7 @@ export function useAllPagamentos() {
               produto,
               numero,
               user_id,
+              cliente_nome,
               clientes (
                 nome
               )
@@ -824,6 +838,7 @@ export function useAllPagamentos() {
             entrega,
             etapa,
             user_id,
+            cliente_nome,
             clientes (
               nome
             )
@@ -849,7 +864,7 @@ export function useAllPagamentos() {
             id: p.pedidos.id,
             produto: p.pedidos.produto,
             numero: p.pedidos.numero,
-            clienteNome: p.pedidos.clientes?.nome ?? "—",
+            clienteNome: p.pedidos.cliente_nome || p.pedidos.clientes?.nome || "—",
           },
         }));
 
@@ -877,7 +892,7 @@ export function useAllPagamentos() {
             id: p.id,
             produto: p.produto,
             numero: p.numero,
-            clienteNome: p.clientes?.nome ?? "—",
+            clienteNome: p.cliente_nome || p.clientes?.nome || "—",
           },
         }));
 
