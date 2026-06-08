@@ -28,6 +28,36 @@ export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos · Sua bancada" }] }),
 });
 
+// ─── Funções utilitárias para dimensões/descrição ────────────────────────────────
+function cleanDescription(desc: string | null | undefined): string {
+  if (!desc) return "";
+  return desc.split("===JSON_MEDIDAS===")[0].trim();
+}
+
+function parseLegacyMedidasToMeters(desc: string): { altura: string; largura: string; profundidade: string } {
+  const clean = desc.trim();
+  const parts = clean.split(/\s*[x×*]\s*/);
+  if (parts.length === 3) {
+    const p0 = parseFloat(parts[0].replace(",", "."));
+    const p1 = parseFloat(parts[1].replace(",", "."));
+    const p2 = parseFloat(parts[2].replace(",", "."));
+    if (!isNaN(p0) && !isNaN(p1) && !isNaN(p2)) {
+      const formatToMeterStr = (v: number) => {
+        if (v >= 10) return (v / 100).toFixed(2);
+        return v.toFixed(2);
+      };
+      // For legacy format: "1.20×0.90×0.80" -> Largura x Profundidade x Altura
+      // Altura = p2, Largura = p0, Profundidade = p1
+      return {
+        altura: formatToMeterStr(p2),
+        largura: formatToMeterStr(p0),
+        profundidade: formatToMeterStr(p1),
+      };
+    }
+  }
+  return { altura: "", largura: "", profundidade: "" };
+}
+
 function ProdutosPage() {
   const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -78,7 +108,7 @@ function ProdutosPage() {
     return produtos.filter(
       (p) =>
         p.nome.toLowerCase().includes(q) ||
-        (p.descricao ?? "").toLowerCase().includes(q)
+        cleanDescription(p.descricao).toLowerCase().includes(q)
     );
   }, [produtos, query]);
 
@@ -177,8 +207,8 @@ function ProdutosPage() {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base tracking-tight truncate" title={p.nome}>{p.nome}</h3>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={p.descricao || ""}>
-                  {p.descricao || "Sem descrição"}
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={cleanDescription(p.descricao)}>
+                  {cleanDescription(p.descricao) || "Sem descrição"}
                 </p>
                 {(p.tipo_movel || p.material || p.cor_acabamento) && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -303,18 +333,58 @@ function ProdutoDialog({
     cor_acabamento: "",
   });
 
+  const [altura, setAltura] = useState("");
+  const [largura, setLargura] = useState("");
+  const [profundidade, setProfundidade] = useState("");
+
   useEffect(() => {
     if (open) {
-      setForm(
-        initial ?? {
+      if (initial) {
+        setForm(initial);
+        // Extract dimensions
+        const rawDesc = initial.descricao || "";
+        if (rawDesc.includes("===JSON_MEDIDAS===")) {
+          try {
+            const parts = rawDesc.split("===JSON_MEDIDAS===\n");
+            if (parts.length > 1) {
+              setForm((prev) => ({ ...prev, descricao: parts[0].trim() }));
+              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+              const parsed = JSON.parse(jsonPart);
+              setAltura(parsed.altura || "");
+              setLargura(parsed.largura || "");
+              setProfundidade(parsed.profundidade || "");
+            }
+          } catch {
+            setForm((prev) => ({ ...prev, descricao: rawDesc }));
+            setAltura("");
+            setLargura("");
+            setProfundidade("");
+          }
+        } else {
+          // Legacy check
+          const legacy = parseLegacyMedidasToMeters(rawDesc);
+          if (legacy.altura || legacy.largura || legacy.profundidade) {
+            setForm((prev) => ({ ...prev, descricao: "" }));
+          } else {
+            setForm((prev) => ({ ...prev, descricao: rawDesc }));
+          }
+          setAltura(legacy.altura);
+          setLargura(legacy.largura);
+          setProfundidade(legacy.profundidade);
+        }
+      } else {
+        setForm({
           nome: "",
           descricao: "",
           preco: undefined,
           tipo_movel: "",
           material: "",
           cor_acabamento: "",
-        }
-      );
+        });
+        setAltura("");
+        setLargura("");
+        setProfundidade("");
+      }
     }
   }, [open, initial]);
 
@@ -334,14 +404,30 @@ function ProdutoDialog({
       return;
     }
     try {
+      // Build final description with JSON metadata
+      let finalDescricao = (form.descricao || "").trim();
+      if (altura.trim() || largura.trim() || profundidade.trim()) {
+        const metadataPart = `===JSON_MEDIDAS===\n${JSON.stringify({
+          altura: altura.trim(),
+          largura: largura.trim(),
+          profundidade: profundidade.trim(),
+        })}\n===END_JSON_MEDIDAS===`;
+        finalDescricao = `${finalDescricao}${finalDescricao ? "\n\n" : ""}${metadataPart}`;
+      }
+
+      const payload = {
+        ...form,
+        descricao: finalDescricao || undefined,
+      };
+
       if (isEdit && initial) {
-        await update.mutateAsync({ ...form, id: initial.id });
+        await update.mutateAsync({ ...payload, id: initial.id });
         toast.success("Produto atualizado");
-        onSuccess?.({ ...form, id: initial.id });
+        onSuccess?.({ ...payload, id: initial.id });
       } else {
-        const id = await create.mutateAsync(form);
+        const id = await create.mutateAsync(payload);
         toast.success("Produto cadastrado");
-        onSuccess?.({ ...form, id, created_at: new Date().toISOString() });
+        onSuccess?.({ ...payload, id, created_at: new Date().toISOString() });
       }
       onOpenChange(false);
     } catch (err: any) {
@@ -432,6 +518,39 @@ function ProdutoDialog({
             />
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-xs font-medium">Altura (m)</label>
+              <input
+                type="text"
+                value={altura}
+                onChange={(e) => setAltura(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 0.80"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Largura (m)</label>
+              <input
+                type="text"
+                value={largura}
+                onChange={(e) => setLargura(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 1.20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Profundidade (m)</label>
+              <input
+                type="text"
+                value={profundidade}
+                onChange={(e) => setProfundidade(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 0.90"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-medium">Descrição</label>
             <textarea
@@ -439,7 +558,7 @@ function ProdutoDialog({
               onChange={(e) => set("descricao", e.target.value)}
               rows={3}
               className="mt-1 w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Detalhes, material, dimensões..."
+              placeholder="Detalhes, material..."
             />
           </div>
 

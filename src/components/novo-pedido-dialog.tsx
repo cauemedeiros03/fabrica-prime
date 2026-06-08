@@ -33,6 +33,44 @@ function applyPhoneMask(raw: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+/** Formata altura, largura e profundidade em cm no padrão AxLxP */
+function formatMedidas(altura: string, largura: string, profundidade: string): string {
+  if (!altura && !largura && !profundidade) return "";
+  
+  const toCmStr = (valStr: string) => {
+    const val = parseFloat(valStr.replace(",", "."));
+    if (isNaN(val)) return valStr;
+    if (val < 10) {
+      return Math.round(val * 100).toString();
+    }
+    return Math.round(val).toString();
+  };
+  
+  const a = toCmStr(altura || "0");
+  const l = toCmStr(largura || "0");
+  const p = toCmStr(profundidade || "0");
+  
+  return `${a}x${l}x${p}`;
+}
+
+/** Tenta extrair medidas de uma string de descrição legado */
+function parseLegacyMedidas(desc: string): string {
+  const clean = desc.trim();
+  const parts = clean.split(/\s*[x×*]\s*/);
+  if (parts.length === 3) {
+    const p0 = parseFloat(parts[0].replace(",", "."));
+    const p1 = parseFloat(parts[1].replace(",", "."));
+    const p2 = parseFloat(parts[2].replace(",", "."));
+    if (!isNaN(p0) && !isNaN(p1) && !isNaN(p2)) {
+      const toCmStr = (v: number) => (v < 10 ? Math.round(v * 100).toString() : Math.round(v).toString());
+      // No formato legado "Largura x Profundidade x Altura" (Ex: 1.20×0.90×0.80):
+      // Altura = p2, Largura = p0, Profundidade = p1
+      return `${toCmStr(p2)}x${toCmStr(p0)}x${toCmStr(p1)}`;
+    }
+  }
+  return "";
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: NovoPedidoInput = {
@@ -585,6 +623,27 @@ export function NovoPedidoDialog({
                           updateItem(idx, "descricao", val);
                           updateItem(idx, "material", selected.material || "");
                           updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
+                          
+                          // Auto-fill measures
+                          let measuresStr = "";
+                          if (selected.descricao) {
+                            if (selected.descricao.includes("===JSON_MEDIDAS===")) {
+                              try {
+                                const parts = selected.descricao.split("===JSON_MEDIDAS===\n");
+                                if (parts.length > 1) {
+                                  const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                                  const parsed = JSON.parse(jsonPart);
+                                  measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                                }
+                              } catch {}
+                            } else {
+                              measuresStr = parseLegacyMedidas(selected.descricao);
+                            }
+                          }
+                          if (measuresStr) {
+                            updateItem(idx, "medidas", measuresStr);
+                          }
+
                           // Auto-sum
                           const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + it.valor, 0);
                           set("valor_total", otherItemsSum + (selected.preco ? Number(selected.preco) : item.valor));
