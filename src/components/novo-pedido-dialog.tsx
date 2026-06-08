@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { X, Loader2, Paperclip, FileText } from "lucide-react";
+import { X, Loader2, Paperclip, FileText, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
@@ -63,6 +63,13 @@ const EMPTY_FORM: NovoPedidoInput = {
   anexos: [],
 };
 
+interface ItemRow {
+  descricao: string;
+  material: string;
+  medidas: string;
+  valor: number;
+}
+
 type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
 
 interface FormErrors {
@@ -90,7 +97,44 @@ export function NovoPedidoDialog({
     [initial?.id]
   );
 
+  const initialObsAdicionais = useMemo(() => {
+    let obsAdicionais = initial?.observacoes || "";
+    if (initial?.observacoes && initial.observacoes.includes("===JSON_ITENS===")) {
+      try {
+        const parts = initial.observacoes.split("===JSON_ITENS===\n");
+        if (parts.length > 1) {
+          obsAdicionais = parts[0].replace(/\n*Itens do Pedido:\n[\s\S]*$/, "").trim();
+        }
+      } catch {}
+    }
+    return obsAdicionais;
+  }, [initial]);
+
+  const initialItems = useMemo<ItemRow[]>(() => {
+    let parsedItems: ItemRow[] = [];
+    if (initial?.observacoes && initial.observacoes.includes("===JSON_ITENS===")) {
+      try {
+        const parts = initial.observacoes.split("===JSON_ITENS===\n");
+        if (parts.length > 1) {
+          const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
+          parsedItems = JSON.parse(jsonPart);
+        }
+      } catch {}
+    }
+    if (parsedItems.length === 0) {
+      parsedItems = [{
+        descricao: initial?.produto || "",
+        material: initial?.material || "",
+        medidas: "",
+        valor: 0
+      }];
+    }
+    return parsedItems;
+  }, [initial]);
+
   const [form, setForm] = useState<NovoPedidoInput>(initialForm);
+  const [items, setItems] = useState<ItemRow[]>(initialItems);
+  const [observacoesAdicionais, setObservacoesAdicionais] = useState(initialObsAdicionais);
   const [errors, setErrors] = useState<FormErrors>({});
   const [novoCliente, setNovoCliente] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -185,6 +229,28 @@ export function NovoPedidoDialog({
     setForm((s) => ({ ...s, anexos: (s.anexos || []).filter((url) => url !== urlToRemove) }));
   }, []);
 
+  const addItem = () => {
+    setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0 }]);
+  };
+
+  const updateItem = (idx: number, field: keyof ItemRow, value: any) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const removeItem = (idx: number) => {
+    if (items.length <= 1) return;
+    setItems((prev) => {
+      const newItems = prev.filter((_, i) => i !== idx);
+      const newSum = newItems.reduce((acc, it) => acc + it.valor, 0);
+      if (newSum > 0) {
+        setForm((s) => ({ ...s, valor_total: newSum }));
+      }
+      return newItems;
+    });
+  };
+
   useEffect(() => {
     async function fetchFormaPagamento() {
       if (isEdit && initial?.id) {
@@ -221,14 +287,19 @@ export function NovoPedidoDialog({
 
     if (open) {
       setForm(initialForm);
+      setItems(initialItems);
+      setObservacoesAdicionais(initialObsAdicionais);
       setErrors({});
       fetchFormaPagamento();
     }
-  }, [open, initialForm, isEdit, initial?.id]);
+  }, [open, initialForm, initialItems, initialObsAdicionais, isEdit, initial?.id]);
 
   const isDirty = useMemo(() => {
-    return JSON.stringify(form) !== JSON.stringify(initialForm);
-  }, [form, initialForm]);
+    const formChanged = JSON.stringify({ ...form, observacoes: "" }) !== JSON.stringify({ ...initialForm, observacoes: "" });
+    const itemsChanged = JSON.stringify(items) !== JSON.stringify(initialItems);
+    const obsChanged = observacoesAdicionais.trim() !== initialObsAdicionais.trim();
+    return formChanged || itemsChanged || obsChanged;
+  }, [form, initialForm, items, initialItems, observacoesAdicionais, initialObsAdicionais]);
 
   const handleClose = useCallback(() => {
     if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
@@ -257,8 +328,9 @@ export function NovoPedidoDialog({
 
     if (!validate()) return;
 
-    if (!form.produto?.trim()) {
-      toast.error("O nome do produto é obrigatório.");
+    const filledItems = items.filter((item) => item.descricao.trim() !== "");
+    if (filledItems.length === 0) {
+      toast.error("Adicione pelo menos um produto com descrição.");
       return;
     }
 
@@ -297,7 +369,31 @@ export function NovoPedidoDialog({
         return;
       }
 
-      const payload = { ...form, cliente_id: finalClienteId };
+      // Format product and material strings by combining descriptions
+      const produtoString = items.map((i) => i.descricao.trim()).filter(Boolean).join(", ");
+      const materialString = items.map((i) => i.material.trim()).filter(Boolean).join(", ") || null;
+
+      // Construct formatted observations with JSON suffix
+      const itemsText = items
+        .map((item, index) => {
+          const matPart = item.material ? ` (${item.material})` : "";
+          const medPart = item.medidas ? ` - Medidas: ${item.medidas}` : "";
+          const valPart = item.valor > 0 ? ` - R$ ${item.valor.toFixed(2)}` : "";
+          return `${index + 1}. ${item.descricao}${matPart}${medPart}${valPart}`;
+        })
+        .join("\n");
+
+      const finalObs = `${observacoesAdicionais.trim()}${
+        observacoesAdicionais.trim() ? "\n\n" : ""
+      }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(items)}\n===END_JSON_ITENS===`;
+
+      const payload = {
+        ...form,
+        cliente_id: finalClienteId,
+        produto: produtoString || "Produto não informado",
+        material: materialString,
+        observacoes: finalObs,
+      };
 
       if (isEdit) {
         await update.mutateAsync({ ...payload, id: initial!.id as string });
@@ -472,48 +568,114 @@ export function NovoPedidoDialog({
             </div>
           </Section>
 
-          <Section title="Produto">
-            <div>
-              <label className="text-xs font-medium">Nome do produto *</label>
-              <input
-                list="catalogo-produtos"
-                value={form.produto}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const selected = catalogo.find((c: any) => c.nome === val);
-                  if (selected) {
-                    setForm((s) => ({
-                      ...s,
-                      produto: val,
-                      valor_total: selected.preco ? Number(selected.preco) : s.valor_total,
-                      tipo: selected.tipo_movel || "",
-                      material: selected.material || "",
-                      cor: selected.cor_acabamento || "",
-                      observacoes: selected.descricao || "",
-                    }));
-                  } else {
-                    set("produto", val);
-                  }
-                }}
-                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                placeholder="Selecione ou digite o nome..."
-              />
+          <Section title="Itens do Pedido">
+            <div className="col-span-1 md:col-span-2 space-y-4">
+              {items.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border-b dark:border-border/40 pb-4 md:pb-3 last:border-b-0">
+                  <div className="md:col-span-4">
+                    <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
+                    <input
+                      type="text"
+                      required
+                      value={item.descricao}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const selected = catalogo.find((c: any) => c.nome === val);
+                        if (selected) {
+                          updateItem(idx, "descricao", val);
+                          updateItem(idx, "material", selected.material || "");
+                          updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
+                          // Auto-sum
+                          const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + it.valor, 0);
+                          set("valor_total", otherItemsSum + (selected.preco ? Number(selected.preco) : item.valor));
+                        } else {
+                          updateItem(idx, "descricao", val);
+                        }
+                      }}
+                      list="catalogo-produtos"
+                      placeholder="Ex: Armário de cozinha"
+                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="text-xs font-medium">Material principal</label>
+                    <input
+                      type="text"
+                      value={item.material}
+                      onChange={(e) => updateItem(idx, "material", e.target.value)}
+                      placeholder="Ex: MDF Branco"
+                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium">Medidas (AxLxP)</label>
+                    <input
+                      type="text"
+                      value={item.medidas}
+                      onChange={(e) => updateItem(idx, "medidas", e.target.value)}
+                      placeholder="Ex: 80x120x60"
+                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium">Valor do Item (R$)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.valor === 0 ? "" : item.valor}
+                      onChange={(e) => {
+                        const val = Math.max(0, Number(e.target.value) || 0);
+                        updateItem(idx, "valor", val);
+                        // Optional auto-sum of item values into valor_total
+                        const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + it.valor, 0);
+                        if (val > 0 || otherItemsSum > 0) {
+                          set("valor_total", otherItemsSum + val);
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    />
+                  </div>
+                  <div className="md:col-span-1 flex justify-end pb-1">
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(idx)}
+                        className="size-10 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Remover item"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
               <datalist id="catalogo-produtos">
                 {catalogo.map((c: any) => (
                   <option key={c.id} value={c.nome} />
                 ))}
               </datalist>
+              <button
+                type="button"
+                onClick={addItem}
+                className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 text-primary text-xs font-medium hover:bg-primary/10 transition-colors"
+              >
+                <Plus className="size-3.5" />
+                Adicionar outro produto
+              </button>
             </div>
-            <Field label="Tipo do móvel" value={form.tipo || ""} onChange={(v) => set("tipo", v)} />
-            <Field label="Material" value={form.material || ""} onChange={(v) => set("material", v)} />
-            <Field label="Cor / acabamento" value={form.cor || ""} onChange={(v) => set("cor", v)} />
-            <div className="md:col-span-2">
-              <label className="text-xs font-medium">Observações / medidas</label>
+          </Section>
+
+          <Section title="Informações Adicionais">
+            <div className="col-span-1 md:col-span-2">
+              <label className="text-xs font-medium">Observações gerais do pedido</label>
               <textarea
-                value={form.observacoes || ""}
-                onChange={(e) => set("observacoes", e.target.value)}
+                value={observacoesAdicionais}
+                onChange={(e) => setObservacoesAdicionais(e.target.value)}
                 rows={3}
                 className="mt-1 w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Detalhes adicionais, observações de montagem, etc."
               />
             </div>
           </Section>
