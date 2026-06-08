@@ -186,11 +186,45 @@ export function NovoPedidoDialog({
   }, []);
 
   useEffect(() => {
+    async function fetchFormaPagamento() {
+      if (isEdit && initial?.id) {
+        try {
+          // Try to fetch by exact observation first
+          let { data, error } = await supabase
+            .from("pagamentos")
+            .select("forma")
+            .eq("pedido_id", initial.id)
+            .eq("observacao", "Pagamento inicial / entrada")
+            .maybeSingle();
+
+          if (!error && data?.forma) {
+            setForm((s) => ({ ...s, forma_pagamento: data.forma }));
+          } else if (!error) {
+            // Fallback: get the oldest payment for this order
+            const { data: oldestData, error: fallbackError } = await supabase
+              .from("pagamentos")
+              .select("forma")
+              .eq("pedido_id", initial.id)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+
+            if (!fallbackError && oldestData?.forma) {
+              setForm((s) => ({ ...s, forma_pagamento: oldestData.forma }));
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao buscar forma de pagamento:", err);
+        }
+      }
+    }
+
     if (open) {
       setForm(initialForm);
       setErrors({});
+      fetchFormaPagamento();
     }
-  }, [open, initialForm]);
+  }, [open, initialForm, isEdit, initial?.id]);
 
   const isDirty = useMemo(() => {
     return JSON.stringify(form) !== JSON.stringify(initialForm);

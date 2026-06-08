@@ -483,12 +483,74 @@ export function useUpdatePedido() {
         .eq("id", id)
         .eq("user_id", user.id);
       if (error) throw error;
+
+      // Try to find the payment by exact observation first
+      let { data: existingPags, error: fetchErr } = await supabase
+        .from("pagamentos")
+        .select("id, valor, forma, observacao")
+        .eq("pedido_id", id)
+        .eq("observacao", "Pagamento inicial / entrada")
+        .maybeSingle();
+
+      // Fallback: locate the oldest payment row for this order
+      if (!fetchErr && !existingPags) {
+        const { data: oldestPag, error: fallbackErr } = await supabase
+          .from("pagamentos")
+          .select("id, valor, forma, observacao")
+          .eq("pedido_id", id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (!fallbackErr && oldestPag) {
+          existingPags = oldestPag;
+        } else if (fallbackErr) {
+          fetchErr = fallbackErr;
+        }
+      }
+
+      if (!fetchErr) {
+        if (existingPags) {
+          if (Number(input.valor_pago) > 0) {
+            const { error: ue } = await supabase
+              .from("pagamentos")
+              .update({
+                valor: Number(input.valor_pago),
+                forma: input.forma_pagamento || "Pix",
+                observacao: existingPags.observacao || "Pagamento inicial / entrada",
+              })
+              .eq("id", existingPags.id);
+            if (ue) throw ue;
+          } else {
+            const { error: de } = await supabase
+              .from("pagamentos")
+              .delete()
+              .eq("id", existingPags.id);
+            if (de) throw de;
+          }
+        } else if (Number(input.valor_pago) > 0) {
+          const { error: ie } = await supabase
+            .from("pagamentos")
+            .insert({
+              pedido_id: id,
+              valor: Number(input.valor_pago),
+              forma: input.forma_pagamento || "Pix",
+              pago_em: new Date().toISOString().split("T")[0],
+              observacao: "Pagamento inicial / entrada",
+            });
+          if (ie) throw ie;
+        }
+      } else {
+        throw fetchErr;
+      }
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
       qc.invalidateQueries({ queryKey: ["pedido", v.id] });
       qc.invalidateQueries({ queryKey: ["etapas_pedido", v.id] });
       qc.invalidateQueries({ queryKey: ["clientes"] });
+      qc.invalidateQueries({ queryKey: ["pagamentos"] });
+      qc.invalidateQueries({ queryKey: ["pagamentos", v.id] });
+      qc.invalidateQueries({ queryKey: ["all_pagamentos"] });
     },
   });
 }
