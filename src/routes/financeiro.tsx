@@ -372,7 +372,7 @@ function FinanceiroPage() {
                     const dataFormatada = isNaN(dateObj.getTime())
                       ? new Date().toLocaleDateString("pt-BR")
                       : dateObj.toLocaleDateString("pt-BR");
-                    const paymentMethod = pag.forma || pag.forma_pagamento || pag.metodo_pagamento || "Não informado";
+                    const paymentMethod = pag.forma || (pag as any).forma_pagamento || (pag as any).metodo_pagamento || "Não informado";
                     return (
                       <tr key={pag.id} className="hover:bg-accent/20 transition group">
                         <td className="pl-5 pr-4 py-3 font-medium text-foreground">
