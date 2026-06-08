@@ -364,7 +364,14 @@ function FinanceiroPage() {
                 </thead>
                 <tbody className="divide-y">
                   {pagamentos.map((pag) => {
-                    const dataFormatada = new Date(pag.pago_em + "T00:00:00").toLocaleDateString("pt-BR");
+                    const rawDate = pag.pago_em || pag.created_at || new Date();
+                    let dateObj = new Date(rawDate);
+                    if (isNaN(dateObj.getTime()) && typeof rawDate === "string") {
+                      dateObj = new Date(rawDate.includes("T") ? rawDate : `${rawDate}T12:00:00`);
+                    }
+                    const dataFormatada = isNaN(dateObj.getTime())
+                      ? new Date().toLocaleDateString("pt-BR")
+                      : dateObj.toLocaleDateString("pt-BR");
                     return (
                       <tr key={pag.id} className="hover:bg-accent/20 transition group">
                         <td className="pl-5 pr-4 py-3 font-medium text-foreground">

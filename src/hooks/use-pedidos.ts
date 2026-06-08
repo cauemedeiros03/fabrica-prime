@@ -709,36 +709,61 @@ export function useAllPagamentos() {
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase
-        .from("pagamentos")
-        .select(`
-          id,
-          valor,
-          forma,
-          pago_em,
-          observacao,
-          pedidos (
+
+      // Fetch both pagamentos and pedidos in parallel
+      const [pagamentosRes, pedidosRes] = await Promise.all([
+        supabase
+          .from("pagamentos")
+          .select(`
+            id,
+            valor,
+            forma,
+            pago_em,
+            observacao,
+            created_at,
+            pedidos (
+              id,
+              produto,
+              numero,
+              user_id,
+              clientes (
+                nome
+              )
+            )
+          `)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("pedidos")
+          .select(`
             id,
             produto,
             numero,
+            valor_pago,
+            valor_total,
+            created_at,
+            entrega,
+            etapa,
             user_id,
             clientes (
               nome
             )
-          )
-        `)
-        .order("pago_em", { ascending: false });
+          `)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+      ]);
 
-      if (error) throw error;
+      if (pagamentosRes.error) throw pagamentosRes.error;
+      if (pedidosRes.error) throw pedidosRes.error;
 
-      const filtered = (data || []) as any[];
-      return filtered
+      // 1. Process pagamentos
+      const userPayments = (pagamentosRes.data || [])
         .filter((p) => p.pedidos && p.pedidos.user_id === user.id)
         .map((p) => ({
           id: p.id,
           valor: Number(p.valor),
           forma: p.forma,
           pago_em: p.pago_em,
+          created_at: p.created_at,
           observacao: p.observacao,
           pedido: {
             id: p.pedidos.id,
@@ -747,6 +772,40 @@ export function useAllPagamentos() {
             clienteNome: p.pedidos.clientes?.nome ?? "—",
           },
         }));
+
+      // 2. Process active orders that have valor_pago > 0 but are not represented in the pagamentos table
+      const paymentPedidoIds = new Set(userPayments.map((p) => p.pedido.id));
+      const ordersAsSales = (pedidosRes.data || [])
+        .filter((p) => {
+          const etapaLower = String(p.etapa || "").toLowerCase();
+          const isActive = !(
+            etapaLower === "cancelado" ||
+            etapaLower === "cancelada" ||
+            etapaLower === "excluido" ||
+            etapaLower === "excluído"
+          );
+          return isActive && Number(p.valor_pago) > 0 && !paymentPedidoIds.has(p.id);
+        })
+        .map((p) => ({
+          id: p.id,
+          valor: Number(p.valor_pago),
+          forma: "Não informado",
+          pago_em: p.entrega || p.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
+          created_at: p.created_at,
+          observacao: "Venda Direta",
+          pedido: {
+            id: p.id,
+            produto: p.produto,
+            numero: p.numero,
+            clienteNome: p.clientes?.nome ?? "—",
+          },
+        }));
+
+      // 3. Combine and sort by created_at descending
+      const combined = [...userPayments, ...ordersAsSales];
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      return combined;
     },
   });
 }
