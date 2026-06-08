@@ -198,7 +198,7 @@ export function NovoPedidoDialog({
             .maybeSingle();
 
           if (!error && data?.forma) {
-            setForm((s) => ({ ...s, forma_pagamento: data.forma }));
+            setForm((s) => ({ ...s, forma_pagamento: data.forma ?? undefined }));
           } else if (!error) {
             // Fallback: get the oldest payment for this order
             const { data: oldestData, error: fallbackError } = await supabase
@@ -210,7 +210,7 @@ export function NovoPedidoDialog({
               .maybeSingle();
 
             if (!fallbackError && oldestData?.forma) {
-              setForm((s) => ({ ...s, forma_pagamento: oldestData.forma }));
+              setForm((s) => ({ ...s, forma_pagamento: oldestData.forma ?? undefined }));
             }
           }
         } catch (err) {
