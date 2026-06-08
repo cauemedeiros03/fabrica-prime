@@ -51,6 +51,7 @@ const EMPTY_FORM: NovoPedidoInput = {
   etapa: "pedido-recebido",
   valor_total: 0,
   valor_pago: 0,
+  forma_pagamento: "Pix",
   cpf: "",
   cep: "",
   endereco: "",
@@ -562,10 +563,32 @@ export function NovoPedidoDialog({
                 onKeyDown={(e) => {
                   if (e.key === "-") e.preventDefault();
                 }}
-                onChange={(e) => set("valor_pago", Math.max(0, Number(e.target.value) || 0))}
+                onChange={(e) => {
+                  const val = Math.max(0, Number(e.target.value) || 0);
+                  set("valor_pago", val);
+                  if (val > 0 && !form.forma_pagamento) {
+                    set("forma_pagamento", "Pix");
+                  }
+                }}
                 className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
               />
             </div>
+
+            {form.valor_pago > 0 && (
+              <div>
+                <label className="text-xs font-medium font-semibold">Forma de pagamento (Entrada) *</label>
+                <select
+                  value={form.forma_pagamento || "Pix"}
+                  onChange={(e) => set("forma_pagamento", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                >
+                  <option value="Pix">Pix</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Cartão de Débito">Cartão de Débito</option>
+                </select>
+              </div>
+            )}
 
             <div className="md:col-span-2 rounded-lg border bg-muted/40 px-4 py-3 flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Saldo restante (calculado)</span>

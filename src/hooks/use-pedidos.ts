@@ -295,6 +295,7 @@ export interface NovoPedidoInput {
   // financeiro
   valor_total: number;
   valor_pago: number;
+  forma_pagamento?: string;
   cpf?: string;
   cep?: string;
   endereco?: string;
@@ -391,9 +392,26 @@ export function useCreatePedido() {
         .single();
       if (e2) throw e2;
 
+      // 4. Inserir pagamento inicial se houver valor pago/entrada
+      if (Number(input.valor_pago) > 0) {
+        const { error: e3 } = await supabase
+          .from("pagamentos")
+          .insert({
+            pedido_id: pedido.id,
+            valor: Number(input.valor_pago),
+            forma: input.forma_pagamento || "Pix",
+            pago_em: new Date().toISOString().split("T")[0],
+            observacao: "Pagamento inicial / entrada",
+          });
+        if (e3) throw e3;
+      }
+
       return pedido.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["all_pagamentos"] });
+    },
   });
 }
 
