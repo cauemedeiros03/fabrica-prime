@@ -294,7 +294,17 @@ function PedidoDetalhePage() {
           <dl className="space-y-2 text-sm">
             <Item label="Produto" value={p.produto} />
             <Item label="Tipo" value={p.tipo || "—"} />
-            <Item label="Material" value={p.material || "—"} />
+            <Item
+              label="Material"
+              value={
+                p.material
+                  ? ([...new Set(p.material.split(",").map((m: string) => m.trim()))] as string[])
+                      .filter(Boolean)
+                      .map((m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
+                      .join(", ")
+                  : "—"
+              }
+            />
             <Item label="Cor / acabamento" value={p.cor || "—"} />
             {(p as unknown as { observacoes?: string }).observacoes && (
               <div className="pt-2 border-t">

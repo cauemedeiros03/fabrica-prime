@@ -400,7 +400,17 @@ function PedidoViewerContent({
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               <Row label="Produto" value={p.produto} />
               <Row label="Tipo" value={p.tipo} />
-              <Row label="Material" value={p.material} />
+              <Row
+                label="Material"
+                value={
+                  p.material
+                    ? ([...new Set(p.material.split(",").map((m: string) => m.trim()))] as string[])
+                        .filter(Boolean)
+                        .map((m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
+                        .join(", ")
+                    : null
+                }
+              />
               <Row label="Cor / Acabamento" value={p.cor} />
             </dl>
             {p.observacoes && (

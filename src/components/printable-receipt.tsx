@@ -14,6 +14,13 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
     const saldo = pedido.valorTotal - pedido.valorPago;
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
 
+    const uniqueMaterials = pedido.material
+      ? ([...new Set(pedido.material.split(",").map((m: string) => m.trim()))] as string[])
+          .filter(Boolean)
+          .map((m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
+          .join(", ")
+      : "";
+
     return (
       <div
         ref={ref}
@@ -113,10 +120,10 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
                     <td className="py-3 px-4 text-slate-800">{pedido.tipo}</td>
                   </tr>
                 )}
-                {pedido.material && (
+                {uniqueMaterials && (
                   <tr>
                     <td className="py-3 px-4 font-medium text-slate-500">Material</td>
-                    <td className="py-3 px-4 text-slate-800">{pedido.material}</td>
+                    <td className="py-3 px-4 text-slate-800">{uniqueMaterials}</td>
                   </tr>
                 )}
                 {pedido.cor && (
