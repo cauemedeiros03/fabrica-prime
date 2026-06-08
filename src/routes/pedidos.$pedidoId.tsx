@@ -33,6 +33,7 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatObservacoes } from "@/lib/utils";
 
 export const Route = createFileRoute("/pedidos/$pedidoId")({
   component: PedidoDetalhePage,
@@ -74,11 +75,14 @@ function PedidoDetalhePage() {
     }
     const phone = p.telefone.replace(/\D/g, '');
     
+    const obsClean = formatObservacoes(p.observacoes);
+    const obsPart = obsClean ? `\n\n*Detalhes do Pedido:*\n${obsClean}` : "";
+    
     let msg = "";
     if (p.etapa === "pronto-entrega") {
-      msg = `Olá! Ótima notícia: seu pedido ${p.produto} está Pronto para entrega! O saldo restante para a liberação é de ${moeda(saldo)}. Vamos agendar o envio?`;
+      msg = `Olá! Ótima notícia: seu pedido ${p.produto} está Pronto para entrega! O saldo restante para a liberação é de ${moeda(saldo)}. Vamos agendar o envio?${obsPart}`;
     } else {
-      msg = `Olá! Passando para avisar que a produção do seu pedido ${p.produto} avançou e agora ele está na etapa: ${etapa.label}! Tudo correndo super bem por aqui.`;
+      msg = `Olá! Passando para avisar que a produção do seu pedido ${p.produto} avançou e agora ele está na etapa: ${etapa.label}! Tudo correndo super bem por aqui.${obsPart}`;
     }
     
     window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -296,7 +300,7 @@ function PedidoDetalhePage() {
               <div className="pt-2 border-t">
                 <dt className="text-xs text-muted-foreground mb-1">Observações</dt>
                 <dd className="whitespace-pre-wrap">
-                  {(p as unknown as { observacoes?: string }).observacoes}
+                  {formatObservacoes((p as unknown as { observacoes?: string }).observacoes)}
                 </dd>
               </div>
             )}

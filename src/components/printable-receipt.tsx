@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { moeda } from "@/lib/mock-data";
+import { formatObservacoes } from "@/lib/utils";
 
 interface PrintableReceiptProps {
   pedido: any;
@@ -128,7 +129,7 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
                   <tr>
                     <td className="py-3 px-4 font-medium text-slate-500">Observações</td>
                     <td className="py-3 px-4 text-slate-700 whitespace-pre-wrap leading-relaxed">
-                      {pedido.observacoes}
+                      {formatObservacoes(pedido.observacoes)}
                     </td>
                   </tr>
                 )}

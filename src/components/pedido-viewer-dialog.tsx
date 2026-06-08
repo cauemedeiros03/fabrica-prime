@@ -3,6 +3,7 @@ import { X, Wallet, ClipboardList, Phone, Mail, MapPin, Calendar, Paperclip, Fil
 import { ETAPAS, moeda, dataBR, PRIORIDADE_LABEL, PRIORIDADE_COR } from "@/lib/mock-data";
 import { usePagamentosPedido, useAddPagamento, useEtapasHistorico } from "@/hooks/use-pedidos";
 import { toast } from "sonner";
+import { formatObservacoes } from "@/lib/utils";
 
 // ─── Funções puras — sem recriação a cada render ───────────────────────────────
 
@@ -405,7 +406,7 @@ function PedidoViewerContent({
             {p.observacoes && (
               <div className="mt-3 pt-3 border-t">
                 <dt className="text-xs text-muted-foreground mb-1">Observações / Medidas</dt>
-                <dd className="whitespace-pre-wrap text-sm leading-relaxed">{p.observacoes}</dd>
+                <dd className="whitespace-pre-wrap text-sm leading-relaxed">{formatObservacoes(p.observacoes)}</dd>
               </div>
             )}
           </section>
