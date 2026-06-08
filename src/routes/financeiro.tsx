@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { moeda, dataBR } from "@/lib/mock-data";
-import { usePedidos } from "@/hooks/use-pedidos";
+import { usePedidos, useCreateVendaDireta } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -34,8 +34,17 @@ function FinanceiroPage() {
   const [salvando, setSalvando] = useState(false);
   const [confirmarExcluir, setConfirmarExcluir] = useState<string | null>(null);
 
+  const [openNewVenda, setOpenNewVenda] = useState(false);
+  const [vendaDescricao, setVendaDescricao] = useState("");
+  const [vendaValor, setVendaValor] = useState("");
+  const [vendaData, setVendaData] = useState(new Date().toISOString().split("T")[0]);
+  const [vendaFormaPagamento, setVendaFormaPagamento] = useState("Pix");
+  const [vendaClienteNome, setVendaClienteNome] = useState("");
+  const [salvandoVenda, setSalvandoVenda] = useState(false);
+
   const createDespesa = useCreateDespesa();
   const deleteDespesa = useDeleteDespesa();
+  const createVendaDireta = useCreateVendaDireta();
 
   const pedidosAtivos = useMemo(() => {
     return PEDIDOS.filter((p) => {
@@ -125,6 +134,38 @@ function FinanceiroPage() {
     }
   };
 
+  const handleSalvarVenda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendaDescricao.trim() || !vendaValor || !vendaData) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setSalvandoVenda(true);
+    try {
+      await createVendaDireta.mutateAsync({
+        descricao: vendaDescricao,
+        valor: Number(vendaValor),
+        data: vendaData,
+        formaPagamento: vendaFormaPagamento,
+        clienteNome: vendaClienteNome || undefined,
+      });
+      toast.success("Venda direta lançada com sucesso!");
+      setVendaDescricao("");
+      setVendaValor("");
+      setVendaData(new Date().toISOString().split("T")[0]);
+      setVendaFormaPagamento("Pix");
+      setVendaClienteNome("");
+      setOpenNewVenda(false);
+    } catch (err: any) {
+      toast.error("Erro ao lançar venda direta", {
+        description: err.message || "",
+      });
+    } finally {
+      setSalvandoVenda(false);
+    }
+  };
+
   const handleExcluirDespesa = async () => {
     if (!confirmarExcluir) return;
     try {
@@ -159,13 +200,22 @@ function FinanceiroPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => setOpenNewDespesa(true)}
-          className="h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-medium transition shadow-[var(--shadow-soft)] w-full sm:w-auto shrink-0"
-        >
-          <Plus className="size-4" />
-          <span>Lançar Gasto</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setOpenNewVenda(true)}
+            className="h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium transition shadow-[var(--shadow-soft)] w-full sm:w-auto shrink-0"
+          >
+            <Plus className="size-4" />
+            <span>Lançar Venda</span>
+          </button>
+          <button
+            onClick={() => setOpenNewDespesa(true)}
+            className="h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-sm font-medium transition shadow-[var(--shadow-soft)] w-full sm:w-auto shrink-0"
+          >
+            <Plus className="size-4" />
+            <span>Lançar Gasto</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -331,6 +381,120 @@ function FinanceiroPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Lançar Venda */}
+      {openNewVenda && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4"
+          onClick={() => setOpenNewVenda(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-card border p-6 shadow-[var(--shadow-elevated)]"
+          >
+            <h3 className="font-semibold tracking-tight text-lg mb-4 text-emerald-800 dark:text-emerald-400">
+              Lançar Venda Direta / Receita
+            </h3>
+            <form onSubmit={handleSalvarVenda} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">
+                  Descrição da Venda *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={vendaDescricao}
+                  onChange={(e) => setVendaDescricao(e.target.value)}
+                  placeholder="Ex: Venda de vaso decorativo, Cadeira pronta-entrega"
+                  className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">
+                    Valor Total (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    value={vendaValor}
+                    onKeyDown={(e) => {
+                      if (e.key === "-") e.preventDefault();
+                    }}
+                    onChange={(e) =>
+                      setVendaValor(String(Math.max(0, Number(e.target.value) || 0)))
+                    }
+                    placeholder="0.00"
+                    className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">
+                    Data do Recebimento *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={vendaData}
+                    onChange={(e) => setVendaData(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">
+                  Forma de Pagamento *
+                </label>
+                <select
+                  value={vendaFormaPagamento}
+                  onChange={(e) => setVendaFormaPagamento(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                >
+                  <option value="Pix">Pix</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Cartão de Débito">Cartão de Débito</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">
+                  Nome do Cliente (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={vendaClienteNome}
+                  onChange={(e) => setVendaClienteNome(e.target.value)}
+                  placeholder="Ex: João da Silva"
+                  className="w-full h-10 px-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setOpenNewVenda(false)}
+                  className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoVenda}
+                  className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800 disabled:opacity-60"
+                >
+                  {salvandoVenda && <Loader2 className="size-4 animate-spin" />}
+                  {salvandoVenda ? "Salvando..." : "Salvar Venda"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Lançar Gasto */}
       {openNewDespesa && (

@@ -618,3 +618,83 @@ export function useDeletePedido() {
     },
   });
 }
+
+export interface NovaVendaDiretaInput {
+  descricao: string;
+  valor: number;
+  data: string; // YYYY-MM-DD
+  formaPagamento: string;
+  clienteNome?: string;
+}
+
+export function useCreateVendaDireta() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: NovaVendaDiretaInput) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // 1. Criar o cliente (ou usar padrão "Venda de Balcão")
+      const clienteNome = input.clienteNome?.trim() || "Venda de Balcão";
+      const { data: cli, error: e1 } = await supabase
+        .from("clientes")
+        .insert({
+          nome: clienteNome,
+          user_id: user.id,
+        })
+        .select("id")
+        .single();
+      if (e1) throw e1;
+      const clienteId = cli.id;
+
+      // 2. Preparar payload do pedido com etapa 'entregue'
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const createdAtStr = `${input.data}T${timeStr}.000Z`;
+
+      const payload = {
+        cliente_id: clienteId,
+        produto: input.descricao || "Venda de Balcão",
+        etapa: "entregue" as const,
+        prioridade: "media" as const,
+        valor_total: Number(input.valor) || 0,
+        valor_pago: Number(input.valor) || 0,
+        numero: String(Math.floor(100000 + Math.random() * 900000)),
+        user_id: user.id,
+        created_at: createdAtStr,
+        entrega: input.data,
+        historico_producao: [
+          { etapa: "Entregue", data: `${input.data} ${timeStr}` }
+        ],
+      };
+
+      // 3. Inserir pedido
+      const { data: pedido, error: e2 } = await (supabase
+        .from("pedidos") as any)
+        .insert(payload)
+        .select("id")
+        .single();
+      if (e2) throw e2;
+      const pedidoId = pedido.id;
+
+      // 4. Inserir pagamento
+      const { error: e3 } = await supabase
+        .from("pagamentos")
+        .insert({
+          pedido_id: pedidoId,
+          valor: Number(input.valor),
+          forma: input.formaPagamento,
+          pago_em: input.data,
+          observacao: "Venda direta de balcão",
+        });
+      if (e3) throw e3;
+
+      return pedidoId;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+    },
+  });
+}
