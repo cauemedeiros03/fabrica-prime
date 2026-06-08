@@ -371,7 +371,7 @@ export function NovoPedidoDialog({
 
       // Format product and material strings by combining descriptions
       const produtoString = items.map((i) => i.descricao.trim()).filter(Boolean).join(", ");
-      const materialString = items.map((i) => i.material.trim()).filter(Boolean).join(", ") || null;
+      const materialString = items.map((i) => i.material.trim()).filter(Boolean).join(", ") || undefined;
 
       // Construct formatted observations with JSON suffix
       const itemsText = items
