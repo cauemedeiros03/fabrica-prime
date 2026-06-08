@@ -24,11 +24,11 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
     return (
       <div
         ref={ref}
-        className="w-full max-w-[800px] p-8 md:p-12 bg-white text-slate-800 font-sans shadow-none"
+        className="w-full max-w-[800px] p-6 md:p-8 bg-white text-slate-800 font-sans shadow-none"
         style={{ contentVisibility: "auto" }}
       >
         {/* CABEÇALHO */}
-        <div className="flex flex-row justify-between items-start gap-4 pb-6 border-b-2 border-slate-200">
+        <div className="flex flex-row justify-between items-start gap-4 pb-4 border-b-2 border-slate-200">
           <div className="flex items-center gap-4">
             {config?.logo_url ? (
               <div className="h-16 w-16 rounded-xl border bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center">
@@ -59,12 +59,12 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
         </div>
 
         {/* TÍTULO DO DOCUMENTO */}
-        <div className="mt-8 flex justify-between items-end border-b border-slate-100 pb-4">
+        <div className="mt-4 flex justify-between items-end border-b border-slate-100 pb-2">
           <div>
             <span className="text-xs font-semibold tracking-wider text-primary uppercase">
               Documento de Pedido
             </span>
-            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
               ORÇAMENTO / RECIBO {pedido.numero}
             </h2>
           </div>
@@ -76,66 +76,66 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
         </div>
 
         {/* DADOS DO CLIENTE */}
-        <div className="mt-8">
-          <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+        <div className="mt-4 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5">
             Dados do Cliente
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs">
             <div>
-              <p className="text-xs text-slate-400 font-medium">Nome</p>
+              <p className="text-[10px] text-slate-400 font-medium">Nome</p>
               <p className="font-semibold text-slate-900 mt-0.5">{pedido.cliente}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-medium">Telefone / Celular</p>
+              <p className="text-[10px] text-slate-400 font-medium">Telefone / Celular</p>
               <p className="font-medium text-slate-800 mt-0.5">{pedido.telefone || "Não informado"}</p>
             </div>
             <div className="md:col-span-2">
-              <p className="text-xs text-slate-400 font-medium">Endereço de Entrega</p>
+              <p className="text-[10px] text-slate-400 font-medium">Endereço de Entrega</p>
               <p className="text-slate-700 mt-0.5">{pedido.clienteEndereco || "Não informado"}</p>
             </div>
           </div>
         </div>
 
         {/* DETALHES DO PEDIDO */}
-        <div className="mt-8">
-          <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+        <div className="mt-4">
+          <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             Especificações do Projeto
           </h3>
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm border-collapse">
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
-                  <th className="py-2.5 px-4 text-left w-1/3">Item / Atributo</th>
-                  <th className="py-2.5 px-4 text-left">Especificação</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-semibold uppercase break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <th className="py-2 px-3 text-left w-1/3">Item / Atributo</th>
+                  <th className="py-2 px-3 text-left">Especificação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr>
-                  <td className="py-3 px-4 font-semibold text-slate-950">Móvel / Projeto</td>
-                  <td className="py-3 px-4 text-slate-800">{pedido.produto}</td>
+                <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <td className="py-2 px-3 font-semibold text-slate-950">Móvel / Projeto</td>
+                  <td className="py-2 px-3 text-slate-800">{pedido.produto}</td>
                 </tr>
                 {pedido.tipo && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Tipo</td>
-                    <td className="py-3 px-4 text-slate-800">{pedido.tipo}</td>
+                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <td className="py-2 px-3 font-medium text-slate-500">Tipo</td>
+                    <td className="py-2 px-3 text-slate-800">{pedido.tipo}</td>
                   </tr>
                 )}
                 {uniqueMaterials && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Material</td>
-                    <td className="py-3 px-4 text-slate-800">{uniqueMaterials}</td>
+                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <td className="py-2 px-3 font-medium text-slate-500">Material</td>
+                    <td className="py-2 px-3 text-slate-800">{uniqueMaterials}</td>
                   </tr>
                 )}
                 {pedido.cor && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Cor / Acabamento</td>
-                    <td className="py-3 px-4 text-slate-800">{pedido.cor}</td>
+                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <td className="py-2 px-3 font-medium text-slate-500">Cor / Acabamento</td>
+                    <td className="py-2 px-3 text-slate-800">{pedido.cor}</td>
                   </tr>
                 )}
                 {pedido.observacoes && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Observações</td>
-                    <td className="py-3 px-4 text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                    <td className="py-2 px-3 font-medium text-slate-500">Observações</td>
+                    <td className="py-2 px-3 text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
                       {formatObservacoes(pedido.observacoes)}
                     </td>
                   </tr>
@@ -146,25 +146,25 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
         </div>
 
         {/* DETALHES FINANCEIROS */}
-        <div className="mt-8 bg-slate-950 text-white rounded-2xl p-6 grid grid-cols-3 gap-4 text-center">
+        <div className="mt-4 bg-slate-950 text-white rounded-xl p-4 grid grid-cols-3 gap-4 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
           <div className="border-r border-slate-800">
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Valor Total
             </p>
-            <p className="text-lg font-bold mt-1 text-white">{moeda(pedido.valorTotal)}</p>
+            <p className="text-base font-bold mt-1 text-white">{moeda(pedido.valorTotal)}</p>
           </div>
           <div className="border-r border-slate-800">
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Valor Pago
             </p>
-            <p className="text-lg font-bold mt-1 text-emerald-400">{moeda(pedido.valorPago)}</p>
+            <p className="text-base font-bold mt-1 text-emerald-400">{moeda(pedido.valorPago)}</p>
           </div>
           <div>
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Saldo Devedor
             </p>
             <p
-              className={`text-lg font-bold mt-1 ${
+              className={`text-base font-bold mt-1 ${
                 saldo > 0 ? "text-rose-400" : "text-emerald-400"
               }`}
             >
@@ -174,25 +174,28 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
         </div>
 
         {/* RODAPÉ */}
-        <div className="mt-16 text-sm text-slate-500">
-          <p className="text-xs">
+        <div
+          className="mt-10 text-xs text-slate-500 break-inside-avoid"
+          style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+        >
+          <p className="text-[11px]">
             Local e Data: ___________________________________, _____ de _________________ de 20___
           </p>
 
-          <div className="mt-16 grid grid-cols-2 gap-12">
+          <div className="mt-10 grid grid-cols-2 gap-12">
             <div className="flex flex-col items-center">
               <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider">
+              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
                 {pedido.cliente}
               </span>
-              <span className="text-[10px] text-slate-400 uppercase">Assinatura do Cliente</span>
+              <span className="text-[9px] text-slate-400 uppercase">Assinatura do Cliente</span>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider">
+              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
                 {config?.nome_marcenaria || "Marcenaria"}
               </span>
-              <span className="text-[10px] text-slate-400 uppercase">Assinatura do Responsável</span>
+              <span className="text-[9px] text-slate-400 uppercase">Assinatura do Responsável</span>
             </div>
           </div>
         </div>
