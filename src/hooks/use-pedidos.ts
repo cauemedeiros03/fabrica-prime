@@ -576,6 +576,7 @@ export function useAddPagamento() {
       qc.invalidateQueries({ queryKey: ["pagamentos", v.pedido_id] });
       qc.invalidateQueries({ queryKey: ["pedidos"] });
       qc.invalidateQueries({ queryKey: ["pedido", v.pedido_id] });
+      qc.invalidateQueries({ queryKey: ["all_pagamentos"] });
     },
   });
 }
@@ -615,6 +616,7 @@ export function useDeletePedido() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["all_pagamentos"] });
     },
   });
 }
@@ -695,6 +697,56 @@ export function useCreateVendaDireta() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pedidos"] });
       qc.invalidateQueries({ queryKey: ["clientes"] });
+      qc.invalidateQueries({ queryKey: ["all_pagamentos"] });
+    },
+  });
+}
+
+export function useAllPagamentos() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["all_pagamentos", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      const { data, error } = await supabase
+        .from("pagamentos")
+        .select(`
+          id,
+          valor,
+          forma,
+          pago_em,
+          observacao,
+          pedidos (
+            id,
+            produto,
+            numero,
+            user_id,
+            clientes (
+              nome
+            )
+          )
+        `)
+        .order("pago_em", { ascending: false });
+
+      if (error) throw error;
+
+      const filtered = (data || []) as any[];
+      return filtered
+        .filter((p) => p.pedidos && p.pedidos.user_id === user.id)
+        .map((p) => ({
+          id: p.id,
+          valor: Number(p.valor),
+          forma: p.forma,
+          pago_em: p.pago_em,
+          observacao: p.observacao,
+          pedido: {
+            id: p.pedidos.id,
+            produto: p.pedidos.produto,
+            numero: p.pedidos.numero,
+            clienteNome: p.pedidos.clientes?.nome ?? "—",
+          },
+        }));
     },
   });
 }

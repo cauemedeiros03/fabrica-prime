@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { moeda, dataBR } from "@/lib/mock-data";
-import { usePedidos, useCreateVendaDireta } from "@/hooks/use-pedidos";
+import { usePedidos, useCreateVendaDireta, useAllPagamentos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
@@ -21,12 +21,13 @@ function FinanceiroPage() {
   const navigate = useNavigate();
   const { data: PEDIDOS = [], refetch } = usePedidos();
   const { data: despesas = [] } = useDespesas();
+  const { data: pagamentos = [] } = useAllPagamentos();
 
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  const [activeTab, setActiveTab] = useState<"receber" | "despesas">("receber");
+  const [activeTab, setActiveTab] = useState<"receber" | "vendas" | "despesas">("receber");
   const [openNewDespesa, setOpenNewDespesa] = useState(false);
   const [newDescricao, setNewDescricao] = useState("");
   const [newValor, setNewValor] = useState("");
@@ -271,6 +272,8 @@ function FinanceiroPage() {
             <p className="text-xs text-muted-foreground">
               {activeTab === "receber"
                 ? `${pendentes.length} pagamentos pendentes de clientes`
+                : activeTab === "vendas"
+                ? `${pagamentos.length} venda(s) / receita(s) realizada(s)`
                 : `${despesas.length} despesa(s) registrada(s)`}
             </p>
           </div>
@@ -286,6 +289,14 @@ function FinanceiroPage() {
                 Receber
               </button>
               <button
+                onClick={() => setActiveTab("vendas")}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  activeTab === "vendas" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Vendas
+              </button>
+              <button
                 onClick={() => setActiveTab("despesas")}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
                   activeTab === "despesas" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -297,7 +308,7 @@ function FinanceiroPage() {
           </div>
         </div>
 
-        {activeTab === "receber" ? (
+        {activeTab === "receber" && (
           <div className="divide-y">
             {pendentes.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
@@ -333,7 +344,58 @@ function FinanceiroPage() {
               })
             )}
           </div>
-        ) : (
+        )}
+
+        {activeTab === "vendas" && (
+          <div className="overflow-x-auto">
+            {pagamentos.length === 0 ? (
+              <div className="p-10 text-center text-sm text-muted-foreground">
+                Nenhuma venda registrada.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase border-b">
+                  <tr>
+                    <th className="text-left font-medium pl-5 pr-4 py-2.5">Descrição/Cliente</th>
+                    <th className="text-left font-medium px-4 py-2.5">Data</th>
+                    <th className="text-left font-medium px-4 py-2.5">Forma de Pagamento</th>
+                    <th className="text-right font-medium px-5 py-2.5">Valor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {pagamentos.map((pag) => {
+                    const dataFormatada = new Date(pag.pago_em + "T00:00:00").toLocaleDateString("pt-BR");
+                    return (
+                      <tr key={pag.id} className="hover:bg-accent/20 transition group">
+                        <td className="pl-5 pr-4 py-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>{pag.pedido?.produto || pag.observacao || "Venda"}</span>
+                            <span className="text-xs text-muted-foreground font-normal">
+                              Cliente: {pag.pedido?.clienteNome || "—"} {pag.pedido?.numero ? `— ${pag.pedido.numero}` : ""}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {dataFormatada}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-400">
+                            {pag.forma || "Não informado"}
+                          </span>
+                        </td>
+                        <td className="pl-4 pr-5 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                          + {moeda(Number(pag.valor))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {activeTab === "despesas" && (
           <div className="overflow-x-auto">
             {despesas.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
