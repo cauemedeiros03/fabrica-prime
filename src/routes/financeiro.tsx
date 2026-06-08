@@ -372,6 +372,7 @@ function FinanceiroPage() {
                     const dataFormatada = isNaN(dateObj.getTime())
                       ? new Date().toLocaleDateString("pt-BR")
                       : dateObj.toLocaleDateString("pt-BR");
+                    const paymentMethod = pag.forma || pag.forma_pagamento || pag.metodo_pagamento || "Não informado";
                     return (
                       <tr key={pag.id} className="hover:bg-accent/20 transition group">
                         <td className="pl-5 pr-4 py-3 font-medium text-foreground">
@@ -387,7 +388,7 @@ function FinanceiroPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-400">
-                            {pag.forma || "Não informado"}
+                            {paymentMethod}
                           </span>
                         </td>
                         <td className="pl-4 pr-5 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">

@@ -214,9 +214,6 @@ export function NovoPedidoDialog({
     if (!form.valor_total || Number(form.valor_total) <= 0) {
       errs.valor_total = "Campo obrigatório";
     }
-    if (!form.endereco?.trim()) {
-      errs.endereco = "Campo obrigatório";
-    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -401,23 +398,15 @@ export function NovoPedidoDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <Field label="CEP" value={form.cep || ""} onChange={(v) => set("cep", v)} />
-                {/* Endereço — obrigatório */}
+                {/* Endereço — opcional */}
                 <div className="col-span-2">
-                  <label className="text-xs font-medium">Endereço / Rua *</label>
+                  <label className="text-xs font-medium">Endereço / Rua</label>
                   <input
                     type="text"
                     value={form.endereco || ""}
-                    onChange={(e) => {
-                      set("endereco", e.target.value);
-                      if (e.target.value.trim()) setErrors((er) => ({ ...er, endereco: undefined }));
-                    }}
-                    className={`mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
-                      errors.endereco ? "border-destructive ring-1 ring-destructive/40" : ""
-                    }`}
+                    onChange={(e) => set("endereco", e.target.value)}
+                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                   />
-                  {errors.endereco && (
-                    <p className="mt-1 text-xs text-destructive">{errors.endereco}</p>
-                  )}
                 </div>
               </div>
 
