@@ -44,7 +44,7 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
         style={{ contentVisibility: "auto" }}
       >
         {/* CABEÇALHO */}
-        <div className="flex flex-row justify-between items-start gap-4 pb-6 border-b-2 border-slate-200">
+        <div className="flex flex-row justify-between items-center gap-4 pb-6 border-b-2 border-slate-200">
           <div className="flex items-center gap-4">
             {config?.logo_url ? (
               <div className="h-16 w-16 rounded-xl border bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center">
@@ -68,9 +68,9 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
               </p>
             </div>
           </div>
-          <div className="text-right text-xs text-slate-500 space-y-0.5">
-            {config?.endereco && <p className="max-w-[250px] leading-tight">{config.endereco}</p>}
-            {config?.telefone && <p className="font-medium text-slate-800">WhatsApp: {config.telefone}</p>}
+          <div className="text-right text-xs text-slate-500 space-y-1">
+            {config?.endereco && <p className="max-w-[250px] leading-tight text-slate-500">{config.endereco}</p>}
+            {config?.telefone && <p className="font-semibold text-slate-800">WhatsApp: {config.telefone}</p>}
           </div>
         </div>
 
@@ -96,19 +96,23 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
           <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
             Dados do Cliente
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Nome</p>
-              <p className="font-semibold text-slate-900 mt-0.5">{pedido.cliente}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Telefone / Celular</p>
-              <p className="font-medium text-slate-800 mt-0.5">{pedido.telefone || "Não informado"}</p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-xs text-slate-400 font-medium">Endereço de Entrega</p>
-              <p className="text-slate-700 mt-0.5">{pedido.clienteEndereco || "Não informado"}</p>
-            </div>
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm border-collapse">
+              <tbody className="divide-y divide-slate-100">
+                <tr>
+                  <td className="py-3 px-4 font-semibold text-slate-950 w-1/3">Nome do Cliente</td>
+                  <td className="py-3 px-4 text-slate-800">{pedido.cliente}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-slate-500">Telefone / Celular</td>
+                  <td className="py-3 px-4 text-slate-800">{pedido.telefone || "Não informado"}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-slate-500">Endereço de Entrega</td>
+                  <td className="py-3 px-4 text-slate-800">{pedido.clienteEndereco || "Não informado"}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -156,7 +160,7 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
                       {orderItems.length > 0 && (
                         <div className="border-t border-dashed border-slate-200 pt-3 mt-3">
                           <p className="font-semibold text-slate-900 text-xs uppercase tracking-wider mb-2">Itens do Pedido:</p>
-                          <ul className="list-none space-y-1.5 text-slate-700 text-sm">
+                          <ul className="list-none pl-4 space-y-2 text-slate-700 text-sm leading-relaxed">
                             {orderItems.map((item: any, index: number) => {
                               const matPart = item.material ? ` (${item.material})` : "";
                               const medPart = item.medidas ? ` - Medidas: ${item.medidas}` : "";
@@ -171,7 +175,7 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
                               return (
                                 <li key={index} className="flex justify-between items-start border-b border-slate-50 pb-1 last:border-0 last:pb-0">
                                   <span>{index + 1}. {item.descricao}{matPart}{medPart}</span>
-                                  {valPart && <span className="font-medium text-slate-900 tabular-nums shrink-0">{valPart}</span>}
+                                  {valPart && <span className="font-semibold text-slate-900 tabular-nums shrink-0">{valPart}</span>}
                                 </li>
                               );
                             })}
@@ -191,19 +195,19 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
 
         {/* DETALHES FINANCEIROS */}
         <div className="mt-12 bg-slate-950 text-white rounded-2xl p-6 grid grid-cols-3 gap-4 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-          <div className="border-r border-slate-800">
+          <div className="border-r border-slate-800 flex flex-col justify-center items-center">
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Valor Total
             </p>
             <p className="text-lg font-bold mt-1 text-white">{moeda(pedido.valorTotal)}</p>
           </div>
-          <div className="border-r border-slate-800">
+          <div className="border-r border-slate-800 flex flex-col justify-center items-center">
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Valor Pago
             </p>
             <p className="text-lg font-bold mt-1 text-emerald-400">{moeda(pedido.valorPago)}</p>
           </div>
-          <div>
+          <div className="flex flex-col justify-center items-center">
             <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
               Saldo Devedor
             </p>
@@ -227,14 +231,14 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
           </p>
 
           <div className="mt-16 grid grid-cols-2 gap-12">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center justify-end h-full">
               <div className="w-full border-b border-slate-300 mb-2"></div>
               <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
                 {pedido.cliente}
               </span>
               <span className="text-[10px] text-slate-400 uppercase">Assinatura do Cliente</span>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center justify-end h-full">
               <div className="w-full border-b border-slate-300 mb-2"></div>
               <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
                 {config?.nome_marcenaria || "Marcenaria"}
