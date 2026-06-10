@@ -249,10 +249,10 @@ function FinanceiroPage() {
         </div>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ left: -10, right: 8 }}>
+            <BarChart data={chartData} margin={{ left: -10, right: 8, bottom: 12 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-              <XAxis dataKey="mes" stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+              <XAxis dataKey="mes" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickMargin={10} />
+              <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 12, fontSize: 12 }}
                 formatter={(v: number) => moeda(v)}

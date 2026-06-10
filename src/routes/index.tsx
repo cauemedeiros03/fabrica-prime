@@ -263,7 +263,7 @@ function PainelPage() {
               </div>
             )}
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ left: -12, right: 8, top: 8 }}>
+              <AreaChart data={chartData} margin={{ left: -12, right: 8, top: 8, bottom: 12 }}>
                 <defs>
                   <linearGradient id="gReceita" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
@@ -271,8 +271,8 @@ function PainelPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="mes" stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="mes" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickMargin={10} />
+                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
                     background: "var(--color-card)",
@@ -302,10 +302,10 @@ function PainelPage() {
           <p className="text-xs text-muted-foreground mb-3">Clique em uma etapa para filtrar</p>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={etapasAgg} margin={{ left: -20, right: 4 }}>
+              <BarChart data={etapasAgg} margin={{ left: -20, right: 4, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis dataKey="nome" stroke="var(--color-muted-foreground)" fontSize={10} tickLine={false} axisLine={false} interval={0} />
-                <YAxis stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <XAxis dataKey="nome" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} interval={0} tickMargin={8} />
+                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   cursor={{ fill: "var(--color-accent)", opacity: 0.4 }}
                   contentStyle={{
