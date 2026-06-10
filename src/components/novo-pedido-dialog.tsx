@@ -522,12 +522,12 @@ export function NovoPedidoDialog({
   const saving = create.isPending || update.isPending || isSubmitting;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-hidden">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full h-full md:h-auto md:max-w-3xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col md:my-8"
+        className="w-full h-full md:h-auto max-h-[90vh] md:max-h-[85vh] md:max-w-3xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col md:my-8"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-5 py-3 border-b">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
               {isEdit ? "Editar pedido" : "Novo pedido"}
@@ -542,7 +542,7 @@ export function NovoPedidoDialog({
         </div>
 
         {/* Step Progress Bar */}
-        <div className="px-6 py-4 border-b bg-muted/20">
+        <div className="px-5 py-2.5 border-b bg-muted/20">
           <div className="flex items-center justify-between max-w-md mx-auto">
             {/* Step 1 */}
             <button
@@ -550,7 +550,7 @@ export function NovoPedidoDialog({
               onClick={() => {
                 if (currentStep > 1) setCurrentStep(1);
               }}
-              className="flex flex-col items-center gap-1.5 flex-1 relative focus:outline-none"
+              className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
               <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
                 currentStep >= 1
@@ -579,7 +579,7 @@ export function NovoPedidoDialog({
                   setCurrentStep(2);
                 }
               }}
-              className="flex flex-col items-center gap-1.5 flex-1 relative focus:outline-none"
+              className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
               <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
                 currentStep >= 2
@@ -609,7 +609,7 @@ export function NovoPedidoDialog({
                   }
                 }
               }}
-              className="flex flex-col items-center gap-1.5 flex-1 relative focus:outline-none"
+              className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
               <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
                 currentStep === 3
@@ -627,7 +627,7 @@ export function NovoPedidoDialog({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-6 flex-1 overflow-y-auto md:max-h-[75vh]">
+        <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-1">
           {currentStep === 1 && (
             <Section title="Cliente">
               {!isEdit && (
@@ -657,8 +657,8 @@ export function NovoPedidoDialog({
                 </div>
               )}
 
-              <div className="md:col-span-2 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="md:col-span-2 space-y-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   {/* Nome do cliente — obrigatório */}
                   <div>
                     <label className="text-xs font-medium">Nome do cliente *</label>
@@ -669,7 +669,7 @@ export function NovoPedidoDialog({
                         set("cliente_nome", e.target.value);
                         if (e.target.value.trim()) setErrors((er) => ({ ...er, cliente_nome: undefined }));
                       }}
-                      className={`mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
+                      className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
                         errors.cliente_nome ? "border-destructive ring-1 ring-destructive/40" : ""
                       }`}
                     />
@@ -680,7 +680,7 @@ export function NovoPedidoDialog({
                   <Field label="CPF / CNPJ" value={form.cpf || ""} onChange={(v) => set("cpf", v)} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   {/* Telefone com máscara */}
                   <div>
                     <label className="text-xs font-medium">Telefone</label>
@@ -690,13 +690,13 @@ export function NovoPedidoDialog({
                       onChange={(e) => set("telefone", applyPhoneMask(e.target.value))}
                       placeholder="(XX) XXXXX-XXXX"
                       maxLength={15}
-                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                      className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                     />
                   </div>
                   <Field label="E-mail" type="email" value={form.email || ""} onChange={(v) => set("email", v)} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <Field
                     label="Instagram"
                     value={form.instagram || ""}
@@ -708,7 +708,7 @@ export function NovoPedidoDialog({
                     <select
                       value={form.origem || ""}
                       onChange={(e) => set("origem", e.target.value)}
-                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                      className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="">Selecione...</option>
                       <option value="Instagram">Instagram</option>
@@ -720,7 +720,7 @@ export function NovoPedidoDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                   <Field label="CEP" value={form.cep || ""} onChange={(v) => set("cep", v)} />
                   {/* Endereço — opcional */}
                   <div className="col-span-2">
@@ -729,12 +729,12 @@ export function NovoPedidoDialog({
                       type="text"
                       value={form.endereco || ""}
                       onChange={(e) => set("endereco", e.target.value)}
-                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                      className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
                   <Field
                     label="Número"
                     value={form.numero_endereco || ""}
@@ -749,7 +749,7 @@ export function NovoPedidoDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <Field label="Bairro" value={form.bairro || ""} onChange={(v) => set("bairro", v)} />
                   <Field label="Cidade" value={form.cidade || ""} onChange={(v) => set("cidade", v)} />
                 </div>
@@ -766,9 +766,9 @@ export function NovoPedidoDialog({
           {currentStep === 2 && (
             <>
               <Section title="Itens do Pedido">
-                <div className="col-span-1 md:col-span-2 space-y-4">
+                <div className="col-span-1 md:col-span-2 space-y-2.5">
                   {items.map((item, idx) => (
-                    <div key={idx} className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-4 rounded-xl mb-4 relative">
+                    <div key={idx} className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-3 rounded-xl mb-3 relative">
                       {items.length > 1 && (
                         <button
                           type="button"
@@ -780,7 +780,7 @@ export function NovoPedidoDialog({
                         </button>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         <div className="md:col-span-2">
                           <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
                           <input
@@ -821,7 +821,7 @@ export function NovoPedidoDialog({
                             }}
                             list="catalogo-produtos"
                             placeholder="Ex: Armário de cozinha"
-                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                           />
                         </div>
 
@@ -832,7 +832,7 @@ export function NovoPedidoDialog({
                             value={item.material}
                             onChange={(e) => updateItem(idx, "material", e.target.value)}
                             placeholder="Ex: MDF Branco"
-                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                           />
                         </div>
 
@@ -843,7 +843,7 @@ export function NovoPedidoDialog({
                             value={item.medidas}
                             onChange={(e) => updateItem(idx, "medidas", e.target.value)}
                             placeholder="Ex: 80x120x60"
-                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                           />
                         </div>
 
@@ -858,7 +858,7 @@ export function NovoPedidoDialog({
                               const val = Math.max(1, parseInt(e.target.value, 10) || 1);
                               updateItem(idx, "quantidade", val);
                             }}
-                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
                           />
                         </div>
 
@@ -870,7 +870,7 @@ export function NovoPedidoDialog({
                               updateItem(idx, "valor", val);
                             }}
                             placeholder="R$ 0,00"
-                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                           />
                         </div>
                       </div>
@@ -898,7 +898,7 @@ export function NovoPedidoDialog({
                   <textarea
                     value={observacoesAdicionais}
                     onChange={(e) => setObservacoesAdicionais(e.target.value)}
-                    rows={3}
+                    rows={2}
                     className="mt-1 w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                     placeholder="Detalhes adicionais, observações de montagem, etc."
                   />
@@ -951,7 +951,7 @@ export function NovoPedidoDialog({
                       if (v > 0) setErrors((er) => ({ ...er, valor_total: undefined }));
                     }}
                     placeholder="R$ 0,00"
-                    className={`mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
+                    className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
                       errors.valor_total ? "border-destructive ring-1 ring-destructive/40" : ""
                     }`}
                   />
@@ -969,7 +969,7 @@ export function NovoPedidoDialog({
                       set("desconto", v);
                     }}
                     placeholder="R$ 0,00"
-                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                   />
                 </div>
 
@@ -985,7 +985,7 @@ export function NovoPedidoDialog({
                       }
                     }}
                     placeholder="R$ 0,00"
-                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                    className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                   />
                 </div>
 
@@ -995,7 +995,7 @@ export function NovoPedidoDialog({
                     <select
                       value={form.forma_pagamento || "Pix"}
                       onChange={(e) => set("forma_pagamento", e.target.value)}
-                      className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                      className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                     >
                       <option value="Pix">Pix</option>
                       <option value="Dinheiro">Dinheiro</option>
@@ -1005,20 +1005,20 @@ export function NovoPedidoDialog({
                   </div>
                 )}
 
-                <div className="md:col-span-2 rounded-lg border bg-muted/40 px-4 py-3 flex items-center justify-between">
+                <div className="md:col-span-2 rounded-lg border bg-muted/40 px-4 py-2.5 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Saldo restante (calculado)</span>
                   <span className="text-lg font-semibold tabular-nums">{moeda(restante)}</span>
                 </div>
               </Section>
 
               <Section title="Anexos do Projeto (Fotos / PDFs)">
-                <div className="md:col-span-2 space-y-4">
+                <div className="md:col-span-2 space-y-3">
                   <div
                     onDragEnter={handleDrag}
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
-                    className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                    className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
                       dragActive
                         ? "border-primary bg-primary/5 scale-[0.99]"
                         : "border-muted-foreground/20 bg-background hover:bg-accent/40"
@@ -1040,20 +1040,20 @@ export function NovoPedidoDialog({
                         <p className="text-sm font-medium text-muted-foreground">Fazendo upload dos arquivos...</p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="mx-auto size-10 rounded-full bg-accent flex items-center justify-center">
-                          <Paperclip className="size-5 text-muted-foreground" />
+                      <div className="space-y-1.5">
+                        <div className="mx-auto size-8 rounded-full bg-accent flex items-center justify-center">
+                          <Paperclip className="size-4 text-muted-foreground" />
                         </div>
-                        <div className="text-sm">
+                        <div className="text-xs">
                           <span className="font-semibold text-primary">Clique para anexar</span> ou arraste arquivos aqui
                         </div>
-                        <p className="text-xs text-muted-foreground">Imagens (JPG, PNG) and PDFs (Máx 10MB)</p>
+                        <p className="text-[10px] text-muted-foreground">Imagens (JPG, PNG) and PDFs (Máx 10MB)</p>
                       </div>
                     )}
                   </div>
 
                   {form.anexos && form.anexos.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1">
                       {form.anexos.map((url, idx) => {
                         const isImg = isImageUrl(url);
                         const name = getFileNameFromUrl(url);
@@ -1094,7 +1094,7 @@ export function NovoPedidoDialog({
               <button
                 type="button"
                 onClick={() => setCurrentStep((prev) => prev - 1)}
-                className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
+                className="h-9 px-4 rounded-lg border text-sm hover:bg-accent"
               >
                 Voltar
               </button>
@@ -1102,7 +1102,7 @@ export function NovoPedidoDialog({
               <button
                 type="button"
                 onClick={handleClose}
-                className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
+                className="h-9 px-4 rounded-lg border text-sm hover:bg-accent"
               >
                 Cancelar
               </button>
@@ -1115,7 +1115,7 @@ export function NovoPedidoDialog({
                   e.preventDefault();
                   handleNextStep();
                 }}
-                className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+                className="h-9 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
               >
                 Avançar
               </button>
@@ -1126,7 +1126,7 @@ export function NovoPedidoDialog({
                   e.preventDefault();
                   setCurrentStep(3);
                 }}
-                className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+                className="h-9 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
               >
                 Avançar
               </button>
@@ -1134,7 +1134,7 @@ export function NovoPedidoDialog({
               <button
                 type="submit"
                 disabled={saving || isUploading}
-                className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                className="h-9 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
               >
                 {(saving || isUploading) && <Loader2 className="size-4 animate-spin" />}
                 {isUploading
@@ -1196,8 +1196,8 @@ export function NovoPedidoDialog({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{title}</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{children}</div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">{title}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">{children}</div>
     </div>
   );
 }
@@ -1226,7 +1226,7 @@ function Field({
         disabled={disabled}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:opacity-60"
+        className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:opacity-60"
       />
     </div>
   );
@@ -1249,7 +1249,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+        className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
       >
         {children}
       </select>
