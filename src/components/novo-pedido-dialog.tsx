@@ -754,106 +754,111 @@ export function NovoPedidoDialog({
               <Section title="Itens do Pedido">
                 <div className="col-span-1 md:col-span-2 space-y-4">
                   {items.map((item, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-[3fr_3fr_2fr_80px_2fr_40px] gap-3 items-end border-b dark:border-border/40 pb-4 md:pb-3 last:border-b-0">
-                      <div>
-                        <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
-                        <input
-                          type="text"
-                          required
-                          value={item.descricao}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const selected = catalogo.find((c: any) => c.nome === val);
-                            if (selected) {
-                              updateItem(idx, "descricao", val);
-                              updateItem(idx, "material", selected.material || "");
-                              updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
-                              
-                              
-                              // Auto-fill measures
-                              let measuresStr = "";
-                              if (selected.descricao) {
-                                if (selected.descricao.includes("===JSON_MEDIDAS===")) {
-                                  try {
-                                    const parts = selected.descricao.split("===JSON_MEDIDAS===\n");
-                                    if (parts.length > 1) {
-                                      const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                                      const parsed = JSON.parse(jsonPart);
-                                      measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                                    }
-                                  } catch {}
-                                } else {
-                                  measuresStr = parseLegacyMedidas(selected.descricao);
+                    <div key={idx} className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-4 rounded-xl mb-4 relative">
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="absolute top-3 right-3 size-8 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors z-10"
+                          title="Remover item"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
+                          <input
+                            type="text"
+                            required
+                            value={item.descricao}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const selected = catalogo.find((c: any) => c.nome === val);
+                              if (selected) {
+                                updateItem(idx, "descricao", val);
+                                updateItem(idx, "material", selected.material || "");
+                                updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
+                                
+                                
+                                // Auto-fill measures
+                                let measuresStr = "";
+                                if (selected.descricao) {
+                                  if (selected.descricao.includes("===JSON_MEDIDAS===")) {
+                                    try {
+                                      const parts = selected.descricao.split("===JSON_MEDIDAS===\n");
+                                      if (parts.length > 1) {
+                                        const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                                        const parsed = JSON.parse(jsonPart);
+                                        measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                                      }
+                                    } catch {}
+                                  } else {
+                                    measuresStr = parseLegacyMedidas(selected.descricao);
+                                  }
                                 }
+                                if (measuresStr) {
+                                  updateItem(idx, "medidas", measuresStr);
+                                }
+                              } else {
+                                updateItem(idx, "descricao", val);
                               }
-                              if (measuresStr) {
-                                updateItem(idx, "medidas", measuresStr);
-                              }
-                            } else {
-                              updateItem(idx, "descricao", val);
-                            }
-                          }}
-                          list="catalogo-produtos"
-                          placeholder="Ex: Armário de cozinha"
-                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium">Material principal</label>
-                        <input
-                          type="text"
-                          value={item.material}
-                          onChange={(e) => updateItem(idx, "material", e.target.value)}
-                          placeholder="Ex: MDF Branco"
-                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium">Medidas (AxLxP)</label>
-                        <input
-                          type="text"
-                          value={item.medidas}
-                          onChange={(e) => updateItem(idx, "medidas", e.target.value)}
-                          placeholder="Ex: 80x120x60"
-                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                      </div>
-                      <div className="min-w-[70px]">
-                        <label className="text-xs font-medium">Qtd</label>
-                        <input
-                          type="number"
-                          min="1"
-                          defaultValue={1}
-                          value={item.quantidade || 1}
-                          onChange={(e) => {
-                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                            updateItem(idx, "quantidade", val);
-                          }}
-                          className="mt-1 w-full h-10 px-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium">Valor do Item (R$)</label>
-                        <CurrencyInput
-                          value={item.valor}
-                          onChange={(val) => {
-                            updateItem(idx, "valor", val);
-                          }}
-                          placeholder="R$ 0,00"
-                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                        />
-                      </div>
-                      <div className="flex justify-end pb-1">
-                        {items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(idx)}
-                            className="size-10 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors"
-                            title="Remover item"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        )}
+                            }}
+                            list="catalogo-produtos"
+                            placeholder="Ex: Armário de cozinha"
+                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium">Material principal</label>
+                          <input
+                            type="text"
+                            value={item.material}
+                            onChange={(e) => updateItem(idx, "material", e.target.value)}
+                            placeholder="Ex: MDF Branco"
+                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium">Medidas (AxLxP)</label>
+                          <input
+                            type="text"
+                            value={item.medidas}
+                            onChange={(e) => updateItem(idx, "medidas", e.target.value)}
+                            placeholder="Ex: 80x120x60"
+                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium">Qtd</label>
+                          <input
+                            type="number"
+                            min="1"
+                            defaultValue={1}
+                            value={item.quantidade || 1}
+                            onChange={(e) => {
+                              const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                              updateItem(idx, "quantidade", val);
+                            }}
+                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium">Valor do Item (R$)</label>
+                          <CurrencyInput
+                            value={item.valor}
+                            onChange={(val) => {
+                              updateItem(idx, "valor", val);
+                            }}
+                            placeholder="R$ 0,00"
+                            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
