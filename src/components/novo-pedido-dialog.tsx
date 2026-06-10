@@ -952,7 +952,7 @@ export function NovoPedidoDialog({
                   />
                 </div>
 
-                {form.valor_pago > 0 && (
+                {Number(form.valor_pago || 0) > 0 && (
                   <div>
                     <label className="text-xs font-medium font-semibold">Forma de pagamento (Entrada) *</label>
                     <select
@@ -1074,7 +1074,10 @@ export function NovoPedidoDialog({
             {currentStep === 1 ? (
               <button
                 type="button"
-                onClick={handleNextStep}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNextStep();
+                }}
                 className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
               >
                 Avançar
@@ -1082,7 +1085,10 @@ export function NovoPedidoDialog({
             ) : currentStep === 2 ? (
               <button
                 type="button"
-                onClick={() => setCurrentStep(3)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCurrentStep(3);
+                }}
                 className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
               >
                 Avançar
@@ -1221,7 +1227,7 @@ function CurrencyInput({
   placeholder,
   id,
 }: {
-  value: number;
+  value: number | null | undefined;
   onChange: (val: number) => void;
   className?: string;
   placeholder?: string;
@@ -1229,9 +1235,10 @@ function CurrencyInput({
 }) {
   const [displayValue, setDisplayValue] = useState("");
 
-  const formatNumberToBRL = (val: number): string => {
-    if (val === 0) return "";
-    return val.toLocaleString("pt-BR", {
+  const formatNumberToBRL = (val: number | null | undefined): string => {
+    const num = Number(val || 0);
+    if (num === 0) return "";
+    return num.toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL",
     });
@@ -1270,7 +1277,7 @@ function CurrencyInput({
 
   useEffect(() => {
     const currentNum = parseBRLToNumber(displayValue);
-    if (currentNum !== value) {
+    if (currentNum !== (value || 0)) {
       setDisplayValue(formatNumberToBRL(value));
     }
   }, [value]);
@@ -1284,7 +1291,8 @@ function CurrencyInput({
   };
 
   const handleBlur = () => {
-    if (value > 0) {
+    const num = Number(value || 0);
+    if (num > 0) {
       setDisplayValue(formatNumberToBRL(value));
     } else {
       setDisplayValue("");
