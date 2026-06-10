@@ -188,6 +188,17 @@ export function NovoPedidoDialog({
   const [catalogo, setCatalogo] = useState<any[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
 
+  const calculatedTotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + (Number(item.quantidade || 1) * Number(item.valor || 0)), 0);
+  }, [items]);
+
+  useEffect(() => {
+    setForm((s) => ({ ...s, valor_total: calculatedTotal }));
+    if (calculatedTotal > 0) {
+      setErrors((er) => ({ ...er, valor_total: undefined }));
+    }
+  }, [calculatedTotal]);
+
   useEffect(() => {
     async function fetchCatalogo() {
       try {
@@ -287,14 +298,7 @@ export function NovoPedidoDialog({
 
   const removeItem = (idx: number) => {
     if (items.length <= 1) return;
-    setItems((prev) => {
-      const newItems = prev.filter((_, i) => i !== idx);
-      const newSum = newItems.reduce((acc, it) => acc + (it.valor * (it.quantidade || 1)), 0);
-      if (newSum > 0) {
-        setForm((s) => ({ ...s, valor_total: newSum }));
-      }
-      return newItems;
-    });
+    setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
   useEffect(() => {
@@ -760,6 +764,7 @@ export function NovoPedidoDialog({
                               updateItem(idx, "material", selected.material || "");
                               updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
                               
+                              
                               // Auto-fill measures
                               let measuresStr = "";
                               if (selected.descricao) {
@@ -779,12 +784,6 @@ export function NovoPedidoDialog({
                               if (measuresStr) {
                                 updateItem(idx, "medidas", measuresStr);
                               }
-
-                              // Auto-sum
-                              const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
-                              const currentPrice = selected.preco ? Number(selected.preco) : item.valor;
-                              const currentQuantity = item.quantidade || 1;
-                              set("valor_total", otherItemsSum + (currentPrice * currentQuantity));
                             } else {
                               updateItem(idx, "descricao", val);
                             }
@@ -824,9 +823,6 @@ export function NovoPedidoDialog({
                           onChange={(e) => {
                             const val = Math.max(1, parseInt(e.target.value, 10) || 1);
                             updateItem(idx, "quantidade", val);
-                            const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
-                            const newTotal = otherItemsSum + (item.valor * val);
-                            set("valor_total", newTotal);
                           }}
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
                         />
@@ -837,10 +833,6 @@ export function NovoPedidoDialog({
                           value={item.valor}
                           onChange={(val) => {
                             updateItem(idx, "valor", val);
-                            const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
-                            const currentQuantity = item.quantidade || 1;
-                            const newTotal = otherItemsSum + (val * currentQuantity);
-                            set("valor_total", newTotal);
                           }}
                           placeholder="R$ 0,00"
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
