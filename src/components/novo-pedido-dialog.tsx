@@ -106,6 +106,7 @@ interface ItemRow {
   material: string;
   medidas: string;
   valor: number;
+  quantidade: number;
 }
 
 type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
@@ -164,8 +165,14 @@ export function NovoPedidoDialog({
         descricao: initial?.produto || "",
         material: initial?.material || "",
         medidas: "",
-        valor: 0
+        valor: 0,
+        quantidade: 1
       }];
+    } else {
+      parsedItems = parsedItems.map((item) => ({
+        ...item,
+        quantidade: item.quantidade || 1
+      }));
     }
     return parsedItems;
   }, [initial]);
@@ -269,7 +276,7 @@ export function NovoPedidoDialog({
   }, []);
 
   const addItem = () => {
-    setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0 }]);
+    setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0, quantidade: 1 }]);
   };
 
   const updateItem = (idx: number, field: keyof ItemRow, value: any) => {
@@ -282,7 +289,7 @@ export function NovoPedidoDialog({
     if (items.length <= 1) return;
     setItems((prev) => {
       const newItems = prev.filter((_, i) => i !== idx);
-      const newSum = newItems.reduce((acc, it) => acc + it.valor, 0);
+      const newSum = newItems.reduce((acc, it) => acc + (it.valor * (it.quantidade || 1)), 0);
       if (newSum > 0) {
         setForm((s) => ({ ...s, valor_total: newSum }));
       }
@@ -384,6 +391,11 @@ export function NovoPedidoDialog({
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (currentStep < 3) {
+      handleNextStep();
+      return;
+    }
+
     if (!form.cliente_nome?.trim()) {
       setCurrentStep(1);
       setErrors((er) => ({ ...er, cliente_nome: "Campo obrigatório" }));
@@ -449,8 +461,9 @@ export function NovoPedidoDialog({
         .map((item, index) => {
           const matPart = item.material ? ` (${item.material})` : "";
           const medPart = item.medidas ? ` - Medidas: ${item.medidas}` : "";
+          const qtdPart = item.quantidade && item.quantidade > 1 ? ` (Qtd: ${item.quantidade})` : "";
           const valPart = item.valor > 0 ? ` - R$ ${item.valor.toFixed(2)}` : "";
-          return `${index + 1}. ${item.descricao}${matPart}${medPart}${valPart}`;
+          return `${index + 1}. ${item.descricao}${qtdPart}${matPart}${medPart}${valPart}`;
         })
         .join("\n");
 
@@ -500,7 +513,7 @@ export function NovoPedidoDialog({
               {isEdit ? "Atualize os dados do pedido" : "Cadastre um novo pedido na produção"}
             </p>
           </div>
-          <button onClick={handleClose} className="size-8 grid place-items-center rounded-lg hover:bg-accent">
+          <button type="button" onClick={handleClose} className="size-8 grid place-items-center rounded-lg hover:bg-accent">
             <X className="size-4" />
           </button>
         </div>
@@ -733,7 +746,7 @@ export function NovoPedidoDialog({
                 <div className="col-span-1 md:col-span-2 space-y-4">
                   {items.map((item, idx) => (
                     <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border-b dark:border-border/40 pb-4 md:pb-3 last:border-b-0">
-                      <div className="md:col-span-4">
+                      <div className="md:col-span-3">
                         <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
                         <input
                           type="text"
@@ -768,8 +781,10 @@ export function NovoPedidoDialog({
                               }
 
                               // Auto-sum
-                              const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + it.valor, 0);
-                              set("valor_total", otherItemsSum + (selected.preco ? Number(selected.preco) : item.valor));
+                              const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
+                              const currentPrice = selected.preco ? Number(selected.preco) : item.valor;
+                              const currentQuantity = item.quantidade || 1;
+                              set("valor_total", otherItemsSum + (currentPrice * currentQuantity));
                             } else {
                               updateItem(idx, "descricao", val);
                             }
@@ -799,16 +814,33 @@ export function NovoPedidoDialog({
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                         />
                       </div>
+                      <div className="md:col-span-1">
+                        <label className="text-xs font-medium">Qtd</label>
+                        <input
+                          type="number"
+                          min="1"
+                          defaultValue={1}
+                          value={item.quantidade || 1}
+                          onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                            updateItem(idx, "quantidade", val);
+                            const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
+                            const newTotal = otherItemsSum + (item.valor * val);
+                            set("valor_total", newTotal);
+                          }}
+                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
+                        />
+                      </div>
                       <div className="md:col-span-2">
                         <label className="text-xs font-medium">Valor do Item (R$)</label>
                         <CurrencyInput
                           value={item.valor}
                           onChange={(val) => {
                             updateItem(idx, "valor", val);
-                            const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + it.valor, 0);
-                            if (val > 0 || otherItemsSum > 0) {
-                              set("valor_total", otherItemsSum + val);
-                            }
+                            const otherItemsSum = items.reduce((acc, it, i) => i === idx ? acc : acc + (it.valor * (it.quantidade || 1)), 0);
+                            const currentQuantity = item.quantidade || 1;
+                            const newTotal = otherItemsSum + (val * currentQuantity);
+                            set("valor_total", newTotal);
                           }}
                           placeholder="R$ 0,00"
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
@@ -1047,10 +1079,18 @@ export function NovoPedidoDialog({
               </button>
             )}
 
-            {currentStep < 3 ? (
+            {currentStep === 1 ? (
               <button
                 type="button"
                 onClick={handleNextStep}
+                className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
+              >
+                Avançar
+              </button>
+            ) : currentStep === 2 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
                 className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
               >
                 Avançar
