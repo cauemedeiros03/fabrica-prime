@@ -388,6 +388,11 @@ export function NovoPedidoDialog({
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
+      const hasEmptyDescription = items.some((item) => !item.descricao.trim());
+      if (hasEmptyDescription) {
+        toast.error("Por favor, preencha a descrição de todos os itens do pedido.");
+        return;
+      }
       const filledItems = items.filter((item) => item.descricao.trim() !== "");
       if (filledItems.length === 0) {
         toast.error("Adicione pelo menos um produto com descrição.");
@@ -400,6 +405,8 @@ export function NovoPedidoDialog({
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (saving || isUploading) return;
+
     if (currentStep < 3) {
       handleNextStep();
       return;
@@ -409,6 +416,13 @@ export function NovoPedidoDialog({
       setCurrentStep(1);
       setErrors((er) => ({ ...er, cliente_nome: "Campo obrigatório" }));
       toast.error("Por favor, preencha o nome do cliente.");
+      return;
+    }
+
+    const hasEmptyDescription = items.some((item) => !item.descricao.trim());
+    if (hasEmptyDescription) {
+      setCurrentStep(2);
+      toast.error("Por favor, preencha a descrição de todos os itens do pedido.");
       return;
     }
 

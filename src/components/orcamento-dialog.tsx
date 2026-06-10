@@ -175,8 +175,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       status: statusVal,
     };
 
-    // 1. Salvar no localStorage
     try {
+      // 1. Salvar no localStorage
       const localList = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
       if (isEdit) {
         const index = localList.findIndex((o: any) => o.id === budgetId);
@@ -189,15 +189,11 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         localList.unshift(novoOrcamento);
       }
       localStorage.setItem("orcamentos_salvos", JSON.stringify(localList));
-    } catch (err) {
-      console.error("Erro ao salvar no localStorage:", err);
-    }
 
-    // 2. Tentar salvar no Supabase (silencioso caso falhe/tabela não exista)
-    if (user) {
-      try {
+      // 2. Tentar salvar no Supabase
+      if (user) {
         if (isEdit) {
-          await (supabase as any).from("orcamentos_salvos").update({
+          const { error } = await (supabase as any).from("orcamentos_salvos").update({
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
             cliente_cidade: form.clienteCidade,
@@ -211,8 +207,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             validade_dias: Number(form.validadeDias),
             status: statusVal,
           }).eq("id", budgetId).eq("user_id", user.id);
+          if (error) throw error;
         } else {
-          await (supabase as any).from("orcamentos_salvos").insert({
+          const { error } = await (supabase as any).from("orcamentos_salvos").insert({
             id: budgetId,
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
@@ -228,19 +225,23 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             status: "Pendente",
             user_id: user.id,
           });
+          if (error) throw error;
         }
-      } catch (dbErr) {
-        console.warn("Supabase table operation skipped or failed. Fallback to localStorage active.", dbErr);
       }
-    }
 
-    // Disparar evento global para recarregar o histórico na listagem
-    window.dispatchEvent(new Event("orcamentos_updated"));
-    toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
-    setSalvando(false);
-    
-    // Inicia a impressão
-    setPrintData(novoOrcamento);
+      window.dispatchEvent(new Event("orcamentos_updated"));
+      toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
+      
+      // Inicia a impressão
+      setPrintData(novoOrcamento);
+    } catch (err: any) {
+      console.error("Erro ao salvar orçamento:", err);
+      toast.error("Erro ao salvar orçamento", {
+        description: err?.message || "Ocorreu um erro inesperado.",
+      });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const handleWhatsApp = async () => {
@@ -286,8 +287,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       status: statusVal,
     };
 
-    // 1. Salvar no localStorage
     try {
+      // 1. Salvar no localStorage
       const localList = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
       if (isEdit) {
         const index = localList.findIndex((o: any) => o.id === budgetId);
@@ -300,15 +301,11 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         localList.unshift(novoOrcamento);
       }
       localStorage.setItem("orcamentos_salvos", JSON.stringify(localList));
-    } catch (err) {
-      console.error("Erro ao salvar no localStorage:", err);
-    }
 
-    // 2. Tentar salvar no Supabase (silencioso caso falhe/tabela não exista)
-    if (user) {
-      try {
+      // 2. Tentar salvar no Supabase
+      if (user) {
         if (isEdit) {
-          await (supabase as any).from("orcamentos_salvos").update({
+          const { error } = await (supabase as any).from("orcamentos_salvos").update({
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
             cliente_cidade: form.clienteCidade,
@@ -322,8 +319,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             validade_dias: Number(form.validadeDias),
             status: statusVal,
           }).eq("id", budgetId).eq("user_id", user.id);
+          if (error) throw error;
         } else {
-          await (supabase as any).from("orcamentos_salvos").insert({
+          const { error } = await (supabase as any).from("orcamentos_salvos").insert({
             id: budgetId,
             cliente_nome: form.clienteNome,
             cliente_telefone: form.clienteTelefone,
@@ -339,34 +337,31 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             status: "Pendente",
             user_id: user.id,
           });
+          if (error) throw error;
         }
-      } catch (dbErr) {
-        console.warn("Supabase table operation skipped or failed. Fallback to localStorage active.", dbErr);
       }
-    }
 
-    // Disparar evento global para recarregar o histórico na listagem
-    window.dispatchEvent(new Event("orcamentos_updated"));
-    toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
-    setSalvando(false);
+      // Disparar evento global para recarregar o histórico na listagem
+      window.dispatchEvent(new Event("orcamentos_updated"));
+      toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
 
-    // Formatar valores para a mensagem
-    const formattedOriginal = originalValue.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    const formattedDesconto = discountValue.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    const formattedFinal = finalValue.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    const materialPart = form.produtoMaterial ? form.produtoMaterial : "Não informado";
-    const medidasPart = form.produtoMedidas ? form.produtoMedidas : "Não informado";
+      // Formatar valores para a mensagem
+      const formattedOriginal = originalValue.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      const formattedDesconto = discountValue.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      const formattedFinal = finalValue.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      const materialPart = form.produtoMaterial ? form.produtoMaterial : "Não informado";
+      const medidasPart = form.produtoMedidas ? form.produtoMedidas : "Não informado";
 
-    const msg = `Olá *${form.clienteNome}*, tudo bem? Aqui é da marcenaria. Segue o resumo do seu orçamento:
+      const msg = `Olá *${form.clienteNome}*, tudo bem? Aqui é da marcenaria. Segue o resumo do seu orçamento:
 *Projeto:* ${form.produtoDescricao}
 *Material:* ${materialPart} | *Medidas:* ${medidasPart}
 *Valor Original:* R$ ${formattedOriginal}
@@ -374,11 +369,19 @@ ${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Val
 *Validade da proposta:* ${form.validadeDias} dias.
 Qualquer dúvida, estou à disposição!`;
 
-    const encodedMsg = encodeURIComponent(msg);
-    const url = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
-    window.open(url, "_blank");
+      const encodedMsg = encodeURIComponent(msg);
+      const url = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+      window.open(url, "_blank");
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error("Erro ao enviar orçamento por WhatsApp:", err);
+      toast.error("Erro ao enviar orçamento por WhatsApp", {
+        description: err?.message || "Ocorreu um erro inesperado.",
+      });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (

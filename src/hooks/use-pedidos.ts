@@ -251,11 +251,29 @@ export function usePagamentosPedido(pedidoId: string | undefined) {
       if (!pedidoId) return [];
       const { data, error } = await supabase
         .from("pagamentos")
-        .select("id, valor, forma, pago_em, observacao, created_at")
+        .select(`
+          id,
+          valor,
+          forma,
+          pago_em,
+          observacao,
+          created_at,
+          pedidos!inner (
+            user_id
+          )
+        `)
         .eq("pedido_id", pedidoId)
+        .eq("pedidos.user_id", user.id)
         .order("pago_em", { ascending: false });
       if (error) throw error;
-      return data as { id: string; valor: number; forma: string | null; pago_em: string; observacao: string | null; created_at: string }[];
+      return (data || []).map(p => ({
+        id: p.id,
+        valor: Number(p.valor),
+        forma: p.forma,
+        pago_em: p.pago_em,
+        observacao: p.observacao,
+        created_at: p.created_at,
+      })) as { id: string; valor: number; forma: string | null; pago_em: string; observacao: string | null; created_at: string }[];
     },
   });
 }
@@ -450,24 +468,24 @@ export function useUpdatePedido() {
         if (ec) throw ec;
       }
 
-      // Fetch current order stage and history
+      // Fetch current order stage and history, validating ownership
       const { data: pData, error: pErr } = await (supabase
         .from("pedidos") as any)
         .select("etapa, historico_producao")
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
+      if (pErr) throw pErr;
+      if (!pData) throw new Error("Pedido não encontrado ou sem permissão");
 
-      let updatedHist = pData?.historico_producao;
-      if (!pErr && pData) {
-        if (pData.etapa !== input.etapa) {
-          const currentHist = Array.isArray(pData.historico_producao) ? pData.historico_producao : [];
-          const etapaLabel = ETAPAS.find(e => e.id === input.etapa)?.label || input.etapa;
-          const now = new Date();
-          const pad = (n: number) => String(n).padStart(2, "0");
-          const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-          updatedHist = [...currentHist, { etapa: etapaLabel, data: dataStr }];
-        }
+      let updatedHist = pData.historico_producao;
+      if (pData.etapa !== input.etapa) {
+        const currentHist = Array.isArray(pData.historico_producao) ? pData.historico_producao : [];
+        const etapaLabel = ETAPAS.find(e => e.id === input.etapa)?.label || input.etapa;
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        updatedHist = [...currentHist, { etapa: etapaLabel, data: dataStr }];
       }
 
       const { error } = await (supabase
@@ -809,7 +827,7 @@ export function useAllPagamentos() {
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // Fetch both pagamentos and pedidos in parallel
+      // Fetch both pagamentos and pedidos in parallel with inner join filters
       const [pagamentosRes, pedidosRes] = await Promise.all([
         supabase
           .from("pagamentos")
@@ -820,7 +838,7 @@ export function useAllPagamentos() {
             pago_em,
             observacao,
             created_at,
-            pedidos (
+            pedidos!inner (
               id,
               produto,
               numero,
@@ -831,6 +849,7 @@ export function useAllPagamentos() {
               )
             )
           `)
+          .eq("pedidos.user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
           .from("pedidos")
@@ -858,7 +877,6 @@ export function useAllPagamentos() {
 
       // 1. Process pagamentos
       const userPayments = (pagamentosRes.data || [])
-        .filter((p) => p.pedidos && p.pedidos.user_id === user.id)
         .map((p) => ({
           id: p.id,
           valor: Number(p.valor),
