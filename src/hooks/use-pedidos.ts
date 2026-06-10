@@ -249,6 +249,7 @@ export function usePagamentosPedido(pedidoId: string | undefined) {
     enabled: !!pedidoId && !!user?.id,
     queryFn: async () => {
       if (!pedidoId) return [];
+      if (!user?.id) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("pagamentos")
         .select(`
