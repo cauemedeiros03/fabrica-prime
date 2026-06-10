@@ -754,8 +754,8 @@ export function NovoPedidoDialog({
               <Section title="Itens do Pedido">
                 <div className="col-span-1 md:col-span-2 space-y-4">
                   {items.map((item, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border-b dark:border-border/40 pb-4 md:pb-3 last:border-b-0">
-                      <div className="md:col-span-3">
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-[3fr_3fr_2fr_80px_2fr_40px] gap-3 items-end border-b dark:border-border/40 pb-4 md:pb-3 last:border-b-0">
+                      <div>
                         <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
                         <input
                           type="text"
@@ -798,7 +798,7 @@ export function NovoPedidoDialog({
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                         />
                       </div>
-                      <div className="md:col-span-3">
+                      <div>
                         <label className="text-xs font-medium">Material principal</label>
                         <input
                           type="text"
@@ -808,7 +808,7 @@ export function NovoPedidoDialog({
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div>
                         <label className="text-xs font-medium">Medidas (AxLxP)</label>
                         <input
                           type="text"
@@ -818,7 +818,7 @@ export function NovoPedidoDialog({
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                         />
                       </div>
-                      <div className="md:col-span-1">
+                      <div className="min-w-[70px]">
                         <label className="text-xs font-medium">Qtd</label>
                         <input
                           type="number"
@@ -829,10 +829,10 @@ export function NovoPedidoDialog({
                             const val = Math.max(1, parseInt(e.target.value, 10) || 1);
                             updateItem(idx, "quantidade", val);
                           }}
-                          className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
+                          className="mt-1 w-full h-10 px-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
                         />
                       </div>
-                      <div className="md:col-span-2">
+                      <div>
                         <label className="text-xs font-medium">Valor do Item (R$)</label>
                         <CurrencyInput
                           value={item.valor}
@@ -843,7 +843,7 @@ export function NovoPedidoDialog({
                           className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
                         />
                       </div>
-                      <div className="md:col-span-1 flex justify-end pb-1">
+                      <div className="flex justify-end pb-1">
                         {items.length > 1 && (
                           <button
                             type="button"
