@@ -636,22 +636,26 @@ Qualquer dúvida, estamos à disposição!`;
           <Loader2 className="size-6 animate-spin" />
         </div>
       ) : filtrados.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-12 text-center shadow-[var(--shadow-soft)]">
-          <FileText className="size-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="font-semibold text-lg">Nenhum orçamento encontrado</p>
-          {q && (
-            <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+        <div className="rounded-2xl border bg-card p-16 shadow-[var(--shadow-soft)] flex flex-col items-center justify-center min-h-[400px] text-center">
+          <div className="mx-auto size-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4 text-amber-600 dark:text-amber-400">
+            <FileText className="size-8" />
+          </div>
+          <p className="font-semibold text-lg text-foreground">Nenhum orçamento encontrado</p>
+          {q ? (
+            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
               Tente refinar sua busca utilizando o nome de outro cliente ou projeto.
             </p>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
+              Crie propostas comerciais rápidas para seus clientes e converta-as em pedidos de produção com um clique.
+            </p>
           )}
-          {!q && (
-            <button
-              onClick={() => setOpenNew(true)}
-              className="mt-5 h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition"
-            >
-              <Plus className="size-4" /> Criar Orçamento
-            </button>
-          )}
+          <button
+            onClick={() => setOpenNew(true)}
+            className="mt-6 h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition shadow-sm"
+          >
+            <Plus className="size-4" /> Criar Primeiro Orçamento
+          </button>
         </div>
       ) : view === "grid" ? (
         /* GRID LAYOUT */
