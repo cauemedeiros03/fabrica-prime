@@ -25,6 +25,7 @@ export interface Orcamento {
   valorSugerido: number;
   validadeDias: number;
   status?: "Pendente" | "Aprovado";
+  desconto?: number;
 }
 
 interface OrcamentoDialogProps {
@@ -45,6 +46,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     produtoMedidas: "",
     valorSugerido: 0,
     validadeDias: 15,
+    desconto: 0,
   }), []);
 
   // Estado base de referência para o dirty check (muda conforme initialData)
@@ -57,6 +59,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     produtoMedidas: initialData.produtoMedidas || "",
     valorSugerido: initialData.valorSugerido || 0,
     validadeDias: initialData.validadeDias || 15,
+    desconto: initialData.desconto || 0,
   }) : emptyForm, [initialData, emptyForm]);
 
   const [form, setForm] = useState(emptyForm);
@@ -75,7 +78,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     form.produtoMaterial !== baseForm.produtoMaterial ||
     form.produtoMedidas !== baseForm.produtoMedidas ||
     Number(form.valorSugerido) !== Number(baseForm.valorSugerido) ||
-    Number(form.validadeDias) !== Number(baseForm.validadeDias),
+    Number(form.validadeDias) !== Number(baseForm.validadeDias) ||
+    Number(form.desconto) !== Number(baseForm.desconto),
     [form, baseForm]
   );
 
@@ -152,6 +156,10 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const createdDate = isEdit ? initialData.criadoEm : new Date().toISOString();
     const statusVal = isEdit ? (initialData.status || "Pendente") : "Pendente";
 
+    const originalValue = Number(form.valorSugerido);
+    const discountValue = Number(form.desconto || 0);
+    const finalValue = Math.max(0, originalValue - discountValue);
+
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
@@ -161,7 +169,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       produtoDescricao: form.produtoDescricao,
       produtoMaterial: form.produtoMaterial,
       produtoMedidas: form.produtoMedidas,
-      valorSugerido: Number(form.valorSugerido),
+      valorSugerido: originalValue,
+      desconto: discountValue,
       validadeDias: Number(form.validadeDias),
       status: statusVal,
     };
@@ -198,7 +207,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             produto_descricao: form.produtoDescricao,
             produto_material: form.produtoMaterial,
             produto_medidas: form.produtoMedidas,
-            valor_sugerido: Number(form.valorSugerido),
+            valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: statusVal,
           }).eq("id", budgetId).eq("user_id", user.id);
@@ -214,7 +223,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             produto_descricao: form.produtoDescricao,
             produto_material: form.produtoMaterial,
             produto_medidas: form.produtoMedidas,
-            valor_sugerido: Number(form.valorSugerido),
+            valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: "Pendente",
             user_id: user.id,
@@ -258,6 +267,10 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const createdDate = isEdit ? initialData.criadoEm : new Date().toISOString();
     const statusVal = isEdit ? (initialData.status || "Pendente") : "Pendente";
 
+    const originalValue = Number(form.valorSugerido);
+    const discountValue = Number(form.desconto || 0);
+    const finalValue = Math.max(0, originalValue - discountValue);
+
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
@@ -267,7 +280,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       produtoDescricao: form.produtoDescricao,
       produtoMaterial: form.produtoMaterial,
       produtoMedidas: form.produtoMedidas,
-      valorSugerido: Number(form.valorSugerido),
+      valorSugerido: originalValue,
+      desconto: discountValue,
       validadeDias: Number(form.validadeDias),
       status: statusVal,
     };
@@ -304,7 +318,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             produto_descricao: form.produtoDescricao,
             produto_material: form.produtoMaterial,
             produto_medidas: form.produtoMedidas,
-            valor_sugerido: Number(form.valorSugerido),
+            valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: statusVal,
           }).eq("id", budgetId).eq("user_id", user.id);
@@ -320,7 +334,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             produto_descricao: form.produtoDescricao,
             produto_material: form.produtoMaterial,
             produto_medidas: form.produtoMedidas,
-            valor_sugerido: Number(form.valorSugerido),
+            valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: "Pendente",
             user_id: user.id,
@@ -337,7 +351,15 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     setSalvando(false);
 
     // Formatar valores para a mensagem
-    const formattedValor = Number(form.valorSugerido).toLocaleString("pt-BR", {
+    const formattedOriginal = originalValue.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const formattedDesconto = discountValue.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const formattedFinal = finalValue.toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -347,7 +369,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const msg = `Olá *${form.clienteNome}*, tudo bem? Aqui é da marcenaria. Segue o resumo do seu orçamento:
 *Projeto:* ${form.produtoDescricao}
 *Material:* ${materialPart} | *Medidas:* ${medidasPart}
-*Valor Sugerido:* R$ ${formattedValor}
+*Valor Original:* R$ ${formattedOriginal}
+${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Valor Final Com Desconto:* R$ ${formattedFinal}
 *Validade da proposta:* ${form.validadeDias} dias.
 Qualquer dúvida, estou à disposição!`;
 
@@ -463,7 +486,7 @@ Qualquer dúvida, estou à disposição!`;
           {/* VALOR / VALIDADE */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-2">Condições Comerciais</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium">Valor Sugerido (R$) *</label>
                 <input
@@ -473,6 +496,18 @@ Qualquer dúvida, estou à disposição!`;
                   step="0.01"
                   value={form.valorSugerido || ""}
                   onChange={(e) => set("valorSugerido", Number(e.target.value) || 0)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Desconto (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.desconto || ""}
+                  onChange={(e) => set("desconto", Number(e.target.value) || 0)}
                   className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                   placeholder="0.00"
                 />
@@ -668,12 +703,24 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
         </div>
 
         {/* CONDICIONAL FINANCEIRO */}
-        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
-          <p className="text-xs text-amber-800 uppercase font-semibold tracking-wider">
-            Valor Sugerido para o Projeto
-          </p>
-          <p className="text-3xl font-extrabold mt-1.5 text-amber-950">{formatMoeda(orcamento.valorSugerido)}</p>
-          <p className="text-xs text-slate-500 mt-2">
+        <div className="mt-8 bg-amber-50 border border-amber-200 rounded-2xl p-6">
+          <div className="max-w-md mx-auto space-y-2">
+            <div className="flex justify-between items-center text-sm text-amber-800 font-medium">
+              <span>Valor Original:</span>
+              <span className="tabular-nums">{formatMoeda(orcamento.valorSugerido)}</span>
+            </div>
+            {Number(orcamento.desconto || 0) > 0 && (
+              <div className="flex justify-between items-center text-sm text-emerald-700 font-semibold">
+                <span>Desconto Especial:</span>
+                <span className="tabular-nums">- {formatMoeda(Number(orcamento.desconto))}</span>
+              </div>
+            )}
+            <div className="border-t border-amber-200 pt-2 flex justify-between items-center text-xl font-extrabold text-amber-950">
+              <span>Valor Final Com Desconto:</span>
+              <span className="tabular-nums">{formatMoeda(Math.max(0, orcamento.valorSugerido - Number(orcamento.desconto || 0)))}</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-4 text-center">
             * Este orçamento é meramente informativo e está sujeito a alterações com base na medição final no local.
           </p>
         </div>

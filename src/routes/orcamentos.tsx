@@ -54,6 +54,7 @@ const mapDbRowToOrcamento = (row: any): Orcamento => ({
   produtoMaterial: row.produto_material || row.produtoMaterial || "",
   produtoMedidas: row.produto_medidas || row.produtoMedidas || "",
   valorSugerido: Number(row.valor_sugerido || row.valorSugerido),
+  desconto: Number(row.desconto || 0),
   validadeDias: Number(row.validade_dias || row.validadeDias || 15),
   status: row.status || "Pendente",
 });
@@ -159,7 +160,7 @@ function OrcamentosPage() {
   // Estatísticas calculadas sobre orçamentos PENDENTES
   const stats = useMemo(() => {
     const pendentes = orcamentos.filter((o) => (o.status || "Pendente") === "Pendente");
-    const totalPendentesValor = pendentes.reduce((acc, o) => acc + o.valorSugerido, 0);
+    const totalPendentesValor = pendentes.reduce((acc, o) => acc + (o.valorSugerido - (o.desconto || 0)), 0);
     const pendentesCount = pendentes.length;
     const ticketMedio = pendentesCount > 0 ? totalPendentesValor / pendentesCount : 0;
 
@@ -267,7 +268,7 @@ function OrcamentosPage() {
         material: orcamento.produtoMaterial,
         prioridade: "media",
         etapa: "pedido-recebido",
-        valor_total: orcamento.valorSugerido,
+        valor_total: Math.max(0, orcamento.valorSugerido - (orcamento.desconto || 0)),
         valor_pago: 0,
       };
 
@@ -333,7 +334,19 @@ function OrcamentosPage() {
       cleanPhone = "55" + cleanPhone;
     }
 
-    const formattedValor = Number(o.valorSugerido).toLocaleString("pt-BR", {
+    const originalValue = Number(o.valorSugerido);
+    const discountValue = Number(o.desconto || 0);
+    const finalValue = Math.max(0, originalValue - discountValue);
+
+    const formattedOriginal = originalValue.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const formattedDesconto = discountValue.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const formattedFinal = finalValue.toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -343,7 +356,8 @@ function OrcamentosPage() {
     const msg = `Olá *${o.clienteNome}*, tudo bem? Segue o resumo da proposta comercial que preparamos:
 *Projeto:* ${o.produtoDescricao}
 *Material:* ${materialPart} | *Medidas:* ${medidasPart}
-*Valor:* R$ ${formattedValor}
+*Valor Original:* R$ ${formattedOriginal}
+${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Valor Final Com Desconto:* R$ ${formattedFinal}
 *Validade:* ${o.validadeDias} dias.
 Qualquer dúvida, estamos à disposição!`;
 
@@ -411,7 +425,7 @@ Qualquer dúvida, estamos à disposição!`;
                 Valor Proposto
               </span>
               <span className="text-base font-bold tabular-nums text-foreground">
-                {moeda(o.valorSugerido)}
+                {moeda(o.valorSugerido - (o.desconto || 0))}
               </span>
             </div>
 
@@ -708,7 +722,7 @@ Qualquer dúvida, estamos à disposição!`;
                           {dataEmissao}
                         </td>
                         <td className="px-4 py-3.5 text-right font-bold text-foreground tabular-nums">
-                          {moeda(o.valorSugerido)}
+                          {moeda(o.valorSugerido - (o.desconto || 0))}
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           <span
