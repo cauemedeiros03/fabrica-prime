@@ -280,6 +280,7 @@ export type Database = {
           cliente_nome: string | null
           cor: string | null
           created_at: string
+          desconto: number
           entrega: string | null
           etapa: Database["public"]["Enums"]["etapa_producao"]
           id: string
@@ -300,6 +301,7 @@ export type Database = {
           cliente_nome?: string | null
           cor?: string | null
           created_at?: string
+          desconto?: number
           entrega?: string | null
           etapa?: Database["public"]["Enums"]["etapa_producao"]
           id?: string
@@ -320,6 +322,7 @@ export type Database = {
           cliente_nome?: string | null
           cor?: string | null
           created_at?: string
+          desconto?: number
           entrega?: string | null
           etapa?: Database["public"]["Enums"]["etapa_producao"]
           id?: string

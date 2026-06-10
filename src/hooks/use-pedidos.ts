@@ -12,6 +12,7 @@ type Row = {
   cor: string | null;
   valor_total: number | string;
   valor_pago: number | string;
+  desconto?: number | string | null;
   entrega: string | null;
   etapa: StatusEtapa;
   prioridade: Pedido["prioridade"];
@@ -52,6 +53,7 @@ function mapRow(r: Row): Pedido & {
   instagram?: string;
   origem?: string;
   historico_producao?: any[];
+  desconto?: number;
 } {
   const c = r.clientes;
   const addressParts = c
@@ -77,6 +79,7 @@ function mapRow(r: Row): Pedido & {
     cor: r.cor ?? "",
     valorTotal: Number(r.valor_total),
     valorPago: Number(r.valor_pago),
+    desconto: Number(r.desconto || 0),
     entrega: r.entrega ? new Date(r.entrega).toISOString() : new Date().toISOString(),
     criadoEm: r.created_at,
     atualizadoEm: r.updated_at,
@@ -296,6 +299,7 @@ export interface NovoPedidoInput {
   // financeiro
   valor_total: number;
   valor_pago: number;
+  desconto?: number;
   forma_pagamento?: string;
   cpf?: string;
   cep?: string;
@@ -378,6 +382,7 @@ export function useCreatePedido() {
         prioridade: input.prioridade || "media",
         valor_total: Number(input.valor_total) || 0,
         valor_pago: Number(input.valor_pago) || 0,
+        desconto: Number(input.desconto) || 0,
         numero: String(Math.floor(100000 + Math.random() * 900000)),
         user_id: user.id,
         anexos: input.anexos || [],
@@ -478,6 +483,7 @@ export function useUpdatePedido() {
           prioridade: input.prioridade,
           valor_total: Number(input.valor_total) || 0,
           valor_pago: Number(input.valor_pago) || 0,
+          desconto: Number(input.desconto) || 0,
           anexos: input.anexos,
           historico_producao: updatedHist,
         })

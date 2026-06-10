@@ -46,6 +46,7 @@ export interface Pedido {
   excluido?: boolean;
   deleted?: boolean;
   ativo?: boolean;
+  desconto?: number;
 }
 
 const hoje = new Date();

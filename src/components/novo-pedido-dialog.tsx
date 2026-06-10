@@ -89,6 +89,7 @@ const EMPTY_FORM: NovoPedidoInput = {
   etapa: "pedido-recebido",
   valor_total: 0,
   valor_pago: 0,
+  desconto: 0,
   forma_pagamento: "Pix",
   cpf: "",
   cep: "",
@@ -188,16 +189,20 @@ export function NovoPedidoDialog({
   const [catalogo, setCatalogo] = useState<any[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
 
-  const calculatedTotal = useMemo(() => {
+  const grossSubtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number(item.quantidade || 1) * Number(item.valor || 0)), 0);
   }, [items]);
 
+  const netTotal = useMemo(() => {
+    return Math.max(0, grossSubtotal - Number(form.desconto || 0));
+  }, [grossSubtotal, form.desconto]);
+
   useEffect(() => {
-    setForm((s) => ({ ...s, valor_total: calculatedTotal }));
-    if (calculatedTotal > 0) {
+    setForm((s) => ({ ...s, valor_total: netTotal }));
+    if (netTotal > 0) {
       setErrors((er) => ({ ...er, valor_total: undefined }));
     }
-  }, [calculatedTotal]);
+  }, [netTotal]);
 
   useEffect(() => {
     async function fetchCatalogo() {
@@ -934,6 +939,19 @@ export function NovoPedidoDialog({
                   {errors.valor_total && (
                     <p className="mt-1 text-xs text-destructive">{errors.valor_total}</p>
                   )}
+                </div>
+
+                {/* Desconto */}
+                <div>
+                  <label className="text-xs font-medium">Desconto (R$)</label>
+                  <CurrencyInput
+                    value={form.desconto || 0}
+                    onChange={(v) => {
+                      set("desconto", v);
+                    }}
+                    placeholder="R$ 0,00"
+                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  />
                 </div>
 
                 {/* Valor pago — sem negativos */}
