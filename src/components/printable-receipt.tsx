@@ -1,10 +1,22 @@
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { moeda } from "@/lib/mock-data";
-import { formatObservacoes } from "@/lib/utils";
 
 interface PrintableReceiptProps {
   pedido: any;
   config: any;
+}
+
+function cleanLatexMedidas(medidas: string): string {
+  if (!medidas) return "";
+  // Remove math mode symbols '$'
+  let clean = medidas.replace(/\$/g, "");
+  // Replace LaTeX \times with ' x ' (case-insensitive)
+  clean = clean.replace(/\\times/gi, " x ");
+  // Replace double spaces
+  clean = clean.replace(/\s+/g, " ");
+  // Replace any remaining LaTeX backslashes or markers if any
+  clean = clean.replace(/\\/g, "");
+  return clean.trim();
 }
 
 export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps>(
@@ -36,6 +48,21 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
     } else {
       cleanObs = obsText;
     }
+
+    const finalItems = useMemo(() => {
+      if (orderItems && orderItems.length > 0) {
+        return orderItems;
+      }
+      return [
+        {
+          descricao: pedido.produto || "Item de Marcenaria",
+          material: uniqueMaterials || pedido.material || "Não informado",
+          medidas: cleanLatexMedidas(pedido.medidas || ""),
+          quantidade: 1,
+          valor: pedido.valorTotal || 0,
+        },
+      ];
+    }, [orderItems, pedido, uniqueMaterials]);
 
     return (
       <div
@@ -116,82 +143,61 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
           </div>
         </div>
 
-        {/* DETALHES DO PEDIDO */}
-        <div className="mt-8">
-          <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-            Especificações do Projeto
+        {/* ITENS DO PEDIDO */}
+        <div className="mt-8 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+            Itens do Pedido
           </h3>
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <th className="py-2.5 px-4 text-left w-1/3">Item / Atributo</th>
-                  <th className="py-2.5 px-4 text-left">Especificação</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
+                  <th className="py-2.5 px-4 text-left w-12">#</th>
+                  <th className="py-2.5 px-4 text-left">Móvel / Projeto</th>
+                  <th className="py-2.5 px-4 text-left">Material</th>
+                  <th className="py-2.5 px-4 text-left">Medidas</th>
+                  <th className="py-2.5 px-4 text-center w-12">Qtd</th>
+                  <th className="py-2.5 px-4 text-right w-24">Valor Unit.</th>
+                  <th className="py-2.5 px-4 text-right w-24">Subtotal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <td className="py-3 px-4 font-semibold text-slate-950">Móvel / Projeto</td>
-                  <td className="py-3 px-4 text-slate-800">{pedido.produto}</td>
-                </tr>
-                {pedido.tipo && (
-                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td className="py-3 px-4 font-medium text-slate-500">Tipo</td>
-                    <td className="py-3 px-4 text-slate-800">{pedido.tipo}</td>
-                  </tr>
-                )}
-                {uniqueMaterials && (
-                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td className="py-3 px-4 font-medium text-slate-500">Material</td>
-                    <td className="py-3 px-4 text-slate-800">{uniqueMaterials}</td>
-                  </tr>
-                )}
-                {pedido.cor && (
-                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td className="py-3 px-4 font-medium text-slate-500">Cor / Acabamento</td>
-                    <td className="py-3 px-4 text-slate-800">{pedido.cor}</td>
-                  </tr>
-                )}
-                {pedido.observacoes && (
-                  <tr className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                    <td className="py-3 px-4 font-medium text-slate-500">Observações</td>
-                    <td className="py-3 px-4 text-slate-700 text-sm">
-                      {cleanObs && <div className="whitespace-pre-wrap leading-relaxed mb-4">{cleanObs}</div>}
-                      {orderItems.length > 0 && (
-                        <div className="border-t border-dashed border-slate-200 pt-3 mt-3">
-                          <p className="font-semibold text-slate-900 text-xs uppercase tracking-wider mb-2">Itens do Pedido:</p>
-                          <ul className="list-none pl-4 space-y-2 text-slate-700 text-sm leading-relaxed">
-                            {orderItems.map((item: any, index: number) => {
-                              const matPart = item.material ? ` (${item.material})` : "";
-                              const medPart = item.medidas ? ` - Medidas: ${item.medidas}` : "";
-                              let valPart = "";
-                              if (item.valor && Number(item.valor) > 0) {
-                                const valFormatted = Number(item.valor).toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                });
-                                valPart = ` - R$ ${valFormatted}`;
-                              }
-                              return (
-                                <li key={index} className="flex justify-between items-start border-b border-slate-50 pb-1 last:border-0 last:pb-0">
-                                  <span>{index + 1}. {item.descricao}{matPart}{medPart}</span>
-                                  {valPart && <span className="font-semibold text-slate-900 tabular-nums shrink-0">{valPart}</span>}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                      {!cleanObs && orderItems.length === 0 && (
-                        <div className="whitespace-pre-wrap leading-relaxed">{formatObservacoes(pedido.observacoes)}</div>
-                      )}
-                    </td>
-                  </tr>
-                )}
+                {finalItems.map((item: any, index: number) => {
+                  const cleanMed = cleanLatexMedidas(item.medidas || "");
+                  const cleanMat = item.material || "—";
+                  const cleanDesc = item.descricao || "";
+                  const qtd = Number(item.quantidade || 1);
+                  const valUnit = Number(item.valor || 0);
+                  const subtotal = qtd * valUnit;
+
+                  return (
+                    <tr key={index} className="break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                      <td className="py-3 px-4 text-slate-400 font-medium">{index + 1}</td>
+                      <td className="py-3 px-4 text-slate-900 font-semibold">{cleanDesc}</td>
+                      <td className="py-3 px-4 text-slate-600">{cleanMat}</td>
+                      <td className="py-3 px-4 text-slate-600 font-mono text-xs">{cleanMed || "—"}</td>
+                      <td className="py-3 px-4 text-center text-slate-800">{qtd}</td>
+                      <td className="py-3 px-4 text-right text-slate-800 tabular-nums">{moeda(valUnit)}</td>
+                      <td className="py-3 px-4 text-right text-slate-900 font-semibold tabular-nums">{moeda(subtotal)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* OBSERVAÇÕES */}
+        {cleanObs && (
+          <div className="mt-8 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+            <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">
+              Observações
+            </h3>
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+              {cleanObs}
+            </div>
+          </div>
+        )}
 
         {/* DETALHES FINANCEIROS */}
         <div className="mt-12 bg-slate-950 text-white rounded-2xl p-6 grid grid-cols-3 gap-4 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
@@ -223,27 +229,27 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
 
         {/* RODAPÉ */}
         <div
-          className="mt-16 text-sm text-slate-500 break-inside-avoid"
+          className="mt-16 text-sm text-slate-600 break-inside-avoid space-y-12"
           style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
         >
-          <p className="text-xs">
-            Local e Data: ___________________________________, _____ de _________________ de 20___
-          </p>
+          <div className="text-sm font-medium text-slate-700">
+            Maceió - AL, _____ de __________________ de 20___
+          </div>
 
-          <div className="mt-16 grid grid-cols-2 gap-12">
-            <div className="flex flex-col items-center justify-end h-full">
+          <div className="grid grid-cols-2 gap-12 pt-8">
+            <div className="flex flex-col items-center justify-end">
               <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
+              <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
                 {pedido.cliente}
               </span>
-              <span className="text-[10px] text-slate-400 uppercase">Assinatura do Cliente</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Cliente</span>
             </div>
-            <div className="flex flex-col items-center justify-end h-full">
+            <div className="flex flex-col items-center justify-end">
               <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-700 uppercase font-bold tracking-wider text-center">
+              <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
                 {config?.nome_marcenaria || "Marcenaria"}
               </span>
-              <span className="text-[10px] text-slate-400 uppercase">Assinatura do Responsável</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Responsável</span>
             </div>
           </div>
         </div>
