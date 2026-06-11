@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useRef, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Paperclip, FileText, Trash2, Plus } from "lucide-react";
+import { X, Loader2, Paperclip, FileText, Trash2, Plus, Search, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
@@ -109,6 +109,7 @@ interface ItemRow {
   medidas: string;
   valor: number;
   quantidade: number;
+  searchQuery?: string;
 }
 
 type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
@@ -168,12 +169,14 @@ export function NovoPedidoDialog({
         material: initial?.material || "",
         medidas: "",
         valor: 0,
-        quantidade: 1
+        quantidade: 1,
+        searchQuery: initial?.produto || ""
       }];
     } else {
       parsedItems = parsedItems.map((item) => ({
         ...item,
-        quantidade: item.quantidade || 1
+        quantidade: item.quantidade || 1,
+        searchQuery: item.descricao || ""
       }));
     }
     return parsedItems;
@@ -197,7 +200,7 @@ export function NovoPedidoDialog({
 
   const productSuggestions = useMemo(() => {
     if (activeItemSuggestIndex === null) return [];
-    const query = items[activeItemSuggestIndex]?.descricao?.trim().toLowerCase() || "";
+    const query = items[activeItemSuggestIndex]?.searchQuery?.trim().toLowerCase() || "";
     if (!query) return catalogo.slice(0, 5);
     return catalogo
       .filter((c) => c.nome.toLowerCase().includes(query))
@@ -209,7 +212,7 @@ export function NovoPedidoDialog({
       const target = e.target as HTMLElement;
       if (
         !target.closest('[data-product-suggest-portal="true"]') &&
-        !target.closest('input[placeholder="Ex: Armário de cozinha"]')
+        !target.closest('input[placeholder="Buscar por produto..."]')
       ) {
         setActiveItemSuggestIndex(null);
       }
@@ -347,7 +350,7 @@ export function NovoPedidoDialog({
   }, []);
 
   const addItem = () => {
-    setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0, quantidade: 1 }]);
+    setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0, quantidade: 1, searchQuery: "" }]);
   };
 
   const updateItem = (idx: number, field: keyof ItemRow, value: any) => {
@@ -841,31 +844,52 @@ export function NovoPedidoDialog({
                         </button>
                       )}
 
+                      {/* Product Autocomplete Search Bar */}
+                      <div className="mb-3 pr-9">
+                        <label className="text-xs font-medium text-muted-foreground">Buscar no Catálogo</label>
+                        <div
+                          ref={(el) => {
+                            productInputRefs.current[idx] = el;
+                          }}
+                          className="mt-1 relative"
+                        >
+                          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                          <input
+                            type="text"
+                            value={item.searchQuery || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateItem(idx, "searchQuery", val);
+                              setActiveItemSuggestIndex(idx);
+                            }}
+                            onFocus={() => {
+                              setActiveItemSuggestIndex(idx);
+                            }}
+                            placeholder="Buscar por produto..."
+                            className="w-full h-9 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
+                          {(item.searchQuery || item.descricao) && (
+                            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Inner Fields Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         <div className="md:col-span-2">
                           <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
-                          <div
-                            ref={(el) => {
-                              productInputRefs.current[idx] = el;
+                          <input
+                            type="text"
+                            required
+                            value={item.descricao}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateItem(idx, "descricao", val);
+                              updateItem(idx, "searchQuery", val);
                             }}
-                            className="relative"
-                          >
-                            <input
-                              type="text"
-                              required
-                              value={item.descricao}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                updateItem(idx, "descricao", val);
-                                setActiveItemSuggestIndex(idx);
-                              }}
-                              onFocus={() => {
-                                setActiveItemSuggestIndex(idx);
-                              }}
-                              placeholder="Ex: Armário de cozinha"
-                              className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                            />
-                          </div>
+                            placeholder="Ex: Armário de cozinha"
+                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                          />
                         </div>
 
                         <div>
@@ -1217,6 +1241,7 @@ export function NovoPedidoDialog({
                       updateItem(idx, "descricao", c.nome);
                       updateItem(idx, "material", c.material || "");
                       updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      updateItem(idx, "searchQuery", c.nome);
                       
                       // Auto-fill measures
                       let measuresStr = "";
@@ -1245,6 +1270,7 @@ export function NovoPedidoDialog({
                       updateItem(idx, "descricao", c.nome);
                       updateItem(idx, "material", c.material || "");
                       updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      updateItem(idx, "searchQuery", c.nome);
                       
                       // Auto-fill measures
                       let measuresStr = "";
