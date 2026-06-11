@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, Paperclip, FileText, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
@@ -189,6 +190,60 @@ export function NovoPedidoDialog({
   const [catalogo, setCatalogo] = useState<any[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // States and refs for Product suggestion portal
+  const [activeItemSuggestIndex, setActiveItemSuggestIndex] = useState<number | null>(null);
+  const [productSuggestCoords, setProductSuggestCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const productInputRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const productSuggestions = useMemo(() => {
+    if (activeItemSuggestIndex === null) return [];
+    const query = items[activeItemSuggestIndex]?.descricao?.trim().toLowerCase() || "";
+    if (!query) return catalogo.slice(0, 5);
+    return catalogo
+      .filter((c) => c.nome.toLowerCase().includes(query))
+      .slice(0, 5);
+  }, [catalogo, items, activeItemSuggestIndex]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-product-suggest-portal="true"]') &&
+        !target.closest('input[placeholder="Ex: Armário de cozinha"]')
+      ) {
+        setActiveItemSuggestIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (activeItemSuggestIndex === null) return;
+    const updatePosition = () => {
+      const anchor = productInputRefs.current[activeItemSuggestIndex];
+      if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        const dropdownHeight = 200; // max-h-48 is 192px
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+        
+        setProductSuggestCoords({
+          top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+        });
+      }
+    };
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [activeItemSuggestIndex]);
+
   const grossSubtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number(item.quantidade || 1) * Number(item.valor || 0)), 0);
   }, [items]);
@@ -304,6 +359,12 @@ export function NovoPedidoDialog({
   const removeItem = (idx: number) => {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, i) => i !== idx));
+    productInputRefs.current = productInputRefs.current.filter((_, i) => i !== idx);
+    if (activeItemSuggestIndex === idx) {
+      setActiveItemSuggestIndex(null);
+    } else if (activeItemSuggestIndex !== null && activeItemSuggestIndex > idx) {
+      setActiveItemSuggestIndex(activeItemSuggestIndex - 1);
+    }
   };
 
   useEffect(() => {
@@ -783,46 +844,28 @@ export function NovoPedidoDialog({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         <div className="md:col-span-2">
                           <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
-                          <input
-                            type="text"
-                            required
-                            value={item.descricao}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const selected = catalogo.find((c: any) => c.nome === val);
-                              if (selected) {
-                                updateItem(idx, "descricao", val);
-                                updateItem(idx, "material", selected.material || "");
-                                updateItem(idx, "valor", selected.preco ? Number(selected.preco) : item.valor);
-                                
-                                
-                                // Auto-fill measures
-                                let measuresStr = "";
-                                if (selected.descricao) {
-                                  if (selected.descricao.includes("===JSON_MEDIDAS===")) {
-                                    try {
-                                      const parts = selected.descricao.split("===JSON_MEDIDAS===\n");
-                                      if (parts.length > 1) {
-                                        const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                                        const parsed = JSON.parse(jsonPart);
-                                        measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                                      }
-                                    } catch {}
-                                  } else {
-                                    measuresStr = parseLegacyMedidas(selected.descricao);
-                                  }
-                                }
-                                if (measuresStr) {
-                                  updateItem(idx, "medidas", measuresStr);
-                                }
-                              } else {
-                                updateItem(idx, "descricao", val);
-                              }
+                          <div
+                            ref={(el) => {
+                              productInputRefs.current[idx] = el;
                             }}
-                            list="catalogo-produtos"
-                            placeholder="Ex: Armário de cozinha"
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
+                            className="relative"
+                          >
+                            <input
+                              type="text"
+                              required
+                              value={item.descricao}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateItem(idx, "descricao", val);
+                                setActiveItemSuggestIndex(idx);
+                              }}
+                              onFocus={() => {
+                                setActiveItemSuggestIndex(idx);
+                              }}
+                              placeholder="Ex: Armário de cozinha"
+                              className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                            />
+                          </div>
                         </div>
 
                         <div>
@@ -876,11 +919,7 @@ export function NovoPedidoDialog({
                       </div>
                     </div>
                   ))}
-                  <datalist id="catalogo-produtos">
-                    {catalogo.map((c: any) => (
-                      <option key={c.id} value={c.nome} />
-                    ))}
-                  </datalist>
+                  {/* Suggestions list is now rendered dynamically via portal context */}
                   <button
                     type="button"
                     onClick={addItem}
@@ -1149,6 +1188,99 @@ export function NovoPedidoDialog({
           </div>
         </form>
       </div>
+
+      {activeItemSuggestIndex !== null && productSuggestCoords && createPortal(
+        <div
+          data-product-suggest-portal="true"
+          style={{
+            position: "fixed",
+            top: `${productSuggestCoords.top}px`,
+            left: `${productSuggestCoords.left}px`,
+            width: `${productSuggestCoords.width}px`,
+            zIndex: 9999,
+          }}
+          className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
+        >
+          {productSuggestions.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              Nenhum produto no catálogo
+            </div>
+          ) : (
+            <ul className="py-1">
+              {productSuggestions.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const idx = activeItemSuggestIndex;
+                      updateItem(idx, "descricao", c.nome);
+                      updateItem(idx, "material", c.material || "");
+                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      
+                      // Auto-fill measures
+                      let measuresStr = "";
+                      if (c.descricao) {
+                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
+                          try {
+                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+                            if (parts.length > 1) {
+                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                              const parsed = JSON.parse(jsonPart);
+                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                            }
+                          } catch {}
+                        } else {
+                          measuresStr = parseLegacyMedidas(c.descricao);
+                        }
+                      }
+                      if (measuresStr) {
+                        updateItem(idx, "medidas", measuresStr);
+                      }
+                      setActiveItemSuggestIndex(null);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      const idx = activeItemSuggestIndex;
+                      updateItem(idx, "descricao", c.nome);
+                      updateItem(idx, "material", c.material || "");
+                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      
+                      // Auto-fill measures
+                      let measuresStr = "";
+                      if (c.descricao) {
+                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
+                          try {
+                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+                            if (parts.length > 1) {
+                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                              const parsed = JSON.parse(jsonPart);
+                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                            }
+                          } catch {}
+                        } else {
+                          measuresStr = parseLegacyMedidas(c.descricao);
+                        }
+                      }
+                      if (measuresStr) {
+                        updateItem(idx, "medidas", measuresStr);
+                      }
+                      setActiveItemSuggestIndex(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm"
+                  >
+                    <p className="font-medium truncate">{c.nome}</p>
+                    {c.material && (
+                      <p className="text-xs text-muted-foreground truncate">{c.material}</p>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>,
+        document.body
+      )}
 
       <ClienteDialog
         open={novoCliente !== null}
