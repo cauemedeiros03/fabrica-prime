@@ -539,12 +539,22 @@ export function NovoPedidoDialog({
         return;
       }
 
+      // Sanitize items list before building payloads
+      const sanitizedItems = items.map((item) => ({
+        descricao: item.descricao?.trim() || "Item sem descrição",
+        material: item.material?.trim() || "",
+        medidas: item.medidas?.trim() || "",
+        valor: Math.max(0, Number(item.valor) || 0),
+        quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
+        searchQuery: item.searchQuery?.trim() || "",
+      }));
+
       // Format product and material strings by combining descriptions
-      const produtoString = items.map((i) => i.descricao.trim()).filter(Boolean).join(", ");
-      const materialString = items.map((i) => i.material.trim()).filter(Boolean).join(", ") || undefined;
+      const produtoString = sanitizedItems.map((i) => i.descricao).filter(Boolean).join(", ");
+      const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || undefined;
 
       // Construct formatted observations with JSON suffix
-      const itemsText = items
+      const itemsText = sanitizedItems
         .map((item, index) => {
           const matPart = item.material ? ` (${item.material})` : "";
           const medPart = item.medidas ? ` - Medidas: ${item.medidas}` : "";
@@ -556,7 +566,7 @@ export function NovoPedidoDialog({
 
       const finalObs = `${observacoesAdicionais.trim()}${
         observacoesAdicionais.trim() ? "\n\n" : ""
-      }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(items)}\n===END_JSON_ITENS===`;
+      }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
 
       const payload = {
         ...form,
@@ -600,8 +610,8 @@ export function NovoPedidoDialog({
               {isEdit ? "Atualize os dados do pedido" : "Cadastre um novo pedido na produção"}
             </p>
           </div>
-          <button type="button" onClick={handleClose} className="size-8 grid place-items-center rounded-lg hover:bg-accent">
-            <X className="size-4" />
+          <button type="button" onClick={handleClose} className="size-10 grid place-items-center rounded-lg hover:bg-accent" aria-label="Fechar modal">
+            <X className="size-5" />
           </button>
         </div>
 
@@ -691,7 +701,7 @@ export function NovoPedidoDialog({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-1">
+        <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-2.5">
           {currentStep === 1 && (
             <Section title="Cliente">
               {!isEdit && (
@@ -787,7 +797,7 @@ export function NovoPedidoDialog({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                   <Field label="CEP" value={form.cep || ""} onChange={(v) => set("cep", v)} />
                   {/* Endereço — opcional */}
-                  <div className="col-span-2">
+                  <div className="md:col-span-2">
                     <label className="text-xs font-medium">Endereço / Rua</label>
                     <input
                       type="text"
@@ -804,7 +814,7 @@ export function NovoPedidoDialog({
                     value={form.numero_endereco || ""}
                     onChange={(v) => set("numero_endereco", v)}
                   />
-                  <div className="col-span-3">
+                  <div className="md:col-span-3">
                     <Field
                       label="Complemento"
                       value={form.complemento || ""}
@@ -832,116 +842,16 @@ export function NovoPedidoDialog({
               <Section title="Itens do Pedido">
                 <div className="col-span-1 md:col-span-2 space-y-2.5">
                   {items.map((item, idx) => (
-                    <div key={idx} className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-3 rounded-xl mb-3 relative">
-                      {items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem(idx)}
-                          className="absolute top-3 right-3 size-8 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors z-10"
-                          title="Remover item"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      )}
-
-                      {/* Product Autocomplete Search Bar */}
-                      <div className="mb-3 pr-9">
-                        <label className="text-xs font-medium text-muted-foreground">Buscar no Catálogo</label>
-                        <div
-                          ref={(el) => {
-                            productInputRefs.current[idx] = el;
-                          }}
-                          className="mt-1 relative"
-                        >
-                          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                          <input
-                            type="text"
-                            value={item.searchQuery || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              updateItem(idx, "searchQuery", val);
-                              setActiveItemSuggestIndex(idx);
-                            }}
-                            onFocus={() => {
-                              setActiveItemSuggestIndex(idx);
-                            }}
-                            placeholder="Buscar por produto..."
-                            className="w-full h-9 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
-                          {(item.searchQuery || item.descricao) && (
-                            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Inner Fields Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        <div className="md:col-span-2">
-                          <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
-                          <input
-                            type="text"
-                            required
-                            value={item.descricao}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              updateItem(idx, "descricao", val);
-                              updateItem(idx, "searchQuery", val);
-                            }}
-                            placeholder="Ex: Armário de cozinha"
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-medium">Material principal</label>
-                          <input
-                            type="text"
-                            value={item.material}
-                            onChange={(e) => updateItem(idx, "material", e.target.value)}
-                            placeholder="Ex: MDF Branco"
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-medium">Medidas (AxLxP)</label>
-                          <input
-                            type="text"
-                            value={item.medidas}
-                            onChange={(e) => updateItem(idx, "medidas", e.target.value)}
-                            placeholder="Ex: 80x120x60"
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-medium">Qtd</label>
-                          <input
-                            type="number"
-                            min="1"
-                            defaultValue={1}
-                            value={item.quantidade || 1}
-                            onChange={(e) => {
-                              const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                              updateItem(idx, "quantidade", val);
-                            }}
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-medium">Valor do Item (R$)</label>
-                          <CurrencyInput
-                            value={item.valor}
-                            onChange={(val) => {
-                              updateItem(idx, "valor", val);
-                            }}
-                            placeholder="R$ 0,00"
-                            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <ProductCardItem
+                      key={idx}
+                      idx={idx}
+                      item={item}
+                      itemsCount={items.length}
+                      updateItem={updateItem}
+                      removeItem={removeItem}
+                      setActiveItemSuggestIndex={setActiveItemSuggestIndex}
+                      productInputRefs={productInputRefs}
+                    />
                   ))}
                   {/* Suggestions list is now rendered dynamically via portal context */}
                   <button
@@ -1506,3 +1416,137 @@ function CurrencyInput({
     />
   );
 }
+
+interface ProductCardItemProps {
+  idx: number;
+  item: ItemRow;
+  itemsCount: number;
+  updateItem: (idx: number, field: keyof ItemRow, value: any) => void;
+  removeItem: (idx: number) => void;
+  setActiveItemSuggestIndex: (idx: number | null) => void;
+  productInputRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+}
+
+const ProductCardItem = React.memo(({
+  idx,
+  item,
+  itemsCount,
+  updateItem,
+  removeItem,
+  setActiveItemSuggestIndex,
+  productInputRefs
+}: ProductCardItemProps) => {
+  return (
+    <div className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-3 rounded-xl mb-3 relative">
+      {itemsCount > 1 && (
+        <button
+          type="button"
+          onClick={() => removeItem(idx)}
+          className="absolute top-3 right-3 size-10 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors z-10"
+          title="Remover item"
+        >
+          <Trash2 className="size-5" />
+        </button>
+      )}
+
+      {/* Product Autocomplete Search Bar */}
+      <div className="mb-3 pr-9">
+        <label className="text-xs font-medium text-muted-foreground">Buscar no Catálogo</label>
+        <div
+          ref={(el) => {
+            productInputRefs.current[idx] = el;
+          }}
+          className="mt-1 relative"
+        >
+          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={item.searchQuery || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateItem(idx, "searchQuery", val);
+              setActiveItemSuggestIndex(idx);
+            }}
+            onFocus={() => {
+              setActiveItemSuggestIndex(idx);
+            }}
+            placeholder="Buscar por produto..."
+            className="w-full h-9 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+          {(item.searchQuery || item.descricao) && (
+            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+          )}
+        </div>
+      </div>
+
+      {/* Inner Fields Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
+          <input
+            type="text"
+            required
+            value={item.descricao}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateItem(idx, "descricao", val);
+              updateItem(idx, "searchQuery", val);
+            }}
+            placeholder="Ex: Armário de cozinha"
+            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Material principal</label>
+          <input
+            type="text"
+            value={item.material}
+            onChange={(e) => updateItem(idx, "material", e.target.value)}
+            placeholder="Ex: MDF Branco"
+            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Medidas (AxLxP)</label>
+          <input
+            type="text"
+            value={item.medidas}
+            onChange={(e) => updateItem(idx, "medidas", e.target.value)}
+            placeholder="Ex: 80x120x60"
+            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Qtd</label>
+          <input
+            type="number"
+            min="1"
+            value={item.quantidade || 1}
+            onChange={(e) => {
+              const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+              updateItem(idx, "quantidade", val);
+            }}
+            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 text-center"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Valor do Item (R$)</label>
+          <CurrencyInput
+            value={item.valor}
+            onChange={(val) => {
+              updateItem(idx, "valor", val);
+            }}
+            placeholder="R$ 0,00"
+            className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ProductCardItem.displayName = "ProductCardItem";
