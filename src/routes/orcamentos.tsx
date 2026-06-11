@@ -44,20 +44,39 @@ export const Route = createFileRoute("/orcamentos")({
   head: () => ({ meta: [{ title: "Orçamentos · Sua bancada" }] }),
 });
 
-const mapDbRowToOrcamento = (row: any): Orcamento => ({
-  id: row.id,
-  criadoEm: row.created_at || row.criadoEm,
-  clienteNome: row.prospecto_nome || row.cliente_nome || row.clienteNome,
-  clienteTelefone: row.prospecto_telefone || row.cliente_telefone || row.clienteTelefone || "",
-  clienteCidade: row.prospecto_cidade || row.cliente_cidade || row.clienteCidade || "",
-  produtoDescricao: row.produto_descricao || row.produtoDescricao,
-  produtoMaterial: row.produto_material || row.produtoMaterial || "",
-  produtoMedidas: row.produto_medidas || row.produtoMedidas || "",
-  valorSugerido: Number(row.valor_sugerido || row.valorSugerido),
-  desconto: Number(row.desconto || 0),
-  validadeDias: Number(row.validade_dias || row.validadeDias || 15),
-  status: row.status || "Pendente",
-});
+const mapDbRowToOrcamento = (row: any): Orcamento => {
+  let clienteCpfCnpj = row.clienteCpfCnpj || row.cliente_cpf_cnpj || "";
+  let formaPagamento = row.formaPagamento || row.forma_pagamento || "À vista (Pix / Dinheiro)";
+  const desc = row.produto_descricao || row.produtoDescricao || "";
+  if (desc.includes("===METADATA===")) {
+    try {
+      const parts = desc.split("===METADATA===\n");
+      if (parts.length > 1) {
+        const jsonPart = parts[1].split("\n===END_METADATA===")[0];
+        const meta = JSON.parse(jsonPart);
+        if (meta.clienteCpfCnpj) clienteCpfCnpj = meta.clienteCpfCnpj;
+        if (meta.formaPagamento) formaPagamento = meta.formaPagamento;
+      }
+    } catch {}
+  }
+
+  return {
+    id: row.id,
+    criadoEm: row.created_at || row.criadoEm,
+    clienteNome: row.prospecto_nome || row.cliente_nome || row.clienteNome,
+    clienteTelefone: row.prospecto_telefone || row.cliente_telefone || row.clienteTelefone || "",
+    clienteCidade: row.prospecto_cidade || row.cliente_cidade || row.clienteCidade || "",
+    produtoDescricao: row.produto_descricao || row.produtoDescricao,
+    produtoMaterial: row.produto_material || row.produtoMaterial || "",
+    produtoMedidas: row.produto_medidas || row.produtoMedidas || "",
+    valorSugerido: Number(row.valor_sugerido || row.valorSugerido),
+    desconto: Number(row.desconto || 0),
+    validadeDias: Number(row.validade_dias || row.validadeDias || 15),
+    status: row.status || "Pendente",
+    clienteCpfCnpj,
+    formaPagamento,
+  };
+};
 
 function OrcamentosPage() {
   const navigate = useNavigate();
@@ -353,11 +372,31 @@ function OrcamentosPage() {
     const materialPart = o.produtoMaterial ? o.produtoMaterial : "Não informado";
     const medidasPart = o.produtoMedidas ? o.produtoMedidas : "Não informado";
 
+    const cleanProjetoDesc = o.produtoDescricao.split(" ===JSON_ITENS===")[0];
+
+    // Extract metadata
+    let clienteCpfCnpj = o.clienteCpfCnpj || "";
+    let formaPagamento = o.formaPagamento || "À vista (Pix / Dinheiro)";
+    const desc = o.produtoDescricao || "";
+    if (desc.includes("===METADATA===")) {
+      try {
+        const parts = desc.split("===METADATA===\n");
+        if (parts.length > 1) {
+          const jsonPart = parts[1].split("\n===END_METADATA===")[0];
+          const meta = JSON.parse(jsonPart);
+          if (meta.clienteCpfCnpj) clienteCpfCnpj = meta.clienteCpfCnpj;
+          if (meta.formaPagamento) formaPagamento = meta.formaPagamento;
+        }
+      } catch {}
+    }
+
     const msg = `Olá *${o.clienteNome}*, tudo bem? Segue o resumo da proposta comercial que preparamos:
-*Projeto:* ${o.produtoDescricao}
+*CPF/CNPJ:* ${clienteCpfCnpj || "Não informado"}
+*Projeto:* ${cleanProjetoDesc}
 *Material:* ${materialPart} | *Medidas:* ${medidasPart}
 *Valor Original:* R$ ${formattedOriginal}
 ${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Valor Final Com Desconto:* R$ ${formattedFinal}
+*Forma de Pagamento:* ${formaPagamento}
 *Validade:* ${o.validadeDias} dias.
 Qualquer dúvida, estamos à disposição!`;
 

@@ -26,6 +26,8 @@ export interface Orcamento {
   validadeDias: number;
   status?: "Pendente" | "Aprovado";
   desconto?: number;
+  clienteCpfCnpj?: string;
+  formaPagamento?: string;
 }
 
 interface ItemRow {
@@ -84,25 +86,46 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     clienteNome: "",
     clienteTelefone: "",
     clienteCidade: "",
+    clienteCpfCnpj: "",
     produtoDescricao: "",
     produtoMaterial: "",
     produtoMedidas: "",
     valorSugerido: 0,
     validadeDias: 15,
     desconto: 0,
+    formaPagamento: "À vista (Pix / Dinheiro)",
   }), []);
 
-  const baseForm = useMemo(() => initialData ? ({
-    clienteNome: initialData.clienteNome || "",
-    clienteTelefone: initialData.clienteTelefone || "",
-    clienteCidade: initialData.clienteCidade || "",
-    produtoDescricao: initialData.produtoDescricao || "",
-    produtoMaterial: initialData.produtoMaterial || "",
-    produtoMedidas: initialData.produtoMedidas || "",
-    valorSugerido: initialData.valorSugerido || 0,
-    validadeDias: initialData.validadeDias || 15,
-    desconto: initialData.desconto || 0,
-  }) : emptyForm, [initialData, emptyForm]);
+  const baseForm = useMemo(() => {
+    let metaCpfCnpj = "";
+    let metaFormaPagamento = "À vista (Pix / Dinheiro)";
+    const desc = initialData?.produtoDescricao || "";
+    if (desc.includes("===METADATA===")) {
+      try {
+        const parts = desc.split("===METADATA===\n");
+        if (parts.length > 1) {
+          const jsonPart = parts[1].split("\n===END_METADATA===")[0];
+          const meta = JSON.parse(jsonPart);
+          if (meta.clienteCpfCnpj) metaCpfCnpj = meta.clienteCpfCnpj;
+          if (meta.formaPagamento) metaFormaPagamento = meta.formaPagamento;
+        }
+      } catch {}
+    }
+
+    return initialData ? ({
+      clienteNome: initialData.clienteNome || "",
+      clienteTelefone: initialData.clienteTelefone || "",
+      clienteCidade: initialData.clienteCidade || "",
+      clienteCpfCnpj: initialData.clienteCpfCnpj || metaCpfCnpj || "",
+      produtoDescricao: initialData.produtoDescricao || "",
+      produtoMaterial: initialData.produtoMaterial || "",
+      produtoMedidas: initialData.produtoMedidas || "",
+      valorSugerido: initialData.valorSugerido || 0,
+      validadeDias: initialData.validadeDias || 15,
+      desconto: initialData.desconto || 0,
+      formaPagamento: initialData.formaPagamento || metaFormaPagamento || "À vista (Pix / Dinheiro)",
+    }) : emptyForm;
+  }, [initialData, emptyForm]);
 
   const [form, setForm] = useState(emptyForm);
   const [salvando, setSalvando] = useState(false);
@@ -148,6 +171,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     form.clienteNome !== baseForm.clienteNome ||
     form.clienteTelefone !== baseForm.clienteTelefone ||
     form.clienteCidade !== baseForm.clienteCidade ||
+    form.clienteCpfCnpj !== baseForm.clienteCpfCnpj ||
+    form.formaPagamento !== baseForm.formaPagamento ||
     Number(form.validadeDias) !== Number(baseForm.validadeDias) ||
     Number(form.desconto) !== Number(baseForm.desconto) ||
     JSON.stringify(items) !== JSON.stringify(initialItems),
@@ -362,7 +387,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
-    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({ clienteCpfCnpj: form.clienteCpfCnpj, formaPagamento: form.formaPagamento })}\n===END_METADATA===`;
 
     const novoOrcamento: Orcamento = {
       id: budgetId,
@@ -370,6 +395,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
+      clienteCpfCnpj: form.clienteCpfCnpj,
+      formaPagamento: form.formaPagamento,
       produtoDescricao: finalProdutoDescricao,
       produtoMaterial: materialString,
       produtoMedidas: medidasString,
@@ -489,7 +516,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
-    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({ clienteCpfCnpj: form.clienteCpfCnpj, formaPagamento: form.formaPagamento })}\n===END_METADATA===`;
 
     const novoOrcamento: Orcamento = {
       id: budgetId,
@@ -497,6 +524,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
+      clienteCpfCnpj: form.clienteCpfCnpj,
+      formaPagamento: form.formaPagamento,
       produtoDescricao: finalProdutoDescricao,
       produtoMaterial: materialString,
       produtoMedidas: medidasString,
@@ -587,6 +616,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         .join("\n");
 
       const msg = `Olá *${form.clienteNome}*, tudo bem? Aqui é da marcenaria. Segue o resumo do seu orçamento:
+*CPF/CNPJ:* ${form.clienteCpfCnpj || "Não informado"}
 
 *Itens do Orçamento:*
 ${itemsListText}
@@ -594,6 +624,7 @@ ${itemsListText}
 *Condições Comerciais:*
 *Valor Sugerido:* R$ ${formattedOriginal}
 ${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Valor Final Com Desconto:* R$ ${formattedFinal}
+*Forma de Pagamento:* ${form.formaPagamento || "Não informado"}
 
 *Validade da proposta:* ${form.validadeDias} dias.
 Qualquer dúvida, estou à disposição!`;
@@ -664,7 +695,7 @@ Qualquer dúvida, estou à disposição!`;
                   placeholder="(00) 00000-0000"
                 />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
                 <label className="text-xs font-medium">Cidade / Estado</label>
                 <input
                   type="text"
@@ -672,6 +703,16 @@ Qualquer dúvida, estou à disposição!`;
                   onChange={(e) => set("clienteCidade", e.target.value)}
                   className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                   placeholder="Cidade, UF"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium">CPF / CNPJ</label>
+                <input
+                  type="text"
+                  value={form.clienteCpfCnpj}
+                  onChange={(e) => set("clienteCpfCnpj", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="CPF ou CNPJ"
                 />
               </div>
             </div>
@@ -707,7 +748,7 @@ Qualquer dúvida, estou à disposição!`;
           {/* VALOR / VALIDADE */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Condições Comerciais</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
               <div>
                 <label className="text-xs font-medium">Valor Sugerido (R$) *</label>
                 <input
@@ -742,6 +783,19 @@ Qualquer dúvida, estou à disposição!`;
                   <option value={15}>15 dias (padrão)</option>
                   <option value={30}>30 dias</option>
                   <option value={60}>60 dias</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Forma de Pagamento</label>
+                <select
+                  value={form.formaPagamento}
+                  onChange={(e) => set("formaPagamento", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                >
+                  <option value="À vista (Pix / Dinheiro)">À vista (Pix / Dinheiro)</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Cartão de Débito">Cartão de Débito</option>
+                  <option value="A Combinar / Entrada + Parcelas">A Combinar / Entrada + Parcelas</option>
                 </select>
               </div>
             </div>
@@ -903,6 +957,24 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
     const formatMoeda = (val: number) =>
       val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+    const meta = useMemo(() => {
+      let clienteCpfCnpj = orcamento.clienteCpfCnpj || "";
+      let formaPagamento = orcamento.formaPagamento || "À vista (Pix / Dinheiro)";
+      const desc = orcamento.produtoDescricao || "";
+      if (desc.includes("===METADATA===")) {
+        try {
+          const parts = desc.split("===METADATA===\n");
+          if (parts.length > 1) {
+            const jsonPart = parts[1].split("\n===END_METADATA===")[0];
+            const parsed = JSON.parse(jsonPart);
+            if (parsed.clienteCpfCnpj) clienteCpfCnpj = parsed.clienteCpfCnpj;
+            if (parsed.formaPagamento) formaPagamento = parsed.formaPagamento;
+          }
+        } catch {}
+      }
+      return { clienteCpfCnpj, formaPagamento };
+    }, [orcamento]);
+
     const parsedItems = useMemo<ItemRow[]>(() => {
       const desc = orcamento.produtoDescricao || "";
       let itemsList: ItemRow[] = [];
@@ -995,10 +1067,14 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
               <p className="font-semibold text-slate-900 mt-0.5">{orcamento.clienteNome}</p>
             </div>
             <div>
+              <p className="text-xs text-slate-400 font-medium">CPF / CNPJ</p>
+              <p className="font-semibold text-slate-900 mt-0.5">{meta.clienteCpfCnpj || "Não informado"}</p>
+            </div>
+            <div>
               <p className="text-xs text-slate-400 font-medium">Telefone / Celular</p>
               <p className="font-medium text-slate-800 mt-0.5">{orcamento.clienteTelefone || "Não informado"}</p>
             </div>
-            <div className="md:col-span-2">
+            <div>
               <p className="text-xs text-slate-400 font-medium">Cidade / Localidade</p>
               <p className="text-slate-700 mt-0.5">{orcamento.clienteCidade || "Não informado"}</p>
             </div>
@@ -1058,6 +1134,10 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
             <div className="border-t border-amber-200 pt-2 flex justify-between items-center text-xl font-extrabold text-amber-950">
               <span>Valor Final Com Desconto:</span>
               <span className="tabular-nums">{formatMoeda(Math.max(0, orcamento.valorSugerido - Number(orcamento.desconto || 0)))}</span>
+            </div>
+            <div className="border-t border-dashed border-amber-200 pt-2 flex justify-between items-center text-sm text-amber-900 font-medium">
+              <span>Forma de Pagamento:</span>
+              <span className="font-semibold">{meta.formaPagamento}</span>
             </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-4 text-center">
