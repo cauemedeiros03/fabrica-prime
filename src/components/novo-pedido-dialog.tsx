@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useRef, type FormEvent } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, Paperclip, FileText, Trash2, Plus, Search, Check } from "lucide-react";
 import { toast } from "sonner";
