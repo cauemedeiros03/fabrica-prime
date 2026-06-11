@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useRef, forwardRef, type FormEvent } from "react";
-import { Loader2, Printer, MessageCircle } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState, useRef, forwardRef, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { Loader2, Printer, MessageCircle, X, Search, Check, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -11,7 +12,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { X } from "lucide-react";
 
 export interface Orcamento {
   id: string;
@@ -28,10 +28,53 @@ export interface Orcamento {
   desconto?: number;
 }
 
+interface ItemRow {
+  descricao: string;
+  material: string;
+  medidas: string;
+  valor: number;
+  quantidade: number;
+  searchQuery?: string;
+}
+
 interface OrcamentoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: Orcamento | null;
+}
+
+function formatMedidas(altura: string, largura: string, profundidade: string): string {
+  if (!altura && !largura && !profundidade) return "";
+  
+  const toCmStr = (valStr: string) => {
+    const val = parseFloat(valStr.replace(",", "."));
+    if (isNaN(val)) return valStr;
+    if (val < 10) {
+      return Math.round(val * 100).toString();
+    }
+    return Math.round(val).toString();
+  };
+  
+  const a = toCmStr(altura || "0");
+  const l = toCmStr(largura || "0");
+  const p = toCmStr(profundidade || "0");
+  
+  return `${a}x${l}x${p}`;
+}
+
+function parseLegacyMedidas(desc: string): string {
+  const clean = desc.trim();
+  const parts = clean.split(/\s*[x×*]\s*/);
+  if (parts.length === 3) {
+    const p0 = parseFloat(parts[0].replace(",", "."));
+    const p1 = parseFloat(parts[1].replace(",", "."));
+    const p2 = parseFloat(parts[2].replace(",", "."));
+    if (!isNaN(p0) && !isNaN(p1) && !isNaN(p2)) {
+      const toCmStr = (v: number) => (v < 10 ? Math.round(v * 100).toString() : Math.round(v).toString());
+      return `${toCmStr(p2)}x${toCmStr(p0)}x${toCmStr(p1)}`;
+    }
+  }
+  return "";
 }
 
 export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDialogProps) {
@@ -49,7 +92,6 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     desconto: 0,
   }), []);
 
-  // Estado base de referência para o dirty check (muda conforme initialData)
   const baseForm = useMemo(() => initialData ? ({
     clienteNome: initialData.clienteNome || "",
     clienteTelefone: initialData.clienteTelefone || "",
@@ -69,21 +111,49 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
 
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Dirty state: true se o usuário alterou qualquer campo
+  const [items, setItems] = useState<ItemRow[]>([]);
+  const [catalogo, setCatalogo] = useState<any[]>([]);
+
+  // States and refs for Product suggestion portal
+  const [activeItemSuggestIndex, setActiveItemSuggestIndex] = useState<number | null>(null);
+  const [productSuggestCoords, setProductSuggestCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const productInputRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const initialItems = useMemo<ItemRow[]>(() => {
+    let parsedItems: ItemRow[] = [];
+    const desc = initialData?.produtoDescricao || "";
+    if (desc.includes("===JSON_ITENS===")) {
+      try {
+        const parts = desc.split("===JSON_ITENS===\n");
+        if (parts.length > 1) {
+          const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
+          parsedItems = JSON.parse(jsonPart);
+        }
+      } catch {}
+    }
+    if (parsedItems.length === 0) {
+      parsedItems = [{
+        descricao: initialData?.produtoDescricao || "",
+        material: initialData?.produtoMaterial || "",
+        medidas: initialData?.produtoMedidas || "",
+        valor: initialData?.valorSugerido || 0,
+        quantidade: 1,
+        searchQuery: initialData?.produtoDescricao || ""
+      }];
+    }
+    return parsedItems;
+  }, [initialData]);
+
   const isDirty = useMemo(() =>
     form.clienteNome !== baseForm.clienteNome ||
     form.clienteTelefone !== baseForm.clienteTelefone ||
     form.clienteCidade !== baseForm.clienteCidade ||
-    form.produtoDescricao !== baseForm.produtoDescricao ||
-    form.produtoMaterial !== baseForm.produtoMaterial ||
-    form.produtoMedidas !== baseForm.produtoMedidas ||
-    Number(form.valorSugerido) !== Number(baseForm.valorSugerido) ||
     Number(form.validadeDias) !== Number(baseForm.validadeDias) ||
-    Number(form.desconto) !== Number(baseForm.desconto),
-    [form, baseForm]
+    Number(form.desconto) !== Number(baseForm.desconto) ||
+    JSON.stringify(items) !== JSON.stringify(initialItems),
+    [form, baseForm, items, initialItems]
   );
 
-  // Fechamento seguro: dispara alerta se o form estiver sujo
   const handleClose = useCallback(() => {
     if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
     onOpenChange(false);
@@ -108,10 +178,31 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   useEffect(() => {
     if (open) {
       setForm(baseForm);
+      let parsedItems: ItemRow[] = [];
+      const desc = initialData?.produtoDescricao || "";
+      if (desc.includes("===JSON_ITENS===")) {
+        try {
+          const parts = desc.split("===JSON_ITENS===\n");
+          if (parts.length > 1) {
+            const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
+            parsedItems = JSON.parse(jsonPart);
+          }
+        } catch {}
+      }
+      if (parsedItems.length === 0) {
+        parsedItems = [{
+          descricao: initialData?.produtoDescricao || "",
+          material: initialData?.produtoMaterial || "",
+          medidas: initialData?.produtoMedidas || "",
+          valor: initialData?.valorSugerido || 0,
+          quantidade: 1,
+          searchQuery: initialData?.produtoDescricao || ""
+        }];
+      }
+      setItems(parsedItems);
     }
-  }, [open, baseForm]);
+  }, [open, baseForm, initialData]);
 
-  // Carrega configurações da marcenaria para o cabeçalho do PDF
   useEffect(() => {
     async function loadConfig() {
       if (!user) return;
@@ -134,19 +225,117 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   }, [open, user]);
 
   useEffect(() => {
+    async function fetchCatalogo() {
+      try {
+        const { data, error } = await supabase
+          .from("catalogo_produtos")
+          .select("*")
+          .order("nome");
+        if (error) throw error;
+        setCatalogo(data || []);
+      } catch (err) {
+        console.error("Erro ao buscar catálogo:", err);
+      }
+    }
+    if (open) fetchCatalogo();
+  }, [open]);
+
+  useEffect(() => {
     if (printData) {
       handlePrint();
     }
   }, [printData]);
 
+  const productSuggestions = useMemo(() => {
+    if (activeItemSuggestIndex === null) return [];
+    const query = items[activeItemSuggestIndex]?.searchQuery?.trim().toLowerCase() || "";
+    if (!query) return catalogo.slice(0, 5);
+    return catalogo
+      .filter((c) => c.nome.toLowerCase().includes(query))
+      .slice(0, 5);
+  }, [catalogo, items, activeItemSuggestIndex]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-product-suggest-portal="true"]') &&
+        !target.closest('input[placeholder="Buscar por produto..."]')
+      ) {
+        setActiveItemSuggestIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (activeItemSuggestIndex === null) return;
+    const updatePosition = () => {
+      const anchor = productInputRefs.current[activeItemSuggestIndex];
+      if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        const dropdownHeight = 200;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+        
+        setProductSuggestCoords({
+          top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+        });
+      }
+    };
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [activeItemSuggestIndex]);
+
+  const calculatedTotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + (Number(item.quantidade || 1) * Number(item.valor || 0)), 0);
+  }, [items]);
+
+  useEffect(() => {
+    setForm((s) => ({ ...s, valorSugerido: calculatedTotal }));
+  }, [calculatedTotal]);
+
   const set = (k: string, v: any) => {
     setForm((s) => ({ ...s, [k]: v }));
   };
 
+  const updateItem = (idx: number, field: keyof ItemRow, value: any) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const addItem = () => {
+    setItems((prev) => [
+      ...prev,
+      { descricao: "", material: "", medidas: "", valor: 0, quantidade: 1, searchQuery: "" },
+    ]);
+  };
+
+  const removeItem = (idx: number) => {
+    if (items.length <= 1) return;
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+    productInputRefs.current = productInputRefs.current.filter((_, i) => i !== idx);
+    if (activeItemSuggestIndex === idx) {
+      setActiveItemSuggestIndex(null);
+    } else if (activeItemSuggestIndex !== null && activeItemSuggestIndex > idx) {
+      setActiveItemSuggestIndex(activeItemSuggestIndex - 1);
+    }
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.clienteNome || !form.produtoDescricao || form.valorSugerido <= 0) {
-      toast.error("Preencha cliente, descrição do produto e o valor sugerido");
+    const hasEmptyDesc = items.some((item) => !item.descricao?.trim());
+    if (!form.clienteNome || hasEmptyDesc || form.valorSugerido <= 0) {
+      toast.error("Preencha cliente, descrição de todos os itens e verifique os valores");
       return;
     }
 
@@ -160,15 +349,30 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const discountValue = Number(form.desconto || 0);
     const finalValue = Math.max(0, originalValue - discountValue);
 
+    const sanitizedItems = items.map((item) => ({
+      descricao: item.descricao?.trim() || "Item sem descrição",
+      material: item.material?.trim() || "",
+      medidas: item.medidas?.trim() || "",
+      valor: Math.max(0, Number(item.valor) || 0),
+      quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
+      searchQuery: item.searchQuery?.trim() || "",
+    }));
+
+    const produtoString = sanitizedItems.map((i) => i.descricao).filter(Boolean).join(", ");
+    const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
+    const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
+
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
+
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
-      produtoDescricao: form.produtoDescricao,
-      produtoMaterial: form.produtoMaterial,
-      produtoMedidas: form.produtoMedidas,
+      produtoDescricao: finalProdutoDescricao,
+      produtoMaterial: materialString,
+      produtoMedidas: medidasString,
       valorSugerido: originalValue,
       desconto: discountValue,
       validadeDias: Number(form.validadeDias),
@@ -200,9 +404,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             prospecto_nome: form.clienteNome,
             prospecto_telefone: form.clienteTelefone,
             prospecto_cidade: form.clienteCidade,
-            produto_descricao: form.produtoDescricao,
-            produto_material: form.produtoMaterial,
-            produto_medidas: form.produtoMedidas,
+            produto_descricao: finalProdutoDescricao,
+            produto_material: materialString,
+            produto_medidas: medidasString,
             valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: statusVal,
@@ -217,9 +421,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             prospecto_nome: form.clienteNome,
             prospecto_telefone: form.clienteTelefone,
             prospecto_cidade: form.clienteCidade,
-            produto_descricao: form.produtoDescricao,
-            produto_material: form.produtoMaterial,
-            produto_medidas: form.produtoMedidas,
+            produto_descricao: finalProdutoDescricao,
+            produto_material: materialString,
+            produto_medidas: medidasString,
             valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: "Pendente",
@@ -232,7 +436,6 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       window.dispatchEvent(new Event("orcamentos_updated"));
       toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
       
-      // Inicia a impressão
       setPrintData(novoOrcamento);
     } catch (err: any) {
       console.error("Erro ao salvar orçamento:", err);
@@ -245,8 +448,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   };
 
   const handleWhatsApp = async () => {
-    if (!form.clienteNome || !form.produtoDescricao || form.valorSugerido <= 0) {
-      toast.error("Preencha cliente, descrição do produto e o valor sugerido");
+    const hasEmptyDesc = items.some((item) => !item.descricao?.trim());
+    if (!form.clienteNome || hasEmptyDesc || form.valorSugerido <= 0) {
+      toast.error("Preencha cliente, descrição de todos os itens e verifique os valores");
       return;
     }
 
@@ -272,15 +476,30 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const discountValue = Number(form.desconto || 0);
     const finalValue = Math.max(0, originalValue - discountValue);
 
+    const sanitizedItems = items.map((item) => ({
+      descricao: item.descricao?.trim() || "Item sem descrição",
+      material: item.material?.trim() || "",
+      medidas: item.medidas?.trim() || "",
+      valor: Math.max(0, Number(item.valor) || 0),
+      quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
+      searchQuery: item.searchQuery?.trim() || "",
+    }));
+
+    const produtoString = sanitizedItems.map((i) => i.descricao).filter(Boolean).join(", ");
+    const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
+    const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
+
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
+
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
-      produtoDescricao: form.produtoDescricao,
-      produtoMaterial: form.produtoMaterial,
-      produtoMedidas: form.produtoMedidas,
+      produtoDescricao: finalProdutoDescricao,
+      produtoMaterial: materialString,
+      produtoMedidas: medidasString,
       valorSugerido: originalValue,
       desconto: discountValue,
       validadeDias: Number(form.validadeDias),
@@ -312,9 +531,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             prospecto_nome: form.clienteNome,
             prospecto_telefone: form.clienteTelefone,
             prospecto_cidade: form.clienteCidade,
-            produto_descricao: form.produtoDescricao,
-            produto_material: form.produtoMaterial,
-            produto_medidas: form.produtoMedidas,
+            produto_descricao: finalProdutoDescricao,
+            produto_material: materialString,
+            produto_medidas: medidasString,
             valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: statusVal,
@@ -329,9 +548,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             prospecto_nome: form.clienteNome,
             prospecto_telefone: form.clienteTelefone,
             prospecto_cidade: form.clienteCidade,
-            produto_descricao: form.produtoDescricao,
-            produto_material: form.produtoMaterial,
-            produto_medidas: form.produtoMedidas,
+            produto_descricao: finalProdutoDescricao,
+            produto_material: materialString,
+            produto_medidas: medidasString,
             valor_sugerido: finalValue,
             validade_dias: Number(form.validadeDias),
             status: "Pendente",
@@ -341,11 +560,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         }
       }
 
-      // Disparar evento global para recarregar o histórico na listagem
       window.dispatchEvent(new Event("orcamentos_updated"));
       toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
 
-      // Formatar valores para a mensagem
       const formattedOriginal = originalValue.toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -358,14 +575,26 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-      const materialPart = form.produtoMaterial ? form.produtoMaterial : "Não informado";
-      const medidasPart = form.produtoMedidas ? form.produtoMedidas : "Não informado";
+
+      const itemsListText = sanitizedItems
+        .map((item, index) => {
+          const matStr = item.material ? ` (${item.material})` : "";
+          const medStr = item.medidas ? ` - Medidas: ${item.medidas}` : "";
+          const qtdStr = item.quantidade > 1 ? ` (Qtd: ${item.quantidade})` : "";
+          const valStr = item.valor > 0 ? ` - R$ ${item.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "";
+          return `${index + 1}. ${item.descricao}${qtdStr}${matStr}${medStr}${valStr}`;
+        })
+        .join("\n");
 
       const msg = `Olá *${form.clienteNome}*, tudo bem? Aqui é da marcenaria. Segue o resumo do seu orçamento:
-*Projeto:* ${form.produtoDescricao}
-*Material:* ${materialPart} | *Medidas:* ${medidasPart}
-*Valor Original:* R$ ${formattedOriginal}
+
+*Itens do Orçamento:*
+${itemsListText}
+
+*Condições Comerciais:*
+*Valor Sugerido:* R$ ${formattedOriginal}
 ${discountValue > 0 ? `*Desconto Especial:* R$ ${formattedDesconto}\n` : ""}*Valor Final Com Desconto:* R$ ${formattedFinal}
+
 *Validade da proposta:* ${form.validadeDias} dias.
 Qualquer dúvida, estou à disposição!`;
 
@@ -387,8 +616,7 @@ Qualquer dúvida, estou à disposição!`;
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="w-full h-full md:h-auto md:max-w-2xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden flex flex-col"
-        // BLOQUEIO: impede fechamento ao clicar fora do modal (Regra RADIX UI)
+        className="w-full h-full md:h-auto max-h-[90vh] md:max-h-[85vh] md:max-w-2xl md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] p-0 gap-0 overflow-hidden flex flex-col"
         onInteractOutside={(e) => { e.preventDefault(); }}
         onPointerDownOutside={(e) => { e.preventDefault(); }}
         onEscapeKeyDown={(e) => {
@@ -405,13 +633,16 @@ Qualquer dúvida, estou à disposição!`;
               Gere propostas comerciais sem impactar a Linha de Produção ou o Financeiro
             </DialogDescription>
           </div>
+          <button type="button" onClick={handleClose} className="size-10 grid place-items-center rounded-lg hover:bg-accent" aria-label="Fechar modal">
+            <X className="size-5" />
+          </button>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-5 flex-1 overflow-y-auto md:max-h-[75vh]">
+        <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-2.5 md:max-h-[75vh]">
           {/* CLIENTE */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-2">Dados do Cliente</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Dados do Cliente</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <div className="md:col-span-2">
                 <label className="text-xs font-medium">Nome do Cliente *</label>
                 <input
@@ -446,60 +677,45 @@ Qualquer dúvida, estou à disposição!`;
             </div>
           </div>
 
-          {/* PRODUTO */}
+          {/* PRODUTOS */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-2">Dados do Produto / Móvel</p>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.produtoDescricao}
-                  onChange={(e) => set("produtoDescricao", e.target.value)}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                  placeholder="Ex: Guarda-Roupa Planejado de MDF"
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Dados dos Produtos / Móveis</p>
+            <div className="col-span-1 md:col-span-2 space-y-2.5">
+              {items.map((item, idx) => (
+                <ProductCardItem
+                  key={idx}
+                  idx={idx}
+                  item={item}
+                  itemsCount={items.length}
+                  updateItem={updateItem}
+                  removeItem={removeItem}
+                  setActiveItemSuggestIndex={setActiveItemSuggestIndex}
+                  productInputRefs={productInputRefs}
                 />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium">Material principal</label>
-                  <input
-                    type="text"
-                    value={form.produtoMaterial}
-                    onChange={(e) => set("produtoMaterial", e.target.value)}
-                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                    placeholder="Ex: MDF Carvalho e Off white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium">Medidas gerais (AxLxP)</label>
-                  <input
-                    type="text"
-                    value={form.produtoMedidas}
-                    onChange={(e) => set("produtoMedidas", e.target.value)}
-                    className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                    placeholder="Ex: 2.40m x 3.00m x 0.60m"
-                  />
-                </div>
-              </div>
+              ))}
+              <button
+                type="button"
+                onClick={addItem}
+                className="h-9 px-3 inline-flex items-center gap-1.5 rounded-lg border border-amber-600/30 bg-amber-600/5 text-amber-600 text-xs font-medium hover:bg-amber-600/10 transition-colors"
+              >
+                <Plus className="size-3.5" />
+                Adicionar outro produto
+              </button>
             </div>
           </div>
 
           {/* VALOR / VALIDADE */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-2">Condições Comerciais</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Condições Comerciais</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <div>
                 <label className="text-xs font-medium">Valor Sugerido (R$) *</label>
                 <input
                   type="number"
                   required
-                  min="1"
-                  step="0.01"
+                  disabled
                   value={form.valorSugerido || ""}
-                  onChange={(e) => set("valorSugerido", Number(e.target.value) || 0)}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                   placeholder="0.00"
                 />
               </div>
@@ -571,6 +787,101 @@ Qualquer dúvida, estou à disposição!`;
       <div className="hidden">
         <PrintableOrcamento ref={printRef} orcamento={printData} config={config} />
       </div>
+
+      {activeItemSuggestIndex !== null && productSuggestCoords && createPortal(
+        <div
+          data-product-suggest-portal="true"
+          style={{
+            position: "fixed",
+            top: `${productSuggestCoords.top}px`,
+            left: `${productSuggestCoords.left}px`,
+            width: `${productSuggestCoords.width}px`,
+            zIndex: 9999,
+          }}
+          className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
+        >
+          {productSuggestions.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              Nenhum produto no catálogo
+            </div>
+          ) : (
+            <ul className="py-1">
+              {productSuggestions.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const idx = activeItemSuggestIndex;
+                      updateItem(idx, "descricao", c.nome);
+                      updateItem(idx, "material", c.material || "");
+                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      updateItem(idx, "searchQuery", c.nome);
+                      
+                      // Auto-fill measures
+                      let measuresStr = "";
+                      if (c.descricao) {
+                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
+                          try {
+                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+                            if (parts.length > 1) {
+                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                              const parsed = JSON.parse(jsonPart);
+                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                            }
+                          } catch {}
+                        } else {
+                          measuresStr = parseLegacyMedidas(c.descricao);
+                        }
+                      }
+                      if (measuresStr) {
+                        updateItem(idx, "medidas", measuresStr);
+                      }
+                      setActiveItemSuggestIndex(null);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      const idx = activeItemSuggestIndex;
+                      updateItem(idx, "descricao", c.nome);
+                      updateItem(idx, "material", c.material || "");
+                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
+                      updateItem(idx, "searchQuery", c.nome);
+                      
+                      // Auto-fill measures
+                      let measuresStr = "";
+                      if (c.descricao) {
+                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
+                          try {
+                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+                            if (parts.length > 1) {
+                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+                              const parsed = JSON.parse(jsonPart);
+                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+                            }
+                          } catch {}
+                        } else {
+                          measuresStr = parseLegacyMedidas(c.descricao);
+                        }
+                      }
+                      if (measuresStr) {
+                        updateItem(idx, "medidas", measuresStr);
+                      }
+                      setActiveItemSuggestIndex(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm"
+                  >
+                    <p className="font-medium truncate">{c.nome}</p>
+                    {c.material && (
+                      <p className="text-xs text-muted-foreground truncate">{c.material}</p>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>,
+        document.body
+      )}
     </Dialog>
   );
 }
@@ -591,6 +902,30 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
 
     const formatMoeda = (val: number) =>
       val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    const parsedItems = useMemo<ItemRow[]>(() => {
+      const desc = orcamento.produtoDescricao || "";
+      let itemsList: ItemRow[] = [];
+      if (desc.includes("===JSON_ITENS===")) {
+        try {
+          const parts = desc.split("===JSON_ITENS===\n");
+          if (parts.length > 1) {
+            const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
+            itemsList = JSON.parse(jsonPart);
+          }
+        } catch {}
+      }
+      if (itemsList.length === 0) {
+        itemsList = [{
+          descricao: orcamento.produtoDescricao || "",
+          material: orcamento.produtoMaterial || "",
+          medidas: orcamento.produtoMedidas || "",
+          valor: orcamento.valorSugerido || 0,
+          quantidade: 1,
+        }];
+      }
+      return itemsList;
+    }, [orcamento]);
 
     return (
       <div
@@ -679,27 +1014,29 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
-                  <th className="py-2.5 px-4 text-left w-1/3">Item / Atributo</th>
-                  <th className="py-2.5 px-4 text-left">Especificação</th>
+                  <th className="py-2.5 px-4 text-left w-8">#</th>
+                  <th className="py-2.5 px-4 text-left">Móvel / Descrição</th>
+                  <th className="py-2.5 px-4 text-left">Material</th>
+                  <th className="py-2.5 px-4 text-left">Medidas</th>
+                  <th className="py-2.5 px-4 text-center w-12">Qtd</th>
+                  <th className="py-2.5 px-4 text-right w-24">Valor Unit.</th>
+                  <th className="py-2.5 px-4 text-right w-24">Subtotal</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <tr>
-                  <td className="py-3 px-4 font-semibold text-slate-950">Móvel / Descrição</td>
-                  <td className="py-3 px-4 text-slate-800">{orcamento.produtoDescricao}</td>
-                </tr>
-                {orcamento.produtoMaterial && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Material Planejado</td>
-                    <td className="py-3 px-4 text-slate-800">{orcamento.produtoMaterial}</td>
+                {parsedItems.map((item, index) => (
+                  <tr key={index}>
+                    <td className="py-3 px-4 text-slate-400">{index + 1}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">{item.descricao}</td>
+                    <td className="py-3 px-4 text-slate-600">{item.material || "—"}</td>
+                    <td className="py-3 px-4 text-slate-600">{item.medidas || "—"}</td>
+                    <td className="py-3 px-4 text-center text-slate-900">{item.quantidade || 1}</td>
+                    <td className="py-3 px-4 text-right tabular-nums text-slate-800">{formatMoeda(item.valor || 0)}</td>
+                    <td className="py-3 px-4 text-right tabular-nums font-medium text-slate-900">
+                      {formatMoeda((item.quantidade || 1) * (item.valor || 0))}
+                    </td>
                   </tr>
-                )}
-                {orcamento.produtoMedidas && (
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-slate-500">Medidas Gerais</td>
-                    <td className="py-3 px-4 text-slate-800">{orcamento.produtoMedidas}</td>
-                  </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -757,3 +1094,141 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
 );
 
 PrintableOrcamento.displayName = "PrintableOrcamento";
+
+interface ProductCardItemProps {
+  idx: number;
+  item: ItemRow;
+  itemsCount: number;
+  updateItem: (idx: number, field: keyof ItemRow, value: any) => void;
+  removeItem: (idx: number) => void;
+  setActiveItemSuggestIndex: (idx: number | null) => void;
+  productInputRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+}
+
+const ProductCardItem = React.memo(({
+  idx,
+  item,
+  itemsCount,
+  updateItem,
+  removeItem,
+  setActiveItemSuggestIndex,
+  productInputRefs
+}: ProductCardItemProps) => {
+  return (
+    <div className="border border-slate-200 dark:border-border/40 bg-slate-50/50 dark:bg-muted/10 p-3 rounded-xl mb-3 relative">
+      {itemsCount > 1 && (
+        <button
+          type="button"
+          onClick={() => removeItem(idx)}
+          className="absolute top-3 right-3 size-10 inline-flex items-center justify-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition-colors z-10"
+          title="Remover item"
+        >
+          <Trash2 className="size-5" />
+        </button>
+      )}
+
+      {/* Product Autocomplete Search Bar */}
+      <div className="mb-3 pr-9">
+        <label className="text-xs font-medium text-muted-foreground">Buscar no Catálogo</label>
+        <div
+          ref={(el) => {
+            productInputRefs.current[idx] = el;
+          }}
+          className="mt-1 relative"
+        >
+          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={item.searchQuery || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateItem(idx, "searchQuery", val);
+              setActiveItemSuggestIndex(idx);
+            }}
+            onFocus={() => {
+              setActiveItemSuggestIndex(idx);
+            }}
+            placeholder="Buscar por produto..."
+            className="w-full h-10 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          />
+          {(item.searchQuery || item.descricao) && (
+            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+          )}
+        </div>
+      </div>
+
+      {/* Inner Fields Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium">Descrição do Móvel / Projeto *</label>
+          <input
+            type="text"
+            required
+            value={item.descricao}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateItem(idx, "descricao", val);
+              updateItem(idx, "searchQuery", val);
+            }}
+            placeholder="Ex: Armário de cozinha"
+            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Material principal</label>
+          <input
+            type="text"
+            value={item.material}
+            onChange={(e) => updateItem(idx, "material", e.target.value)}
+            placeholder="Ex: MDF Branco"
+            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Medidas (AxLxP)</label>
+          <input
+            type="text"
+            value={item.medidas}
+            onChange={(e) => updateItem(idx, "medidas", e.target.value)}
+            placeholder="Ex: 80x120x60"
+            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Qtd</label>
+          <input
+            type="number"
+            min="1"
+            value={item.quantidade || 1}
+            onChange={(e) => {
+              const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+              updateItem(idx, "quantidade", val);
+            }}
+            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 text-center"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium">Valor do Item (R$)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={item.valor || ""}
+            onChange={(e) => {
+              const val = Math.max(0, parseFloat(e.target.value) || 0);
+              updateItem(idx, "valor", val);
+            }}
+            placeholder="0.00"
+            className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          />
+        </div>
+      </div>
+    </div>
+  );
+});
+
+ProductCardItem.displayName = "ProductCardItem";
