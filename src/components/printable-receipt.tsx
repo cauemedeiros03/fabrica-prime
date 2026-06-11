@@ -68,7 +68,6 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
       <div
         ref={ref}
         className="w-full max-w-[800px] p-8 md:p-12 bg-white text-slate-800 font-sans shadow-none"
-        style={{ contentVisibility: "auto" }}
       >
         {/* CABEÇALHO */}
         <div className="flex flex-row justify-between items-center gap-4 pb-6 border-b-2 border-slate-200">
@@ -227,30 +226,32 @@ export const PrintableReceipt = forwardRef<HTMLDivElement, PrintableReceiptProps
           </div>
         </div>
 
-        {/* RODAPÉ */}
+        {/* LOCAL E DATA */}
         <div
-          className="mt-16 text-sm text-slate-600 break-inside-avoid space-y-12"
+          className="mt-12 text-sm font-medium text-slate-700 break-inside-avoid"
           style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
         >
-          <div className="text-sm font-medium text-slate-700">
-            Maceió - AL, _____ de __________________ de 20___
-          </div>
+          Maceió - AL, _____ de __________________ de 20___
+        </div>
 
-          <div className="grid grid-cols-2 gap-12 pt-8">
-            <div className="flex flex-col items-center justify-end">
-              <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
-                {pedido.cliente}
-              </span>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Cliente</span>
-            </div>
-            <div className="flex flex-col items-center justify-end">
-              <div className="w-full border-b border-slate-300 mb-2"></div>
-              <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
-                {config?.nome_marcenaria || "Marcenaria"}
-              </span>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Responsável</span>
-            </div>
+        {/* SIGNATURES */}
+        <div
+          className="mt-16 grid grid-cols-2 gap-12 break-inside-avoid pt-4"
+          style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+        >
+          <div className="flex flex-col items-center justify-end">
+            <div className="w-full border-b border-slate-300 mb-2"></div>
+            <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
+              {pedido.cliente}
+            </span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Cliente</span>
+          </div>
+          <div className="flex flex-col items-center justify-end">
+            <div className="w-full border-b border-slate-300 mb-2"></div>
+            <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
+              {config?.nome_marcenaria || "Marcenaria"}
+            </span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">Assinatura do Responsável</span>
           </div>
         </div>
       </div>
