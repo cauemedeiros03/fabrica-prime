@@ -141,7 +141,7 @@ function PedidoViewerContent({
               )}
             </div>
             <h2 className="text-lg font-semibold tracking-tight mt-1">
-              Pedido {p.numero?.toString().startsWith('#') ? p.numero : `#${p.numero}`} — {p.clientes?.nome || p.cliente || "Cliente não informado"}
+              {`Pedido #${p.numero?.toString().startsWith('#') ? p.numero.slice(1) : p.numero || p.id} — ${p.clientes?.nome || p.cliente || "Cliente não informado"}`}
             </h2>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 ml-4">

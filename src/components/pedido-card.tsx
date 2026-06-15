@@ -122,12 +122,12 @@ export const PedidoCard = React.memo(function PedidoCard({
         {/* Conteúdo do header: clicável para abrir detalhes */}
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
           <span className="text-xs font-semibold text-muted-foreground">{p.numero}</span>
-          <h4 className="font-semibold text-sm leading-tight mt-0.5">
+          <h4 className="font-bold text-sm leading-tight mt-0.5 text-foreground">
             {p.clientes?.nome || p.cliente || "Cliente não identificado"}
           </h4>
-          <p className="text-xs text-muted-foreground mt-0.5 truncate" title={p.produto}>
+          <span className="w-full block truncate text-sm text-slate-500 mt-1" title={p.produto}>
             {p.produto}
-          </p>
+          </span>
         </div>
 
         <span
