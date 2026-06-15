@@ -7,6 +7,7 @@ import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from
 import { useState, useMemo, useEffect } from "react";
 import { useDespesas, useCreateDespesa, useDeleteDespesa } from "@/hooks/use-despesas";
 import { toast } from "sonner";
+import { PedidoViewerDialog } from "@/components/pedido-viewer-dialog";
 
 export const Route = createFileRoute("/financeiro")({
   component: FinanceiroPage,
@@ -22,6 +23,13 @@ function FinanceiroPage() {
   const { data: PEDIDOS = [], refetch } = usePedidos();
   const { data: despesas = [] } = useDespesas();
   const { data: pagamentos = [] } = useAllPagamentos();
+
+  const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+
+  const selectedPedido = useMemo(() => {
+    return PEDIDOS.find((p) => p.id === selectedPedidoId) || null;
+  }, [PEDIDOS, selectedPedidoId]);
 
   useEffect(() => {
     refetch();
@@ -319,7 +327,14 @@ function FinanceiroPage() {
                 const restante = p.valorTotal - p.valorPago;
                 const pct = (p.valorPago / p.valorTotal) * 100;
                 return (
-                  <div key={p.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-accent/10 transition">
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPedidoId(p.id);
+                      setIsOrderModalOpen(true);
+                    }}
+                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-slate-50 active:bg-slate-100"
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
                         {p.cliente} <span className="text-muted-foreground font-normal">— {p.numero}</span>
@@ -679,6 +694,16 @@ function FinanceiroPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {isOrderModalOpen && (
+        <PedidoViewerDialog
+          pedido={selectedPedido}
+          onClose={() => {
+            setIsOrderModalOpen(false);
+            setSelectedPedidoId(null);
+          }}
+        />
       )}
     </AppShell>
   );
