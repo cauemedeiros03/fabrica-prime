@@ -1,7 +1,9 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Search, UserPlus, Check } from "lucide-react";
-import { useClientes, type Cliente } from "@/hooks/use-clientes";
+import { type Cliente } from "@/hooks/use-clientes";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Props {
   value?: string; // selected cliente id
@@ -11,14 +13,95 @@ interface Props {
 }
 
 export function ClienteAutocomplete({ value, onSelect, onCreateNew, disabled }: Props) {
-  const { data: clientes = [], isLoading } = useClientes();
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [results, setResults] = useState<Cliente[]>([]);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [selected, setSelected] = useState<Cliente | null>(null);
+  const [loadingSelected, setLoadingSelected] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  const selected = clientes.find((c) => c.id === value);
+  // Debounce query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Fetch selected client info when value (ID) changes
+  useEffect(() => {
+    if (!value) {
+      setSelected(null);
+      return;
+    }
+    let active = true;
+    async function fetchSelected() {
+      setLoadingSelected(true);
+      try {
+        const { data, error } = await supabase
+          .from("clientes")
+          .select("*")
+          .eq("id", value!)
+          .single();
+        if (error) throw error;
+        if (active && data) {
+          setSelected(data as Cliente);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar cliente selecionado:", err);
+      } finally {
+        if (active) setLoadingSelected(false);
+      }
+    }
+    fetchSelected();
+    return () => {
+      active = false;
+    };
+  }, [value]);
+
+  // Fetch results debounced
+  useEffect(() => {
+    if (!open || !user?.id) {
+      setResults([]);
+      return;
+    }
+    let active = true;
+    async function fetchResults() {
+      setLoadingResults(true);
+      try {
+        const q = debouncedQuery.trim();
+        let queryBuilder = supabase
+          .from("clientes")
+          .select("id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at")
+          .eq("user_id", user!.id);
+        
+        if (q) {
+          queryBuilder = queryBuilder.or(`nome.ilike.%${q}%,telefone.ilike.%${q}%,email.ilike.%${q}%`);
+        }
+        
+        const { data, error } = await queryBuilder.order("nome").limit(10);
+        if (error) throw error;
+        if (active) {
+          setResults((data || []) as Cliente[]);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar clientes:", err);
+      } finally {
+        if (active) setLoadingResults(false);
+      }
+    }
+    fetchResults();
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery, open, user?.id]);
+
+  const isLoading = loadingResults || loadingSelected;
 
   useEffect(() => {
     if (selected && !query) setQuery(selected.nome);
@@ -64,20 +147,7 @@ export function ClienteAutocomplete({ value, onSelect, onCreateNew, disabled }: 
     };
   }, [open]);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return clientes.slice(0, 8);
-    return clientes
-      .filter(
-        (c) =>
-          c.nome.toLowerCase().includes(q) ||
-          (c.telefone ?? "").toLowerCase().includes(q) ||
-          (c.email ?? "").toLowerCase().includes(q),
-      )
-      .slice(0, 10);
-  }, [clientes, query]);
-
-  const exactMatch = clientes.some((c) => c.nome.toLowerCase() === query.trim().toLowerCase());
+  const exactMatch = results.some((c) => c.nome.toLowerCase() === query.trim().toLowerCase());
 
   return (
     <div ref={ref} className="relative">

@@ -190,7 +190,6 @@ export function NovoPedidoDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [catalogo, setCatalogo] = useState<any[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
 
   // States and refs for Product suggestion portal
@@ -198,14 +197,42 @@ export function NovoPedidoDialog({
   const [productSuggestCoords, setProductSuggestCoords] = useState<{ top: number; left: number; width: number } | null>(null);
   const productInputRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const productSuggestions = useMemo(() => {
-    if (activeItemSuggestIndex === null) return [];
-    const query = items[activeItemSuggestIndex]?.searchQuery?.trim().toLowerCase() || "";
-    if (!query) return catalogo.slice(0, 5);
-    return catalogo
-      .filter((c) => c.nome.toLowerCase().includes(query))
-      .slice(0, 5);
-  }, [catalogo, items, activeItemSuggestIndex]);
+  const [productSuggestions, setProductSuggestions] = useState<any[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  // Debounced product suggestions search querying Supabase directly
+  useEffect(() => {
+    if (activeItemSuggestIndex === null) {
+      setProductSuggestions([]);
+      return;
+    }
+    const query = items[activeItemSuggestIndex]?.searchQuery || "";
+    let active = true;
+
+    const timer = setTimeout(async () => {
+      setLoadingSuggestions(true);
+      try {
+        let qBuilder = supabase.from("catalogo_produtos").select("*");
+        if (query.trim()) {
+          qBuilder = qBuilder.ilike("nome", `%${query.trim()}%`);
+        }
+        const { data, error } = await qBuilder.order("nome").limit(5);
+        if (error) throw error;
+        if (active) {
+          setProductSuggestions(data || []);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar catálogo:", err);
+      } finally {
+        if (active) setLoadingSuggestions(false);
+      }
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeItemSuggestIndex, items, activeItemSuggestIndex !== null ? items[activeItemSuggestIndex]?.searchQuery : null]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -261,19 +288,6 @@ export function NovoPedidoDialog({
       setErrors((er) => ({ ...er, valor_total: undefined }));
     }
   }, [netTotal]);
-
-  useEffect(() => {
-    async function fetchCatalogo() {
-      try {
-        const { data, error } = await supabase.from("catalogo_produtos").select("*").order("nome");
-        if (error) throw error;
-        setCatalogo(data || []);
-      } catch {
-        // catálogo é opcional — falha silenciosa
-      }
-    }
-    if (open) fetchCatalogo();
-  }, [open]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -468,8 +482,8 @@ export function NovoPedidoDialog({
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    if (saving || isUploading) return;
+    const isLoading = saving || isUploading;
+    if (isLoading) return;
 
     if (currentStep < 3) {
       handleNextStep();
@@ -594,6 +608,7 @@ export function NovoPedidoDialog({
 
   if (!open) return null;
   const saving = create.isPending || update.isPending || isSubmitting;
+  const isLoading = saving || isUploading;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-hidden">
@@ -1106,10 +1121,10 @@ export function NovoPedidoDialog({
             ) : (
               <button
                 type="submit"
-                disabled={saving || isUploading}
-                className="h-9 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                disabled={isLoading}
+                className="h-9 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
-                {(saving || isUploading) && <Loader2 className="size-4 animate-spin" />}
+                {isLoading && <Loader2 className="size-4 animate-spin" />}
                 {isUploading
                   ? "Enviando arquivos..."
                   : saving
@@ -1135,7 +1150,11 @@ export function NovoPedidoDialog({
           }}
           className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
         >
-          {productSuggestions.length === 0 ? (
+          {loadingSuggestions ? (
+            <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+              <Loader2 className="size-3.5 animate-spin" /> Carregando...
+            </div>
+          ) : productSuggestions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
               Nenhum produto no catálogo
             </div>

@@ -135,7 +135,6 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   const printRef = useRef<HTMLDivElement>(null);
 
   const [items, setItems] = useState<ItemRow[]>([]);
-  const [catalogo, setCatalogo] = useState<any[]>([]);
 
   // States and refs for Product suggestion portal
   const [activeItemSuggestIndex, setActiveItemSuggestIndex] = useState<number | null>(null);
@@ -249,36 +248,48 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     }
   }, [open, user]);
 
+  const [productSuggestions, setProductSuggestions] = useState<any[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  // Debounced product suggestions search querying Supabase directly
   useEffect(() => {
-    async function fetchCatalogo() {
+    if (activeItemSuggestIndex === null) {
+      setProductSuggestions([]);
+      return;
+    }
+    const query = items[activeItemSuggestIndex]?.searchQuery || "";
+    let active = true;
+
+    const timer = setTimeout(async () => {
+      setLoadingSuggestions(true);
       try {
-        const { data, error } = await supabase
-          .from("catalogo_produtos")
-          .select("*")
-          .order("nome");
+        let qBuilder = supabase.from("catalogo_produtos").select("*");
+        if (query.trim()) {
+          qBuilder = qBuilder.ilike("nome", `%${query.trim()}%`);
+        }
+        const { data, error } = await qBuilder.order("nome").limit(5);
         if (error) throw error;
-        setCatalogo(data || []);
+        if (active) {
+          setProductSuggestions(data || []);
+        }
       } catch (err) {
         console.error("Erro ao buscar catálogo:", err);
+      } finally {
+        if (active) setLoadingSuggestions(false);
       }
-    }
-    if (open) fetchCatalogo();
-  }, [open]);
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeItemSuggestIndex, items, activeItemSuggestIndex !== null ? items[activeItemSuggestIndex]?.searchQuery : null]);
 
   useEffect(() => {
     if (printData) {
       handlePrint();
     }
   }, [printData]);
-
-  const productSuggestions = useMemo(() => {
-    if (activeItemSuggestIndex === null) return [];
-    const query = items[activeItemSuggestIndex]?.searchQuery?.trim().toLowerCase() || "";
-    if (!query) return catalogo.slice(0, 5);
-    return catalogo
-      .filter((c) => c.nome.toLowerCase().includes(query))
-      .slice(0, 5);
-  }, [catalogo, items, activeItemSuggestIndex]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -358,6 +369,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const isLoading = salvando;
+    if (isLoading) return;
     const hasEmptyDesc = items.some((item) => !item.descricao?.trim());
     if (!form.clienteNome || hasEmptyDesc || form.valorSugerido <= 0) {
       toast.error("Preencha cliente, descrição de todos os itens e verifique os valores");
@@ -475,6 +488,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   };
 
   const handleWhatsApp = async () => {
+    const isLoading = salvando;
+    if (isLoading) return;
     const hasEmptyDesc = items.some((item) => !item.descricao?.trim());
     if (!form.clienteNome || hasEmptyDesc || form.valorSugerido <= 0) {
       toast.error("Preencha cliente, descrição de todos os itens e verifique os valores");
@@ -813,7 +828,7 @@ Qualquer dúvida, estou à disposição!`;
               type="button"
               onClick={handleWhatsApp}
               disabled={salvando}
-              className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-60 transition"
+              className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 transition-opacity"
             >
               {salvando ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -825,7 +840,7 @@ Qualquer dúvida, estou à disposição!`;
             <button
               type="submit"
               disabled={salvando}
-              className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-60 transition"
+              className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-opacity"
             >
               {salvando ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -854,7 +869,11 @@ Qualquer dúvida, estou à disposição!`;
           }}
           className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
         >
-          {productSuggestions.length === 0 ? (
+          {loadingSuggestions ? (
+            <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+              <Loader2 className="size-3.5 animate-spin" /> Carregando...
+            </div>
+          ) : productSuggestions.length === 0 ? (
             <div className="px-3 py-2 text-xs text-muted-foreground">
               Nenhum produto no catálogo
             </div>
