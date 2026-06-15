@@ -206,7 +206,7 @@ function ProdutosPage() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base tracking-tight truncate" title={p.nome}>{p.nome}</h3>
+                <h3 className="font-semibold text-base tracking-tight line-clamp-2" title={p.nome}>{p.nome}</h3>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={cleanDescription(p.descricao)}>
                   {cleanDescription(p.descricao) || "Sem descrição"}
                 </p>
