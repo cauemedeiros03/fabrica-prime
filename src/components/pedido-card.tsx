@@ -122,14 +122,12 @@ export const PedidoCard = React.memo(function PedidoCard({
         {/* Conteúdo do header: clicável para abrir detalhes */}
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
           <span className="text-xs font-semibold text-muted-foreground">{p.numero}</span>
-          <h4 className="font-medium text-sm leading-tight mt-0.5 line-clamp-2">
-            {p.produto}
-            {(p.clientes?.nome || p.cliente) && (
-              <span className="text-muted-foreground font-normal">
-                {" "}· {p.clientes?.nome || p.cliente}
-              </span>
-            )}
+          <h4 className="font-semibold text-sm leading-tight mt-0.5">
+            {p.clientes?.nome || p.cliente || "Cliente não identificado"}
           </h4>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate" title={p.produto}>
+            {p.produto}
+          </p>
         </div>
 
         <span

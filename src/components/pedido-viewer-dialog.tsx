@@ -118,7 +118,6 @@ function PedidoViewerContent({
         <div className="flex items-start justify-between px-6 py-4 border-b bg-card/50">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-muted-foreground">{p.numero}</span>
               {etapa && (
                 <span
                   className="text-xs font-medium px-2 py-0.5 rounded-full"
@@ -142,7 +141,7 @@ function PedidoViewerContent({
               )}
             </div>
             <h2 className="text-lg font-semibold tracking-tight mt-1">
-              {p.produto || "Produto não informado"}
+              Pedido {p.numero?.toString().startsWith('#') ? p.numero : `#${p.numero}`} — {p.clientes?.nome || p.cliente || "Cliente não informado"}
             </h2>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 ml-4">
