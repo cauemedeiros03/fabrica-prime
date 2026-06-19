@@ -17,18 +17,24 @@ export interface DespesaInput {
   data: string;
 }
 
-export function useDespesas() {
+export function useDespesas(startDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["despesas", user?.id],
+    queryKey: ["despesas", user?.id, startDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase
+      let query = supabase
         .from("despesas")
         .select("*")
         .eq("user_id", user.id)
         .order("data", { ascending: false });
+
+      if (startDate) {
+        query = query.gte("data", startDate);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as Despesa[];
     },

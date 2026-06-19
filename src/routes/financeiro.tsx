@@ -20,9 +20,23 @@ export const Route = createFileRoute("/financeiro")({
 function FinanceiroPage() {
   const { filtro } = Route.useSearch();
   const navigate = useNavigate();
-  const { data: PEDIDOS = [], refetch } = usePedidos();
-  const { data: despesas = [] } = useDespesas();
-  const { data: pagamentos = [] } = useAllPagamentos();
+  const [periodFilter, setPeriodFilter] = useState("mes_atual");
+
+  const filterStartDate = useMemo(() => {
+    const now = new Date();
+    let monthsToSubtract = 0;
+    if (periodFilter === "3_meses") monthsToSubtract = 2;
+    else if (periodFilter === "6_meses") monthsToSubtract = 5;
+    else if (periodFilter === "12_meses") monthsToSubtract = 11;
+
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - monthsToSubtract, 1);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-01`;
+  }, [periodFilter]);
+
+  const { data: PEDIDOS = [], refetch } = usePedidos(filterStartDate);
+  const { data: despesas = [] } = useDespesas(filterStartDate);
+  const { data: pagamentos = [] } = useAllPagamentos(filterStartDate);
 
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -85,7 +99,12 @@ function FinanceiroPage() {
     const result = [];
     const hoje = new Date();
     
-    for (let i = 6; i >= 0; i--) {
+    const monthsCount = periodFilter === "mes_atual" ? 1 
+                      : periodFilter === "3_meses" ? 3 
+                      : periodFilter === "6_meses" ? 6 
+                      : 12; // 12_meses
+    
+    for (let i = monthsCount - 1; i >= 0; i--) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const year = d.getFullYear();
       const month = d.getMonth();
@@ -113,7 +132,7 @@ function FinanceiroPage() {
       });
     }
     return result;
-  }, [pedidosAtivos, despesas]);
+  }, [pedidosAtivos, despesas, periodFilter]);
 
   const handleSalvarDespesa = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,6 +229,16 @@ function FinanceiroPage() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <select
+            value={periodFilter}
+            onChange={(e) => setPeriodFilter(e.target.value)}
+            className="h-10 px-3 rounded-lg border bg-card text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer w-full sm:w-auto shrink-0 shadow-[var(--shadow-soft)]"
+          >
+            <option value="mes_atual">Mês Atual</option>
+            <option value="3_meses">Últimos 3 Meses</option>
+            <option value="6_meses">Últimos 6 Meses</option>
+            <option value="12_meses">Últimos 12 Meses</option>
+          </select>
           <button
             onClick={() => setOpenNewVenda(true)}
             className="h-10 px-4 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium transition shadow-[var(--shadow-soft)] w-full sm:w-auto shrink-0"
@@ -252,7 +281,12 @@ function FinanceiroPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="font-semibold tracking-tight">Receita vs custos</p>
-            <p className="text-xs text-muted-foreground">Últimos 7 meses</p>
+            <p className="text-xs text-muted-foreground">
+              {periodFilter === "mes_atual" ? "Mês atual" 
+               : periodFilter === "3_meses" ? "Últimos 3 meses" 
+               : periodFilter === "6_meses" ? "Últimos 6 meses" 
+               : "Últimos 12 meses"}
+            </p>
           </div>
         </div>
         <div className="h-72">
@@ -339,7 +373,7 @@ function FinanceiroPage() {
                       <p className="text-sm font-medium truncate">
                         {p.cliente} <span className="text-muted-foreground font-normal">— {p.numero}</span>
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">{p.produto}</p>
+                      <span className="w-full block truncate text-xs text-slate-400">{p.produto}</span>
                     </div>
                     <div className="hidden md:block w-40">
                       <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">

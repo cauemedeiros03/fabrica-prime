@@ -103,18 +103,24 @@ function mapRow(r: Row): Pedido & {
   };
 }
 
-export function usePedidos() {
+export function usePedidos(startDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["pedidos", user?.id],
+    queryKey: ["pedidos", user?.id, startDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase
+      let query = supabase
         .from("pedidos")
         .select("*, clientes(nome, telefone, cidade, email, endereco, numero, bairro, cep, complemento, cpf, instagram, origem)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+
+      if (startDate) {
+        query = query.gte("created_at", startDate);
+      }
+
+      const { data, error } = await query;
       if (error) {
         console.error("Erro na busca de pedidos (usePedidos):", error);
         throw error;
@@ -820,57 +826,66 @@ export function useCreateVendaDireta() {
   });
 }
 
-export function useAllPagamentos() {
+export function useAllPagamentos(startDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["all_pagamentos", user?.id],
+    queryKey: ["all_pagamentos", user?.id, startDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // Fetch both pagamentos and pedidos in parallel with inner join filters
-      const [pagamentosRes, pedidosRes] = await Promise.all([
-        supabase
-          .from("pagamentos")
-          .select(`
-            id,
-            valor,
-            forma,
-            pago_em,
-            observacao,
-            created_at,
-            pedidos!inner (
-              id,
-              produto,
-              numero,
-              user_id,
-              cliente_nome,
-              clientes (
-                nome
-              )
-            )
-          `)
-          .eq("pedidos.user_id", user.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("pedidos")
-          .select(`
+      let pagamentosQuery = supabase
+        .from("pagamentos")
+        .select(`
+          id,
+          valor,
+          forma,
+          pago_em,
+          observacao,
+          created_at,
+          pedidos!inner (
             id,
             produto,
             numero,
-            valor_pago,
-            valor_total,
-            created_at,
-            entrega,
-            etapa,
             user_id,
             cliente_nome,
             clientes (
               nome
             )
-          `)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
+          )
+        `)
+        .eq("pedidos.user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      let pedidosQuery = supabase
+        .from("pedidos")
+        .select(`
+          id,
+          produto,
+          numero,
+          valor_pago,
+          valor_total,
+          created_at,
+          entrega,
+          etapa,
+          user_id,
+          cliente_nome,
+          clientes (
+            nome
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (startDate) {
+        pagamentosQuery = pagamentosQuery.gte("created_at", startDate);
+        pedidosQuery = pedidosQuery.gte("created_at", startDate);
+      }
+
+      // Fetch both pagamentos and pedidos in parallel with inner join filters
+      const [pagamentosRes, pedidosRes] = await Promise.all([
+        pagamentosQuery,
+        pedidosQuery
       ]);
 
       if (pagamentosRes.error) throw pagamentosRes.error;
