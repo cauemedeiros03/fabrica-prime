@@ -100,7 +100,7 @@ function FinanceiroPage() {
     return totalGrossSales - totalAReceber;
   }, [totalGrossSales, totalAReceber]);
 
-  const lucroReal = useMemo(() => {
+  const lucroRealFisico = useMemo(() => {
     return valorRealmenteRecebido - totalDespesas;
   }, [valorRealmenteRecebido, totalDespesas]);
 
@@ -275,7 +275,7 @@ function FinanceiroPage() {
           { l: "Recebido", v: valorRealmenteRecebido, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
           { l: "A receber", v: totalAReceber, i: Clock, c: "text-warning-foreground", bg: "bg-warning/20" },
           { l: "Despesas / Custos", v: totalDespesas, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10" },
-          { l: "Saldo Líquido / Lucro", v: lucroReal, i: Wallet, c: lucroReal >= 0 ? "text-info" : "text-destructive", bg: lucroReal >= 0 ? "bg-info/10" : "bg-destructive/10" },
+          { l: "Saldo Líquido / Lucro", v: lucroRealFisico, i: Wallet, c: lucroRealFisico >= 0 ? "text-info" : "text-destructive", bg: lucroRealFisico >= 0 ? "bg-info/10" : "bg-destructive/10" },
         ].map((s) => (
           <div key={s.l} className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
             <div className="flex items-center justify-between">
