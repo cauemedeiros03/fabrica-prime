@@ -159,8 +159,8 @@ export function NovoPedidoDialog({
       };
       if (initial) {
         const mappedInitial = { ...defaults, ...initial };
-        if (!mappedInitial.data_criacao && mappedInitial.criadoEm) {
-          mappedInitial.data_criacao = mappedInitial.criadoEm.split("T")[0];
+        if (!mappedInitial.data_criacao && (initial as any).criadoEm) {
+          mappedInitial.data_criacao = (initial as any).criadoEm.split("T")[0];
         }
         return mappedInitial;
       }

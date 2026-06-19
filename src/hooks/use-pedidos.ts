@@ -327,7 +327,7 @@ export interface NovoPedidoInput {
   cor?: string;
   observacoes?: string;
   // entrega
-  entrega?: string; // YYYY-MM-DD
+  entrega?: string | null; // YYYY-MM-DD
   prioridade: "baixa" | "media" | "alta" | "urgente";
   etapa: StatusEtapa;
   // financeiro
@@ -344,8 +344,8 @@ export interface NovoPedidoInput {
   instagram?: string;
   origem?: string;
   anexos?: string[];
-  data_criacao?: string;
-  data_entrega_estimada?: string;
+  data_criacao?: string | null;
+  data_entrega_estimada?: string | null;
 }
 
 export function useCreatePedido() {
