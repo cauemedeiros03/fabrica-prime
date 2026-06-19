@@ -22,21 +22,36 @@ function FinanceiroPage() {
   const navigate = useNavigate();
   const [periodFilter, setPeriodFilter] = useState("mes_atual");
 
-  const filterStartDate = useMemo(() => {
+  const { filterStartDate, filterEndDate } = useMemo(() => {
     const now = new Date();
-    let monthsToSubtract = 0;
-    if (periodFilter === "3_meses") monthsToSubtract = 2;
-    else if (periodFilter === "6_meses") monthsToSubtract = 5;
-    else if (periodFilter === "12_meses") monthsToSubtract = 11;
+    let startDate = "";
+    let endDate = "";
 
-    const targetDate = new Date(now.getFullYear(), now.getMonth() - monthsToSubtract, 1);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-01`;
+    if (periodFilter.includes("-")) {
+      const [yearStr, monthStr] = periodFilter.split("-");
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      startDate = `${year}-${pad(month)}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      endDate = `${year}-${pad(month)}-${pad(lastDay)}`;
+    } else {
+      let monthsToSubtract = 0;
+      if (periodFilter === "3_meses") monthsToSubtract = 2;
+      else if (periodFilter === "6_meses") monthsToSubtract = 5;
+      else if (periodFilter === "12_meses") monthsToSubtract = 11;
+
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - monthsToSubtract, 1);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      startDate = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-01`;
+    }
+
+    return { filterStartDate: startDate, filterEndDate: endDate };
   }, [periodFilter]);
 
-  const { data: PEDIDOS = [], refetch } = usePedidos(filterStartDate);
-  const { data: despesas = [] } = useDespesas(filterStartDate);
-  const { data: pagamentos = [] } = useAllPagamentos(filterStartDate);
+  const { data: PEDIDOS = [], refetch } = usePedidos(filterStartDate, filterEndDate ? `${filterEndDate}T23:59:59.999Z` : undefined);
+  const { data: despesas = [] } = useDespesas(filterStartDate, filterEndDate || undefined);
+  const { data: pagamentos = [] } = useAllPagamentos(filterStartDate, filterEndDate ? `${filterEndDate}T23:59:59.999Z` : undefined);
 
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
@@ -116,13 +131,18 @@ function FinanceiroPage() {
     return pendentes.filter((p) => {
       const pDate = new Date(p.criadoEm);
       const now = new Date();
+      if (periodFilter.includes("-")) {
+        const start = new Date(filterStartDate + "T00:00:00");
+        const end = new Date(filterEndDate + "T23:59:59.999");
+        return pDate >= start && pDate <= end;
+      }
       if (periodFilter === "mes_atual") {
         return pDate.getFullYear() === now.getFullYear() && pDate.getMonth() === now.getMonth();
       }
       const cutoff = new Date(filterStartDate + "T00:00:00");
       return pDate >= cutoff;
     });
-  }, [pendentes, periodFilter, filterStartDate]);
+  }, [pendentes, periodFilter, filterStartDate, filterEndDate]);
 
   const filteredPagamentos = useMemo(() => {
     return pagamentos.filter((pag) => {
@@ -132,38 +152,54 @@ function FinanceiroPage() {
         dateObj = new Date(rawDate.includes("T") ? rawDate : `${rawDate}T12:00:00`);
       }
       const now = new Date();
+      if (periodFilter.includes("-")) {
+        const start = new Date(filterStartDate + "T00:00:00");
+        const end = new Date(filterEndDate + "T23:59:59.999");
+        return dateObj >= start && dateObj <= end;
+      }
       if (periodFilter === "mes_atual") {
         return dateObj.getFullYear() === now.getFullYear() && dateObj.getMonth() === now.getMonth();
       }
       const cutoff = new Date(filterStartDate + "T00:00:00");
       return dateObj >= cutoff;
     });
-  }, [pagamentos, periodFilter, filterStartDate]);
+  }, [pagamentos, periodFilter, filterStartDate, filterEndDate]);
 
   const filteredDespesas = useMemo(() => {
     return despesas.filter((dsp) => {
       const dDate = new Date(dsp.data + "T00:00:00");
       const now = new Date();
+      if (periodFilter.includes("-")) {
+        const start = new Date(filterStartDate + "T00:00:00");
+        const end = new Date(filterEndDate + "T23:59:59.999");
+        return dDate >= start && dDate <= end;
+      }
       if (periodFilter === "mes_atual") {
         return dDate.getFullYear() === now.getFullYear() && dDate.getMonth() === now.getMonth();
       }
       const cutoff = new Date(filterStartDate + "T00:00:00");
       return dDate >= cutoff;
     });
-  }, [despesas, periodFilter, filterStartDate]);
+  }, [despesas, periodFilter, filterStartDate, filterEndDate]);
 
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const result = [];
-    const hoje = new Date();
     
-    const monthsCount = periodFilter === "mes_atual" ? 1 
+    const referenceDate = periodFilter.includes("-") 
+      ? (() => {
+          const [year, month] = periodFilter.split("-").map(Number);
+          return new Date(year, month - 1, 1);
+        })()
+      : new Date();
+
+    const monthsCount = (periodFilter === "mes_atual" || periodFilter.includes("-")) ? 1 
                       : periodFilter === "3_meses" ? 3 
                       : periodFilter === "6_meses" ? 6 
                       : 12; // 12_meses
     
     for (let i = monthsCount - 1; i >= 0; i--) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - i, 1);
       const year = d.getFullYear();
       const month = d.getMonth();
       
@@ -292,10 +328,20 @@ function FinanceiroPage() {
             onChange={(e) => setPeriodFilter(e.target.value)}
             className="h-10 px-3 rounded-lg border bg-card text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring/30 cursor-pointer w-full sm:w-auto shrink-0 shadow-[var(--shadow-soft)]"
           >
-            <option value="mes_atual">Mês Atual</option>
-            <option value="3_meses">Últimos 3 Meses</option>
-            <option value="6_meses">Últimos 6 Meses</option>
-            <option value="12_meses">Últimos 12 Meses</option>
+            <optgroup label="Períodos">
+              <option value="mes_atual">Mês Atual</option>
+              <option value="3_meses">Últimos 3 Meses</option>
+              <option value="6_meses">Últimos 6 Meses</option>
+              <option value="12_meses">Últimos 12 Meses</option>
+            </optgroup>
+            <optgroup label="Meses de 2026">
+              <option value="2026-06">Junho 2026</option>
+              <option value="2026-05">Maio 2026</option>
+              <option value="2026-04">Abril 2026</option>
+              <option value="2026-03">Março 2026</option>
+              <option value="2026-02">Fevereiro 2026</option>
+              <option value="2026-01">Janeiro 2026</option>
+            </optgroup>
           </select>
           <button
             onClick={() => setOpenNewVenda(true)}
@@ -343,7 +389,15 @@ function FinanceiroPage() {
               {periodFilter === "mes_atual" ? "Mês atual" 
                : periodFilter === "3_meses" ? "Últimos 3 meses" 
                : periodFilter === "6_meses" ? "Últimos 6 meses" 
-               : "Últimos 12 meses"}
+               : periodFilter === "12_meses" ? "Últimos 12 meses"
+               : `Mês de ${
+                   periodFilter === "2026-06" ? "Junho 2026"
+                   : periodFilter === "2026-05" ? "Maio 2026"
+                   : periodFilter === "2026-04" ? "Abril 2026"
+                   : periodFilter === "2026-03" ? "Março 2026"
+                   : periodFilter === "2026-02" ? "Fevereiro 2026"
+                   : "Janeiro 2026"
+                 }`}
             </p>
           </div>
         </div>

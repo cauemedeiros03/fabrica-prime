@@ -17,10 +17,10 @@ export interface DespesaInput {
   data: string;
 }
 
-export function useDespesas(startDate?: string) {
+export function useDespesas(startDate?: string, endDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["despesas", user?.id, startDate],
+    queryKey: ["despesas", user?.id, startDate, endDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
@@ -32,6 +32,9 @@ export function useDespesas(startDate?: string) {
 
       if (startDate) {
         query = query.gte("data", startDate);
+      }
+      if (endDate) {
+        query = query.lte("data", endDate);
       }
 
       const { data, error } = await query;

@@ -103,10 +103,10 @@ function mapRow(r: Row): Pedido & {
   };
 }
 
-export function usePedidos(startDate?: string) {
+export function usePedidos(startDate?: string, endDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["pedidos", user?.id, startDate],
+    queryKey: ["pedidos", user?.id, startDate, endDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
@@ -118,6 +118,9 @@ export function usePedidos(startDate?: string) {
 
       if (startDate) {
         query = query.gte("created_at", startDate);
+      }
+      if (endDate) {
+        query = query.lte("created_at", endDate);
       }
 
       const { data, error } = await query;
@@ -826,10 +829,10 @@ export function useCreateVendaDireta() {
   });
 }
 
-export function useAllPagamentos(startDate?: string) {
+export function useAllPagamentos(startDate?: string, endDate?: string) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["all_pagamentos", user?.id, startDate],
+    queryKey: ["all_pagamentos", user?.id, startDate, endDate],
     enabled: !!user?.id,
     queryFn: async () => {
       if (!user?.id) throw new Error("Usuário não autenticado");
@@ -880,6 +883,10 @@ export function useAllPagamentos(startDate?: string) {
       if (startDate) {
         pagamentosQuery = pagamentosQuery.gte("created_at", startDate);
         pedidosQuery = pedidosQuery.gte("created_at", startDate);
+      }
+      if (endDate) {
+        pagamentosQuery = pagamentosQuery.lte("created_at", endDate);
+        pedidosQuery = pedidosQuery.lte("created_at", endDate);
       }
 
       // Fetch both pagamentos and pedidos in parallel with inner join filters
