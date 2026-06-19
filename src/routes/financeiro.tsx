@@ -84,15 +84,25 @@ function FinanceiroPage() {
     });
   }, [PEDIDOS]);
 
-  const recebido = pedidosAtivos.reduce((s, p) => s + p.valorPago, 0);
-  const aReceber = pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
-  const pendentes = pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
+  const recebido = useMemo(() => {
+    return pagamentos.reduce((acc, p) => acc + Number(p.valor), 0);
+  }, [pagamentos]);
+
+  const aReceber = useMemo(() => {
+    return pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
+  }, [pedidosAtivos]);
+
+  const pendentes = useMemo(() => {
+    return pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
+  }, [pedidosAtivos]);
 
   const despesasTotal = useMemo(() => {
     return despesas.reduce((acc, d) => acc + Number(d.valor), 0);
   }, [despesas]);
 
-  const saldoLiquido = recebido - despesasTotal;
+  const saldoLiquido = useMemo(() => {
+    return recebido - despesasTotal;
+  }, [recebido, despesasTotal]);
 
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
