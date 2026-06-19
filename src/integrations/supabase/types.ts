@@ -294,6 +294,8 @@ export type Database = {
           user_id: string
           valor_pago: number
           valor_total: number
+          data_criacao: string | null
+          data_entrega_estimada: string | null
         }
         Insert: {
           anexos?: string[] | null
@@ -315,6 +317,8 @@ export type Database = {
           user_id?: string
           valor_pago?: number
           valor_total?: number
+          data_criacao?: string | null
+          data_entrega_estimada?: string | null
         }
         Update: {
           anexos?: string[] | null
@@ -336,6 +340,8 @@ export type Database = {
           user_id?: string
           valor_pago?: number
           valor_total?: number
+          data_criacao?: string | null
+          data_entrega_estimada?: string | null
         }
         Relationships: [
           {

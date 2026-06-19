@@ -72,6 +72,21 @@ function parseLegacyMedidas(desc: string): string {
   return "";
 }
 
+function calculateBusinessDaysDate(dataCriacaoStr: string, businessDaysChosen: number): string {
+  if (!dataCriacaoStr) return "";
+  const [year, month, day] = dataCriacaoStr.split("-").map(Number);
+  let resultDate = new Date(year, month - 1, day);
+  let count = 0;
+  while (count < businessDaysChosen) {
+    resultDate.setDate(resultDate.getDate() + 1);
+    if (resultDate.getDay() !== 0 && resultDate.getDay() !== 6) {
+      count++;
+    }
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${resultDate.getFullYear()}-${pad(resultDate.getMonth() + 1)}-${pad(resultDate.getDate())}`;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const EMPTY_FORM: NovoPedidoInput = {
@@ -101,6 +116,8 @@ const EMPTY_FORM: NovoPedidoInput = {
   instagram: "",
   origem: "",
   anexos: [],
+  data_criacao: "",
+  data_entrega_estimada: "",
 };
 
 interface ItemRow {
@@ -134,9 +151,22 @@ export function NovoPedidoDialog({
   const update = useUpdatePedido();
 
   const initialForm = useMemo<NovoPedidoInput>(
-    () => (initial ? { ...EMPTY_FORM, ...initial } : EMPTY_FORM),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [initial?.id]
+    () => {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const defaults = {
+        ...EMPTY_FORM,
+        data_criacao: todayStr,
+      };
+      if (initial) {
+        const mappedInitial = { ...defaults, ...initial };
+        if (!mappedInitial.data_criacao && mappedInitial.criadoEm) {
+          mappedInitial.data_criacao = mappedInitial.criadoEm.split("T")[0];
+        }
+        return mappedInitial;
+      }
+      return defaults;
+    },
+    [initial, open]
   );
 
   const initialObsAdicionais = useMemo(() => {
@@ -191,6 +221,28 @@ export function NovoPedidoDialog({
   const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [prazoDias, setPrazoDias] = useState("");
+
+  const handlePrazoChange = (dias: string) => {
+    setPrazoDias(dias);
+    const businessDays = parseInt(dias, 10);
+    if (form.data_criacao && !isNaN(businessDays) && businessDays > 0) {
+      const calculatedDate = calculateBusinessDaysDate(form.data_criacao, businessDays);
+      setForm((s) => ({ ...s, entrega: calculatedDate }));
+    }
+  };
+
+  const handleDataCriacaoChange = (dateVal: string) => {
+    setForm((s) => {
+      const updated = { ...s, data_criacao: dateVal };
+      const businessDays = parseInt(prazoDias, 10);
+      if (dateVal && !isNaN(businessDays) && businessDays > 0) {
+        const calculatedDate = calculateBusinessDaysDate(dateVal, businessDays);
+        updated.entrega = calculatedDate;
+      }
+      return updated;
+    });
+  };
 
   // States and refs for Product suggestion portal
   const [activeItemSuggestIndex, setActiveItemSuggestIndex] = useState<number | null>(null);
@@ -424,6 +476,7 @@ export function NovoPedidoDialog({
       setObservacoesAdicionais(initialObsAdicionais);
       setErrors({});
       setCurrentStep(1);
+      setPrazoDias("");
       fetchFormaPagamento();
     }
   }, [open, initialForm, initialItems, initialObsAdicionais, isEdit, initial?.id]);
@@ -582,12 +635,21 @@ export function NovoPedidoDialog({
         observacoesAdicionais.trim() ? "\n\n" : ""
       }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
 
+      let estimatedDeliveryDate = form.entrega;
+      const businessDays = parseInt(prazoDias, 10);
+      if (form.data_criacao && !isNaN(businessDays) && businessDays > 0) {
+        estimatedDeliveryDate = calculateBusinessDaysDate(form.data_criacao, businessDays);
+      }
+
       const payload = {
         ...form,
         cliente_id: finalClienteId,
         produto: produtoString || "Produto não informado",
         material: materialString,
         observacoes: finalObs,
+        data_criacao: form.data_criacao || new Date().toISOString().split("T")[0],
+        data_entrega_estimada: estimatedDeliveryDate || null,
+        entrega: estimatedDeliveryDate || form.entrega || null,
       };
 
       if (isEdit) {
@@ -898,6 +960,27 @@ export function NovoPedidoDialog({
           {currentStep === 3 && (
             <>
               <Section title="Entrega & Status">
+                <Field
+                  label="Data do Pedido / Criação"
+                  type="date"
+                  value={form.data_criacao || ""}
+                  onChange={handleDataCriacaoChange}
+                />
+                <div>
+                  <label className="text-xs font-medium">Prazo de Entrega (Dias Úteis)</label>
+                  <select
+                    value={prazoDias}
+                    onChange={(e) => handlePrazoChange(e.target.value)}
+                    className="mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="7">7 Dias Úteis</option>
+                    <option value="15">15 Dias Úteis</option>
+                    <option value="30">30 Dias Úteis</option>
+                    <option value="45">45 Dias Úteis</option>
+                    <option value="60">60 Dias Úteis</option>
+                  </select>
+                </div>
                 <Field
                   label="Data estimada de entrega"
                   type="date"

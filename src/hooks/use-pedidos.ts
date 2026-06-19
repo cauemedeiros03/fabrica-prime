@@ -37,6 +37,8 @@ type Row = {
   } | null;
   anexos: string[] | null;
   historico_producao: any[] | null;
+  data_criacao?: string | null;
+  data_entrega_estimada?: string | null;
 };
 
 function mapRow(r: Row): Pedido & {
@@ -54,6 +56,8 @@ function mapRow(r: Row): Pedido & {
   origem?: string;
   historico_producao?: any[];
   desconto?: number;
+  data_criacao?: string;
+  data_entrega_estimada?: string;
 } {
   const c = r.clientes;
   const addressParts = c
@@ -100,6 +104,8 @@ function mapRow(r: Row): Pedido & {
     clientes: c ? { nome: c.nome } : null,
     anexos: Array.isArray(r.anexos) ? (r.anexos as string[]) : [],
     historico_producao: Array.isArray(r.historico_producao) ? r.historico_producao : [],
+    data_criacao: r.data_criacao ?? undefined,
+    data_entrega_estimada: r.data_entrega_estimada ?? undefined,
   };
 }
 
@@ -338,6 +344,8 @@ export interface NovoPedidoInput {
   instagram?: string;
   origem?: string;
   anexos?: string[];
+  data_criacao?: string;
+  data_entrega_estimada?: string;
 }
 
 export function useCreatePedido() {
@@ -417,6 +425,8 @@ export function useCreatePedido() {
         historico_producao: [
           { etapa: etapaLabel, data: dataStr }
         ],
+        data_criacao: input.data_criacao || null,
+        data_entrega_estimada: input.data_entrega_estimada || null,
       };
 
       const { data: pedido, error: e2 } = await (supabase
@@ -514,6 +524,8 @@ export function useUpdatePedido() {
           desconto: Number(input.desconto) || 0,
           anexos: input.anexos,
           historico_producao: updatedHist,
+          data_criacao: input.data_criacao || null,
+          data_entrega_estimada: input.data_entrega_estimada || null,
         })
         .eq("id", id)
         .eq("user_id", user.id);
