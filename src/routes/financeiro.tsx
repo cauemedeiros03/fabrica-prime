@@ -84,25 +84,29 @@ function FinanceiroPage() {
     });
   }, [PEDIDOS]);
 
-  const recebido = useMemo(() => {
-    return pagamentos.reduce((acc, p) => acc + Number(p.valor), 0);
-  }, [pagamentos]);
+  const totalGrossSales = useMemo(() => {
+    return pedidosAtivos.reduce((s, p) => s + p.valorTotal, 0);
+  }, [pedidosAtivos]);
 
-  const aReceber = useMemo(() => {
+  const totalAReceber = useMemo(() => {
     return pedidosAtivos.reduce((s, p) => s + (p.valorTotal - p.valorPago), 0);
   }, [pedidosAtivos]);
+
+  const totalDespesas = useMemo(() => {
+    return despesas.reduce((acc, d) => acc + Number(d.valor), 0);
+  }, [despesas]);
+
+  const valorRealmenteRecebido = useMemo(() => {
+    return totalGrossSales - totalAReceber;
+  }, [totalGrossSales, totalAReceber]);
+
+  const lucroReal = useMemo(() => {
+    return valorRealmenteRecebido - totalDespesas;
+  }, [valorRealmenteRecebido, totalDespesas]);
 
   const pendentes = useMemo(() => {
     return pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
   }, [pedidosAtivos]);
-
-  const despesasTotal = useMemo(() => {
-    return despesas.reduce((acc, d) => acc + Number(d.valor), 0);
-  }, [despesas]);
-
-  const saldoLiquido = useMemo(() => {
-    return recebido - despesasTotal;
-  }, [recebido, despesasTotal]);
 
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -268,10 +272,10 @@ function FinanceiroPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { l: "Recebido", v: recebido, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
-          { l: "A receber", v: aReceber, i: Clock, c: "text-warning-foreground", bg: "bg-warning/20" },
-          { l: "Despesas / Custos", v: despesasTotal, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10" },
-          { l: "Saldo Líquido / Lucro", v: saldoLiquido, i: Wallet, c: saldoLiquido >= 0 ? "text-info" : "text-destructive", bg: saldoLiquido >= 0 ? "bg-info/10" : "bg-destructive/10" },
+          { l: "Recebido", v: valorRealmenteRecebido, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
+          { l: "A receber", v: totalAReceber, i: Clock, c: "text-warning-foreground", bg: "bg-warning/20" },
+          { l: "Despesas / Custos", v: totalDespesas, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10" },
+          { l: "Saldo Líquido / Lucro", v: lucroReal, i: Wallet, c: lucroReal >= 0 ? "text-info" : "text-destructive", bg: lucroReal >= 0 ? "bg-info/10" : "bg-destructive/10" },
         ].map((s) => (
           <div key={s.l} className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
             <div className="flex items-center justify-between">
