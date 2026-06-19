@@ -112,6 +112,46 @@ function FinanceiroPage() {
     return pedidosAtivos.filter((p) => p.valorPago < p.valorTotal);
   }, [pedidosAtivos]);
 
+  const filteredPendentes = useMemo(() => {
+    return pendentes.filter((p) => {
+      const pDate = new Date(p.criadoEm);
+      const now = new Date();
+      if (periodFilter === "mes_atual") {
+        return pDate.getFullYear() === now.getFullYear() && pDate.getMonth() === now.getMonth();
+      }
+      const cutoff = new Date(filterStartDate + "T00:00:00");
+      return pDate >= cutoff;
+    });
+  }, [pendentes, periodFilter, filterStartDate]);
+
+  const filteredPagamentos = useMemo(() => {
+    return pagamentos.filter((pag) => {
+      const rawDate = pag.pago_em || pag.created_at || new Date();
+      let dateObj = new Date(rawDate);
+      if (isNaN(dateObj.getTime()) && typeof rawDate === "string") {
+        dateObj = new Date(rawDate.includes("T") ? rawDate : `${rawDate}T12:00:00`);
+      }
+      const now = new Date();
+      if (periodFilter === "mes_atual") {
+        return dateObj.getFullYear() === now.getFullYear() && dateObj.getMonth() === now.getMonth();
+      }
+      const cutoff = new Date(filterStartDate + "T00:00:00");
+      return dateObj >= cutoff;
+    });
+  }, [pagamentos, periodFilter, filterStartDate]);
+
+  const filteredDespesas = useMemo(() => {
+    return despesas.filter((dsp) => {
+      const dDate = new Date(dsp.data + "T00:00:00");
+      const now = new Date();
+      if (periodFilter === "mes_atual") {
+        return dDate.getFullYear() === now.getFullYear() && dDate.getMonth() === now.getMonth();
+      }
+      const cutoff = new Date(filterStartDate + "T00:00:00");
+      return dDate >= cutoff;
+    });
+  }, [despesas, periodFilter, filterStartDate]);
+
   const chartData = useMemo(() => {
     const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const result = [];
@@ -331,10 +371,10 @@ function FinanceiroPage() {
             <p className="font-semibold tracking-tight">Fluxo de Caixa / Movimentações</p>
             <p className="text-xs text-muted-foreground">
               {activeTab === "receber"
-                ? `${pendentes.length} pagamentos pendentes de clientes`
+                ? `${filteredPendentes.length} pagamentos pendentes de clientes`
                 : activeTab === "vendas"
-                ? `${pagamentos.length} venda(s) / receita(s) realizada(s)`
-                : `${despesas.length} despesa(s) registrada(s)`}
+                ? `${filteredPagamentos.length} venda(s) / receita(s) realizada(s)`
+                : `${filteredDespesas.length} despesa(s) registrada(s)`}
             </p>
           </div>
           
@@ -370,12 +410,12 @@ function FinanceiroPage() {
 
         {activeTab === "receber" && (
           <div className="divide-y">
-            {pendentes.length === 0 ? (
+            {filteredPendentes.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 Nenhum pagamento pendente.
               </div>
             ) : (
-              pendentes.map((p) => {
+              filteredPendentes.map((p) => {
                 const restante = p.valorTotal - p.valorPago;
                 const pct = (p.valorPago / p.valorTotal) * 100;
                 return (
@@ -415,7 +455,7 @@ function FinanceiroPage() {
 
         {activeTab === "vendas" && (
           <div className="overflow-x-auto">
-            {pagamentos.length === 0 ? (
+            {filteredPagamentos.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 Nenhuma venda registrada.
               </div>
@@ -430,7 +470,7 @@ function FinanceiroPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {pagamentos.map((pag) => {
+                  {filteredPagamentos.map((pag) => {
                     const rawDate = pag.pago_em || pag.created_at || new Date();
                     let dateObj = new Date(rawDate);
                     if (isNaN(dateObj.getTime()) && typeof rawDate === "string") {
@@ -472,7 +512,7 @@ function FinanceiroPage() {
 
         {activeTab === "despesas" && (
           <div className="overflow-x-auto">
-            {despesas.length === 0 ? (
+            {filteredDespesas.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 Nenhuma despesa registrada. Clique em "+ Lançar Gasto" para começar.
               </div>
@@ -487,7 +527,7 @@ function FinanceiroPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {despesas.map((dsp) => {
+                  {filteredDespesas.map((dsp) => {
                     const dataFormatada = new Date(dsp.data + "T00:00:00").toLocaleDateString("pt-BR");
                     return (
                       <tr key={dsp.id} className="hover:bg-accent/20 transition group">
