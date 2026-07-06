@@ -57,6 +57,7 @@ export type Database = {
           material: string | null
           cor_acabamento: string | null
           criado_em: string
+          imagem_url: string | null
         }
         Insert: {
           id?: string
@@ -67,6 +68,7 @@ export type Database = {
           material?: string | null
           cor_acabamento?: string | null
           criado_em?: string
+          imagem_url?: string | null
         }
         Update: {
           id?: string
@@ -77,6 +79,7 @@ export type Database = {
           material?: string | null
           cor_acabamento?: string | null
           criado_em?: string
+          imagem_url?: string | null
         }
         Relationships: []
       }

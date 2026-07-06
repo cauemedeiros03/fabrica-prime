@@ -20,6 +20,7 @@ import {
   PackageOpen,
   X,
   Package,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -76,7 +77,7 @@ function ProdutosPage() {
     try {
       const { data, error } = await supabase
         .from("catalogo_produtos")
-        .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em")
+        .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em, imagem_url")
         .order("nome", { ascending: true });
         
       console.log('Produtos fetch:', data, error);
@@ -121,6 +122,7 @@ function ProdutosPage() {
       tipo_movel: p.tipo_movel ?? "",
       material: p.material ?? "",
       cor_acabamento: p.cor_acabamento ?? "",
+      imagem_url: p.imagem_url ?? "",
     });
 
   const apagar = async () => {
@@ -186,9 +188,13 @@ function ProdutosPage() {
               className="group rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative"
             >
               <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Package className="size-5" />
-                </div>
+                {p.imagem_url ? (
+                  <img src={p.imagem_url} alt={p.nome} className="size-10 rounded-xl object-cover shrink-0 bg-slate-100" />
+                ) : (
+                  <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Package className="size-5" />
+                  </div>
+                )}
                 <div className="flex md:hidden items-center gap-1">
                   <button
                     onClick={() => abrirEditar(p)}
@@ -331,6 +337,7 @@ function ProdutoDialog({
     tipo_movel: "",
     material: "",
     cor_acabamento: "",
+    imagem_url: "",
   });
 
   const [altura, setAltura] = useState("");
@@ -340,7 +347,10 @@ function ProdutoDialog({
   useEffect(() => {
     if (open) {
       if (initial) {
-        setForm(initial);
+        setForm({
+          ...initial,
+          imagem_url: initial.imagem_url || "",
+        });
         // Extract dimensions
         const rawDesc = initial.descricao || "";
         if (rawDesc.includes("===JSON_MEDIDAS===")) {
@@ -380,6 +390,7 @@ function ProdutoDialog({
           tipo_movel: "",
           material: "",
           cor_acabamento: "",
+          imagem_url: "",
         });
         setAltura("");
         setLargura("");
@@ -439,6 +450,96 @@ function ProdutoDialog({
   if (!open) return null;
   const saving = create.isPending || update.isPending;
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const compressImage = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Could not get canvas 2d context"));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Image compression failed"));
+              }
+            },
+            "image/jpeg",
+            0.7
+          );
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    try {
+      const file = files[0];
+      const compressedBlob = await compressImage(file);
+      
+      const fileExt = "jpg";
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("produtos")
+        .upload(filePath, compressedBlob, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("produtos").getPublicUrl(filePath);
+
+      set("imagem_url", publicUrl);
+      toast.success("Imagem enviada com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao enviar imagem:", err);
+      toast.error("Erro ao enviar imagem", { description: err?.message || "" });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
       <div
@@ -463,6 +564,45 @@ function ProdutoDialog({
         </div>
 
         <form onSubmit={onSubmit} className="px-6 py-5 space-y-4 flex-1 overflow-y-auto md:flex-none">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition cursor-pointer relative bg-slate-50/50 dark:bg-slate-900/50">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              id="product-image-upload"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            <label htmlFor="product-image-upload" className="w-full flex flex-col items-center justify-center cursor-pointer">
+              {uploadingImage ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">Enviando imagem...</span>
+                </div>
+              ) : form.imagem_url ? (
+                <div className="relative w-full flex items-center justify-center">
+                  <img src={form.imagem_url} alt="Preview" className="h-28 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      set("imagem_url", "");
+                    }}
+                    className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5 py-2">
+                  <Camera className="size-6 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Tirar foto ou escolher imagem</span>
+                </div>
+              )}
+            </label>
+          </div>
+
           <div>
             <label className="text-xs font-medium">Nome do Produto *</label>
             <input

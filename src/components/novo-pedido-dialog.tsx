@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Paperclip, FileText, Trash2, Plus, Search, Check } from "lucide-react";
+import { X, Loader2, Paperclip, FileText, Trash2, Plus, Search, Check, Sofa } from "lucide-react";
 import { toast } from "sonner";
 import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-data";
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
@@ -1305,12 +1305,28 @@ export function NovoPedidoDialog({
                       }
                       setActiveItemSuggestIndex(null);
                     }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm"
+                    className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0"
                   >
-                    <p className="font-medium truncate">{c.nome}</p>
-                    {c.material && (
-                      <p className="text-xs text-muted-foreground truncate">{c.material}</p>
+                    {c.imagem_url ? (
+                      <img
+                        src={c.imagem_url}
+                        alt={c.nome}
+                        className="w-8 h-8 rounded-md object-cover mr-2 bg-slate-100 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">
+                        <Sofa className="size-4" />
+                      </div>
                     )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
+                        {c.nome}
+                        {c.preco != null && ` - ${moeda(c.preco)}`}
+                      </p>
+                      {c.material && (
+                        <p className="text-xs text-muted-foreground truncate">{c.material}</p>
+                      )}
+                    </div>
                   </button>
                 </li>
               ))}
