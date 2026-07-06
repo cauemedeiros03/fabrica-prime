@@ -343,6 +343,7 @@ function ProdutoDialog({
   const [altura, setAltura] = useState("");
   const [largura, setLargura] = useState("");
   const [profundidade, setProfundidade] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -449,8 +450,6 @@ function ProdutoDialog({
 
   if (!open) return null;
   const saving = create.isPending || update.isPending;
-
-  const [uploadingImage, setUploadingImage] = useState(false);
 
   const compressImage = async (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
