@@ -59,6 +59,27 @@ function parseLegacyMedidasToMeters(desc: string): { altura: string; largura: st
   return { altura: "", largura: "", profundidade: "" };
 }
 
+function parseMedidas(desc: string | null | undefined): { altura: string; largura: string; profundidade: string } {
+  if (!desc) return { altura: "", largura: "", profundidade: "" };
+  if (desc.includes("===JSON_MEDIDAS===")) {
+    try {
+      const parts = desc.split("===JSON_MEDIDAS===\n");
+      if (parts.length > 1) {
+        const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+        const parsed = JSON.parse(jsonPart);
+        return {
+          altura: parsed.altura || "",
+          largura: parsed.largura || "",
+          profundidade: parsed.profundidade || "",
+        };
+      }
+    } catch (e) {
+      console.error("Erro ao fazer parse de medidas JSON:", e);
+    }
+  }
+  return parseLegacyMedidasToMeters(desc);
+}
+
 function ProdutosPage() {
   const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -70,6 +91,7 @@ function ProdutosPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<(ProdutoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<Produto | null>(null);
+  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
 
   const fetchProdutos = async () => {
     if (!user?.id) return;
@@ -185,79 +207,83 @@ function ProdutosPage() {
           {filtrados.map((p) => (
             <div
               key={p.id}
-              className="group rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative"
+              onClick={() => setSelectedProduto(p)}
+              className="group overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative cursor-pointer"
             >
-              <div className="flex items-start justify-between gap-3 mb-3">
+              {/* Imagem Banner */}
+              <div className="relative overflow-hidden w-full h-48 bg-slate-50 border-b">
                 {p.imagem_url ? (
-                  <img src={p.imagem_url} alt={p.nome} className="size-10 rounded-xl object-cover shrink-0 bg-slate-100" />
+                  <img
+                    src={p.imagem_url}
+                    alt={p.nome}
+                    className="w-full h-48 object-cover rounded-t-xl bg-slate-50 transition-transform duration-200 group-hover:scale-105"
+                  />
                 ) : (
-                  <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Package className="size-5" />
+                  <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Package className="size-10 stroke-[1.5]" />
                   </div>
                 )}
-                <div className="flex md:hidden items-center gap-1">
+
+                {/* Ações (Desktop: Hover, Mobile: Fixo) */}
+                <div className="absolute top-3 right-3 flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button
-                    onClick={() => abrirEditar(p)}
-                    className="size-8 grid place-items-center rounded-lg border bg-card hover:bg-accent transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      abrirEditar(p);
+                    }}
+                    className="size-8 grid place-items-center rounded-lg border bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition shadow-sm"
+                    aria-label="Editar"
                   >
                     <Pencil className="size-3.5" />
                   </button>
                   <button
-                    onClick={() => setConfirmar(p)}
-                    className="size-8 grid place-items-center rounded-lg border border-destructive/30 bg-card text-destructive hover:bg-destructive/10 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmar(p);
+                    }}
+                    className="size-8 grid place-items-center rounded-lg border border-destructive/30 bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive/10 transition shadow-sm"
+                    aria-label="Remover"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base tracking-tight line-clamp-2" title={p.nome}>{p.nome}</h3>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={cleanDescription(p.descricao)}>
-                  {cleanDescription(p.descricao) || "Sem descrição"}
-                </p>
-                {(p.tipo_movel || p.material || p.cor_acabamento) && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {p.tipo_movel && (
-                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                        {p.tipo_movel}
-                      </span>
-                    )}
-                    {p.material && (
-                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                        {p.material}
-                      </span>
-                    )}
-                    {p.cor_acabamento && (
-                      <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                        {p.cor_acabamento}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              {/* Informações */}
+              <div className="p-5 flex-1 flex flex-col justify-between min-w-0">
+                <div className="space-y-1.5 flex-1">
+                  <h3 className="font-semibold text-base tracking-tight line-clamp-2 text-foreground" title={p.nome}>
+                    {p.nome}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2" title={cleanDescription(p.descricao)}>
+                    {cleanDescription(p.descricao) || "Sem descrição"}
+                  </p>
+                  {(p.tipo_movel || p.material || p.cor_acabamento) && (
+                    <div className="pt-1.5 flex flex-wrap gap-1">
+                      {p.tipo_movel && (
+                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                          {p.tipo_movel}
+                        </span>
+                      )}
+                      {p.material && (
+                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                          {p.material}
+                        </span>
+                      )}
+                      {p.cor_acabamento && (
+                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                          {p.cor_acabamento}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                  {p.preco != null ? moeda(p.preco) : "Sob consulta"}
-                </span>
-              </div>
-
-              <div className="hidden md:flex absolute top-4 right-4 items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                <button
-                  onClick={() => abrirEditar(p)}
-                  className="size-8 grid place-items-center rounded-lg border bg-card hover:bg-accent"
-                  aria-label="Editar"
-                >
-                  <Pencil className="size-3.5" />
-                </button>
-                <button
-                  onClick={() => setConfirmar(p)}
-                  className="size-8 grid place-items-center rounded-lg border border-destructive/30 bg-card text-destructive hover:bg-destructive/10"
-                  aria-label="Remover"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    {p.preco != null ? moeda(p.preco) : "Sob consulta"}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -311,6 +337,124 @@ function ProdutosPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE DETALHES DO PRODUTO */}
+      {selectedProduto && (() => {
+        const medidas = parseMedidas(selectedProduto.descricao);
+        const descPura = cleanDescription(selectedProduto.descricao);
+        return (
+          <div
+            className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setSelectedProduto(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+            >
+              {/* Cabeçalho */}
+              <div className="flex items-center justify-between px-6 py-4 border-b">
+                <h2 className="text-lg font-semibold tracking-tight">Detalhes do Produto</h2>
+                <button
+                  onClick={() => setSelectedProduto(null)}
+                  className="size-8 grid place-items-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              {/* Imagem Banner */}
+              <div className="relative w-full h-64 bg-muted flex items-center justify-center overflow-hidden border-b">
+                {selectedProduto.imagem_url ? (
+                  <img
+                    src={selectedProduto.imagem_url}
+                    alt={selectedProduto.nome}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
+                    <Package className="size-16 stroke-[1.5]" />
+                    <span className="text-xs">Sem imagem disponível</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Conteúdo */}
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div>
+                  <h3 className="font-bold text-xl text-foreground tracking-tight">{selectedProduto.nome}</h3>
+                  {descPura ? (
+                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap leading-relaxed">
+                      {descPura}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground/60 italic mt-2">Sem descrição adicional</p>
+                  )}
+                </div>
+
+                <div className="border rounded-xl overflow-hidden bg-muted/30">
+                  <table className="w-full text-sm border-collapse text-left">
+                    <tbody>
+                      <tr className="border-b bg-muted/10">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">Nome</th>
+                        <td className="px-4 py-2.5 text-foreground font-medium">{selectedProduto.nome}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">Preço</th>
+                        <td className="px-4 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {selectedProduto.preco != null ? moeda(selectedProduto.preco) : "Sob consulta"}
+                        </td>
+                      </tr>
+                      <tr className="border-b bg-muted/10">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Tipo do Móvel</th>
+                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.tipo_movel || "-"}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Material</th>
+                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.material || "-"}</td>
+                      </tr>
+                      <tr className="border-b bg-muted/10">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Cor/Acabamento</th>
+                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.cor_acabamento || "-"}</td>
+                      </tr>
+                      <tr className="border-b">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Altura</th>
+                        <td className="px-4 py-2.5 text-foreground">{medidas.altura ? `${medidas.altura} m` : "-"}</td>
+                      </tr>
+                      <tr className="border-b bg-muted/10">
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Largura</th>
+                        <td className="px-4 py-2.5 text-foreground">{medidas.largura ? `${medidas.largura} m` : "-"}</td>
+                      </tr>
+                      <tr>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Profundidade</th>
+                        <td className="px-4 py-2.5 text-foreground">{medidas.profundidade ? `${medidas.profundidade} m` : "-"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Rodapé */}
+              <div className="flex items-center justify-end gap-2 px-6 py-4 bg-muted/30 border-t">
+                <button
+                  onClick={() => {
+                    abrirEditar(selectedProduto);
+                    setSelectedProduto(null);
+                  }}
+                  className="h-9 px-4 inline-flex items-center gap-2 rounded-lg border bg-card hover:bg-accent text-sm font-medium transition-colors"
+                >
+                  <Pencil className="size-3.5" /> Editar
+                </button>
+                <button
+                  onClick={() => setSelectedProduto(null)}
+                  className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </AppShell>
   );
 }
