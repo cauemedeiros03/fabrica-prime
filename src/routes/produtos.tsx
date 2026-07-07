@@ -363,12 +363,12 @@ function ProdutosPage() {
               </div>
 
               {/* Imagem Banner */}
-              <div className="relative w-full max-h-[65vh] min-h-[350px] bg-zinc-950 flex items-center justify-center overflow-hidden rounded-t-xl border-b">
+              <div className="w-full bg-zinc-950 flex items-center justify-center rounded-t-xl overflow-hidden p-2 min-h-[350px] max-h-[550px] border-b">
                 {selectedProduto.imagem_url ? (
                   <img
                     src={selectedProduto.imagem_url}
                     alt={selectedProduto.nome}
-                    className="w-full h-full max-h-[65vh] object-contain block mx-auto"
+                    className="w-auto h-auto max-w-full max-h-[500px] object-contain block mx-auto"
                   />
                 ) : (
                   <div className="w-full h-64 bg-muted flex flex-col items-center justify-center">
