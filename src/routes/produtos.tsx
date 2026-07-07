@@ -211,12 +211,12 @@ function ProdutosPage() {
               className="group overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative cursor-pointer"
             >
               {/* Imagem Banner */}
-              <div className="relative overflow-hidden w-full h-48 bg-slate-50 border-b">
+              <div className="relative overflow-hidden w-full h-56 bg-slate-100 border-b">
                 {p.imagem_url ? (
                   <img
                     src={p.imagem_url}
                     alt={p.nome}
-                    className="w-full h-48 object-cover rounded-t-xl bg-slate-50 transition-transform duration-200 group-hover:scale-105"
+                    className="w-full h-56 object-cover rounded-t-xl bg-slate-100 transition-transform duration-200 group-hover:scale-105"
                   />
                 ) : (
                   <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center">
@@ -363,17 +363,17 @@ function ProdutosPage() {
               </div>
 
               {/* Imagem Banner */}
-              <div className="relative w-full h-64 bg-muted flex items-center justify-center overflow-hidden border-b">
+              <div className="w-full bg-slate-950 flex items-center justify-center rounded-t-xl overflow-hidden border-b">
                 {selectedProduto.imagem_url ? (
                   <img
                     src={selectedProduto.imagem_url}
                     alt={selectedProduto.nome}
-                    className="w-full h-full object-cover"
+                    className="w-full max-h-[60vh] min-h-[350px] object-contain transition-all"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
-                    <Package className="size-16 stroke-[1.5]" />
-                    <span className="text-xs">Sem imagem disponível</span>
+                  <div className="w-full h-64 bg-muted flex flex-col items-center justify-center">
+                    <Package className="size-16 stroke-[1.5] text-muted-foreground/50" />
+                    <span className="text-xs text-muted-foreground/50">Sem imagem disponível</span>
                   </div>
                 )}
               </div>
