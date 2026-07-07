@@ -91,7 +91,7 @@ function ProdutosPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<(ProdutoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<Produto | null>(null);
-  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null);
+  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null); // State to handle the active product pop-up details modal
 
   const fetchProdutos = async () => {
     if (!user?.id) return;
