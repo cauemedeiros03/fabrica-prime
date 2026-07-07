@@ -366,6 +366,7 @@ export function NovoPedidoDialog({
     if (files && files.length > 0) {
       await uploadFiles(files);
     }
+    e.target.value = "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -401,7 +402,16 @@ export function NovoPedidoDialog({
         newUrls.push(publicUrl);
         toast.success(`Upload concluído: ${file.name}`);
       } catch (err: any) {
-        toast.error(`Erro ao enviar ${file.name}: ${err?.message || "Erro desconhecido"}`);
+        console.error(`Erro ao enviar ${file.name}:`, err);
+        const errMsg = err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "";
+        if (errMsg.toLowerCase().includes("bucket not found")) {
+          toast.error("Erro de Configuração", {
+            description: "A pasta 'anexos-pedidos' não foi localizada no Storage do Supabase. Por favor, crie o bucket público.",
+            duration: 8000,
+          });
+        } else {
+          toast.error(`Erro ao enviar ${file.name}`, { description: errMsg });
+        }
       }
     }
 

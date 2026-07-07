@@ -533,9 +533,18 @@ function ProdutoDialog({
       toast.success("Imagem enviada com sucesso!");
     } catch (err: any) {
       console.error("Erro ao enviar imagem:", err);
-      toast.error("Erro ao enviar imagem", { description: err?.message || "" });
+      const errMsg = err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "";
+      if (errMsg.toLowerCase().includes("bucket not found")) {
+        toast.error("Erro de Configuração", {
+          description: "A pasta 'produtos' não foi localizada no Storage do Supabase. Por favor, crie o bucket público.",
+          duration: 8000,
+        });
+      } else {
+        toast.error("Erro ao enviar imagem", { description: errMsg });
+      }
     } finally {
       setUploadingImage(false);
+      e.target.value = "";
     }
   };
 
