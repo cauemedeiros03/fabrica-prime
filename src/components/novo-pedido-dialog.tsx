@@ -1141,10 +1141,10 @@ export function NovoPedidoDialog({
                         return (
                           <div
                             key={idx}
-                            className="relative group rounded-xl border bg-card overflow-hidden aspect-video flex flex-col items-center justify-center p-2 shadow-sm"
+                            className="relative group rounded-xl border bg-muted/30 hover:bg-muted/50 transition-all overflow-hidden h-32 flex flex-col items-center justify-center p-2 shadow-sm"
                           >
                             {isImg ? (
-                              <img src={url} alt="Anexo" className="w-full h-full object-cover rounded-lg" />
+                              <img src={url} alt="Anexo" className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg" />
                             ) : (
                               <div className="flex flex-col items-center justify-center text-center p-2">
                                 <FileText className="size-8 text-destructive/80 mb-1" />
@@ -1321,7 +1321,7 @@ export function NovoPedidoDialog({
                       <img
                         src={c.imagem_url}
                         alt={c.nome}
-                        className="w-8 h-8 rounded-md object-cover mr-2 bg-slate-100 flex-shrink-0"
+                        className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">

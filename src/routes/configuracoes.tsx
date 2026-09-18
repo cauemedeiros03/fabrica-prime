@@ -334,7 +334,7 @@ function ConfiguracoesPage() {
                       <div className="flex items-center gap-4">
                         <div className="size-16 rounded-xl border-2 border-dashed border-input bg-muted/50 grid place-items-center overflow-hidden">
                           {form.watch("logo_url") ? (
-                            <img src={form.watch("logo_url")} alt="Logo" className="w-full h-full object-cover" />
+                            <img src={form.watch("logo_url")} alt="Logo" className="w-full h-full object-contain p-1" />
                           ) : (
                             <Building2 className="size-6 text-muted-foreground/50" />
                           )}

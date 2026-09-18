@@ -210,29 +210,32 @@ function ProdutosPage() {
               onClick={() => setSelectedProduto(p)}
               className="group overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative cursor-pointer"
             >
-              {/* Imagem Banner */}
-              <div className="relative overflow-hidden w-full h-56 bg-slate-100 border-b">
+              {/* Imagem Banner com Proporção Preservada */}
+              <div className="relative overflow-hidden w-full h-56 bg-muted/40 dark:bg-muted/20 border-b flex items-center justify-center p-3">
                 {p.imagem_url ? (
                   <img
                     src={p.imagem_url}
                     alt={p.nome}
-                    className="w-full h-56 object-cover rounded-t-xl bg-slate-100 transition-transform duration-200 group-hover:scale-105"
+                    loading="lazy"
+                    className="max-h-full max-w-full w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-[1.03] select-none"
                   />
                 ) : (
-                  <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center">
-                    <Package className="size-10 stroke-[1.5]" />
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
+                    <Package className="size-9 stroke-[1.5]" />
+                    <span className="text-[11px] font-medium">Sem imagem</span>
                   </div>
                 )}
 
                 {/* Ações (Desktop: Hover, Mobile: Fixo) */}
-                <div className="absolute top-3 right-3 flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       abrirEditar(p);
                     }}
-                    className="size-8 grid place-items-center rounded-lg border bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition shadow-sm"
+                    className="size-8 grid place-items-center rounded-lg border bg-background/90 backdrop-blur-sm text-foreground hover:bg-background transition shadow-sm"
                     aria-label="Editar"
+                    title="Editar produto"
                   >
                     <Pencil className="size-3.5" />
                   </button>
@@ -241,8 +244,9 @@ function ProdutosPage() {
                       e.stopPropagation();
                       setConfirmar(p);
                     }}
-                    className="size-8 grid place-items-center rounded-lg border border-destructive/30 bg-background/80 backdrop-blur-sm text-destructive hover:bg-destructive/10 transition shadow-sm"
+                    className="size-8 grid place-items-center rounded-lg border border-destructive/30 bg-background/90 backdrop-blur-sm text-destructive hover:bg-destructive/10 transition shadow-sm"
                     aria-label="Remover"
+                    title="Remover produto"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -363,17 +367,17 @@ function ProdutosPage() {
               </div>
 
               {/* Imagem Banner */}
-              <div className="w-full bg-zinc-950 flex items-center justify-center rounded-t-xl overflow-hidden p-2 min-h-[350px] max-h-[550px] border-b">
+              <div className="w-full bg-muted/50 dark:bg-card flex items-center justify-center rounded-t-xl overflow-hidden p-4 min-h-[300px] max-h-[500px] border-b">
                 {selectedProduto.imagem_url ? (
                   <img
                     src={selectedProduto.imagem_url}
                     alt={selectedProduto.nome}
-                    className="w-auto h-auto max-w-full max-h-[500px] object-contain block mx-auto"
+                    className="w-auto h-auto max-w-full max-h-[460px] object-contain block mx-auto drop-shadow-sm"
                   />
                 ) : (
-                  <div className="w-full h-64 bg-muted flex flex-col items-center justify-center">
-                    <Package className="size-16 stroke-[1.5] text-muted-foreground/50" />
-                    <span className="text-xs text-muted-foreground/50">Sem imagem disponível</span>
+                  <div className="w-full h-64 bg-muted/30 flex flex-col items-center justify-center gap-2">
+                    <Package className="size-16 stroke-[1.5] text-muted-foreground/40" />
+                    <span className="text-xs text-muted-foreground/60 font-medium">Sem imagem disponível</span>
                   </div>
                 )}
               </div>
@@ -734,7 +738,7 @@ function ProdutoDialog({
                 </div>
               ) : form.imagem_url ? (
                 <div className="relative w-full flex items-center justify-center">
-                  <img src={form.imagem_url} alt="Preview" className="h-28 rounded-lg object-cover" />
+                  <img src={form.imagem_url} alt="Preview" className="h-32 max-w-full rounded-lg object-contain bg-muted/40 p-1" />
                   <button
                     type="button"
                     onClick={(e) => {

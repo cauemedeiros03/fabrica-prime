@@ -440,10 +440,10 @@ function PedidoViewerContent({
                       target="_blank"
                       rel="noreferrer"
                       title={name}
-                      className="relative group rounded-xl border bg-card hover:bg-accent/40 hover:border-primary/30 transition-all overflow-hidden aspect-video flex flex-col items-center justify-center p-2 shadow-sm cursor-pointer"
+                      className="relative group rounded-xl border bg-muted/30 hover:bg-muted/50 hover:border-primary/40 transition-all overflow-hidden h-36 flex flex-col items-center justify-center p-2 shadow-sm cursor-pointer"
                     >
                       {isImg ? (
-                        <img src={url} alt={name} className="w-full h-full object-cover rounded-lg" />
+                        <img src={url} alt={name} className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg" />
                       ) : (
                         <div className="flex flex-col items-center justify-center text-center p-1">
                           <FileText className="size-7 text-destructive/80 mb-1" />

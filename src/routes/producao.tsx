@@ -8,7 +8,7 @@ import { AddPagamentoDialog } from "@/components/add-pagamento-dialog";
 import { useState, type DragEvent, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Package, AlertTriangle } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import { PrintableReceipt } from "@/components/printable-receipt";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,6 +29,7 @@ function ProducaoPage() {
   const { user } = useAuth();
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [activeEtapaTab, setActiveEtapaTab] = useState<StatusEtapa>("pedido-recebido");
+  const [openNovoPedido, setOpenNovoPedido] = useState(false);
   
   const [edit, setEdit] = useState<(NovoPedidoInput & { id: string }) | null>(null);
   const [confirmar, setConfirmar] = useState<{ id: string; numero: string } | null>(null);
@@ -57,6 +58,14 @@ function ProducaoPage() {
       );
     });
   }, [pedidos]);
+
+  const emProducaoQtd = useMemo(() => {
+    return pedidosAtivos.filter((p) => !["entregue", "pronto-entrega"].includes(String(p.etapa || "").toLowerCase())).length;
+  }, [pedidosAtivos]);
+
+  const atrasadosQtd = useMemo(() => {
+    return pedidosAtivos.filter((p) => new Date(p.entrega) < new Date() && String(p.etapa || "").toLowerCase() !== "entregue").length;
+  }, [pedidosAtivos]);
 
   useEffect(() => {
     async function loadConfig() {
@@ -183,10 +192,39 @@ function ProducaoPage() {
 
   return (
     <AppShell
-      title="Fluxo de produção"
-      subtitle={isLoading ? "Carregando…" : "Arraste os cards entre as etapas ou use o seletor para atualizar"}
+      title="Fluxo de Produção"
+      subtitle={isLoading ? "Carregando…" : "Acompanhe e mova os pedidos entre as fases da marcenaria"}
       breadcrumbs={[{ label: "Produção" }]}
     >
+      {/* Overview Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-card text-xs font-semibold text-foreground shadow-sm">
+            <Package className="size-3.5 text-primary" />
+            <span>{emProducaoQtd} pedidos na oficina</span>
+          </div>
+
+          {atrasadosQtd > 0 ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs font-semibold shadow-sm">
+              <AlertTriangle className="size-3.5" />
+              <span>{atrasadosQtd} com entrega atrasada</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-success/30 bg-success/10 text-success text-xs font-semibold shadow-sm">
+              <span>Prazos em dia</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => setOpenNovoPedido(true)}
+          className="h-9 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition cursor-pointer shadow-[var(--shadow-glow)] shrink-0"
+        >
+          <Plus className="size-3.5" />
+          <span>Novo Pedido</span>
+        </button>
+      </div>
+
       {isLoading ? (
         <div className="grid place-items-center py-20 text-muted-foreground">
           <Loader2 className="size-6 animate-spin" />
@@ -204,7 +242,7 @@ function ProducaoPage() {
                   <button
                     key={etapa.id}
                     onClick={() => setActiveEtapaTab(etapa.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                       isActive
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-card hover:bg-accent text-muted-foreground border-border"
@@ -216,10 +254,12 @@ function ProducaoPage() {
                     />
                     <span>{etapa.label}</span>
                     <span
-                      className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                      className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold tabular-nums ${
                         isActive
                           ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-destructive text-white"
+                          : itens.length > 0
+                          ? "bg-muted text-foreground"
+                          : "bg-muted/40 text-muted-foreground/60"
                       }`}
                     >
                       {itens.length}
@@ -355,6 +395,7 @@ function ProducaoPage() {
       <div className="hidden">
         <PrintableReceipt ref={printRef} pedido={printPedido} config={config} />
       </div>
+      <NovoPedidoDialog open={openNovoPedido} onOpenChange={setOpenNovoPedido} />
     </AppShell>
   );
 }

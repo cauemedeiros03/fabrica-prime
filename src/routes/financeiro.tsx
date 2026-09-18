@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { moeda, dataBR } from "@/lib/mock-data";
 import { usePedidos, useCreateVendaDireta, useAllPagamentos } from "@/hooks/use-pedidos";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
-import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown } from "lucide-react";
+import { CheckCircle2, Clock, Trash2, Loader2, Plus, Wallet, TrendingDown, Package } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useDespesas, useCreateDespesa, useDeleteDespesa } from "@/hooks/use-despesas";
 import { toast } from "sonner";
@@ -115,10 +115,12 @@ function FinanceiroPage() {
     return totalGrossSales - totalAReceber;
   }, [totalGrossSales, totalAReceber]);
 
+  // Receita real recebida em caixa
   const actualCashReceived = useMemo(() => {
-    return totalGrossRevenue - totalAReceber;
-  }, [totalGrossRevenue, totalAReceber]);
+    return totalGrossRevenue;
+  }, [totalGrossRevenue]);
 
+  // Lucro líquido real (Entradas de caixa - Despesas pagas)
   const trueNetCashProfit = useMemo(() => {
     return actualCashReceived - totalDespesas;
   }, [actualCashReceived, totalDespesas]);
@@ -360,21 +362,22 @@ function FinanceiroPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
         {[
-          { l: "Recebido", v: actualCashReceived, i: CheckCircle2, c: "text-success", bg: "bg-success/10" },
-          { l: "A receber", v: totalAReceber, i: Clock, c: "text-warning-foreground", bg: "bg-warning/20" },
-          { l: "Despesas / Custos", v: totalDespesas, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10" },
-          { l: "Saldo Líquido / Lucro", v: trueNetCashProfit, i: Wallet, c: trueNetCashProfit >= 0 ? "text-info" : "text-destructive", bg: trueNetCashProfit >= 0 ? "bg-info/10" : "bg-destructive/10" },
+          { l: "Vendas Totais", v: totalGrossSales, i: Package, c: "text-foreground", bg: "bg-primary/10", border: "border-border" },
+          { l: "Recebido (Caixa)", v: actualCashReceived, i: CheckCircle2, c: "text-success", bg: "bg-success/10", border: "border-success/20" },
+          { l: "A Receber", v: totalAReceber, i: Clock, c: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { l: "Despesas / Custos", v: totalDespesas, i: TrendingDown, c: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20" },
+          { l: "Saldo Líquido", v: trueNetCashProfit, i: Wallet, c: trueNetCashProfit >= 0 ? "text-primary" : "text-destructive", bg: trueNetCashProfit >= 0 ? "bg-primary/10" : "bg-destructive/10", border: trueNetCashProfit >= 0 ? "border-primary/20" : "border-destructive/20" },
         ].map((s) => (
-          <div key={s.l} className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
+          <div key={s.l} className={`rounded-2xl border ${s.border} bg-card p-4 sm:p-5 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition`}>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{s.l}</p>
-              <div className={`size-9 grid place-items-center rounded-lg ${s.bg} ${s.c}`}>
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">{s.l}</p>
+              <div className={`size-8 sm:size-9 grid place-items-center rounded-xl ${s.bg} ${s.c}`}>
                 <s.i className="size-4" />
               </div>
             </div>
-            <p className="mt-3 text-lg sm:text-xl md:text-2xl font-semibold tracking-tight tabular-nums truncate" title={moeda(s.v)}>
+            <p className="mt-2.5 sm:mt-3 text-base sm:text-lg md:text-xl font-bold tracking-tight tabular-nums truncate" title={moeda(s.v)}>
               {moeda(s.v)}
             </p>
           </div>
@@ -508,22 +511,15 @@ function FinanceiroPage() {
         )}
 
         {activeTab === "vendas" && (
-          <div className="overflow-x-auto">
+          <div>
             {filteredPagamentos.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
-                Nenhuma venda registrada.
+                Nenhuma venda registrada no período selecionado.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase border-b">
-                  <tr>
-                    <th className="text-left font-medium pl-5 pr-4 py-2.5">Descrição/Cliente</th>
-                    <th className="text-left font-medium px-4 py-2.5">Data</th>
-                    <th className="text-left font-medium px-4 py-2.5">Forma de Pagamento</th>
-                    <th className="text-right font-medium px-5 py-2.5">Valor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+              <>
+                {/* Mobile View: Cards */}
+                <div className="divide-y md:hidden">
                   {filteredPagamentos.map((pag) => {
                     const rawDate = pag.pago_em || pag.created_at || new Date();
                     let dateObj = new Date(rawDate);
@@ -535,79 +531,163 @@ function FinanceiroPage() {
                       : dateObj.toLocaleDateString("pt-BR");
                     const paymentMethod = pag.forma || (pag as any).forma_pagamento || (pag as any).metodo_pagamento || "Não informado";
                     return (
-                      <tr key={pag.id} className="hover:bg-accent/20 transition group">
-                        <td className="pl-5 pr-4 py-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>{pag.pedido?.produto || pag.observacao || "Venda"}</span>
-                            <span className="text-xs text-muted-foreground font-normal">
+                      <div key={pag.id} className="p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm text-foreground truncate">
+                              {pag.pedido?.produto || pag.observacao || "Venda Direta"}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
                               Cliente: {pag.pedido?.clienteNome || "—"} {pag.pedido?.numero ? `— ${pag.pedido.numero}` : ""}
-                            </span>
+                            </p>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {dataFormatada}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-400">
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
+                            + {moeda(Number(pag.valor))}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                          <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
                             {paymentMethod}
                           </span>
-                        </td>
-                        <td className="pl-4 pr-5 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                          + {moeda(Number(pag.valor))}
-                        </td>
-                      </tr>
+                          <span>{dataFormatada}</span>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground text-xs uppercase border-b">
+                      <tr>
+                        <th className="text-left font-medium pl-5 pr-4 py-2.5">Descrição/Cliente</th>
+                        <th className="text-left font-medium px-4 py-2.5">Data</th>
+                        <th className="text-left font-medium px-4 py-2.5">Forma de Pagamento</th>
+                        <th className="text-right font-medium px-5 py-2.5">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredPagamentos.map((pag) => {
+                        const rawDate = pag.pago_em || pag.created_at || new Date();
+                        let dateObj = new Date(rawDate);
+                        if (isNaN(dateObj.getTime()) && typeof rawDate === "string") {
+                          dateObj = new Date(rawDate.includes("T") ? rawDate : `${rawDate}T12:00:00`);
+                        }
+                        const dataFormatada = isNaN(dateObj.getTime())
+                          ? new Date().toLocaleDateString("pt-BR")
+                          : dateObj.toLocaleDateString("pt-BR");
+                        const paymentMethod = pag.forma || (pag as any).forma_pagamento || (pag as any).metodo_pagamento || "Não informado";
+                        return (
+                          <tr key={pag.id} className="hover:bg-accent/20 transition group">
+                            <td className="pl-5 pr-4 py-3 font-medium text-foreground">
+                              <div className="flex flex-col">
+                                <span>{pag.pedido?.produto || pag.observacao || "Venda"}</span>
+                                <span className="text-xs text-muted-foreground font-normal">
+                                  Cliente: {pag.pedido?.clienteNome || "—"} {pag.pedido?.numero ? `— ${pag.pedido.numero}` : ""}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {dataFormatada}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-400">
+                                {paymentMethod}
+                              </span>
+                            </td>
+                            <td className="pl-4 pr-5 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                              + {moeda(Number(pag.valor))}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
 
         {activeTab === "despesas" && (
-          <div className="overflow-x-auto">
+          <div>
             {filteredDespesas.length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
                 Nenhuma despesa registrada. Clique em "+ Lançar Gasto" para começar.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase border-b">
-                  <tr>
-                    <th className="text-left font-medium pl-5 pr-4 py-2.5">Descrição</th>
-                    <th className="text-left font-medium px-4 py-2.5">Data</th>
-                    <th className="text-right font-medium px-4 py-2.5">Valor</th>
-                    <th className="px-5 py-2.5 text-right w-16" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+              <>
+                {/* Mobile View: Cards */}
+                <div className="divide-y md:hidden">
                   {filteredDespesas.map((dsp) => {
                     const dataFormatada = new Date(dsp.data + "T00:00:00").toLocaleDateString("pt-BR");
                     return (
-                      <tr key={dsp.id} className="hover:bg-accent/20 transition group">
-                        <td className="pl-5 pr-4 py-3 font-medium text-foreground">
-                          {dsp.descricao}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {dataFormatada}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-destructive/90 dark:text-red-400/90 tabular-nums">
-                          - {moeda(Number(dsp.valor))}
-                        </td>
-                        <td className="pl-4 pr-5 py-3 text-right">
+                      <div key={dsp.id} className="p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold text-sm text-foreground truncate flex-1">
+                            {dsp.descricao}
+                          </p>
+                          <span className="text-sm font-bold text-destructive tabular-nums shrink-0">
+                            - {moeda(Number(dsp.valor))}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                          <span>{dataFormatada}</span>
                           <button
                             onClick={() => setConfirmarExcluir(dsp.id)}
-                            className="size-8 grid place-items-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition"
+                            className="size-7 grid place-items-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 transition"
                             title="Remover Despesa"
                           >
                             <Trash2 className="size-3.5" />
                           </button>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground text-xs uppercase border-b">
+                      <tr>
+                        <th className="text-left font-medium pl-5 pr-4 py-2.5">Descrição</th>
+                        <th className="text-left font-medium px-4 py-2.5">Data</th>
+                        <th className="text-right font-medium px-4 py-2.5">Valor</th>
+                        <th className="px-5 py-2.5 text-right w-16" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredDespesas.map((dsp) => {
+                        const dataFormatada = new Date(dsp.data + "T00:00:00").toLocaleDateString("pt-BR");
+                        return (
+                          <tr key={dsp.id} className="hover:bg-accent/20 transition group">
+                            <td className="pl-5 pr-4 py-3 font-medium text-foreground">
+                              {dsp.descricao}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {dataFormatada}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-destructive/90 dark:text-red-400/90 tabular-nums">
+                              - {moeda(Number(dsp.valor))}
+                            </td>
+                            <td className="pl-4 pr-5 py-3 text-right">
+                              <button
+                                onClick={() => setConfirmarExcluir(dsp.id)}
+                                className="size-8 grid place-items-center rounded-lg border border-destructive/20 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition"
+                                title="Remover Despesa"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}

@@ -16,10 +16,20 @@ export function AppHeader({
   onNovoOrcamento?: () => void;
   onOpenNav?: () => void;
 }) {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("suabancada_theme");
+      if (saved) return saved === "dark";
+      return document.documentElement.classList.contains("dark");
+    }
+    return false;
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("suabancada_theme", dark ? "dark" : "light");
+    }
   }, [dark]);
 
   return (

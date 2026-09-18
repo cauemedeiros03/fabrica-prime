@@ -948,7 +948,7 @@ Qualquer dúvida, estou à disposição!`;
                       <img
                         src={c.imagem_url}
                         alt={c.nome}
-                        className="w-8 h-8 rounded-md object-cover mr-2 bg-slate-100 flex-shrink-0"
+                        className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">

@@ -7,7 +7,7 @@ import { OrcamentoDialog } from "@/components/orcamento-dialog";
 import { Breadcrumbs, type Crumb } from "./breadcrumbs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import { Loader2, X, Menu, Plus, FileText } from "lucide-react";
+import { Loader2, X, Menu, Plus, FileText, Sun, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -166,6 +166,20 @@ export function AppShell({
               {nomeMarcenaria || "Sua bancada"}
             </span>
           </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                const isDark = document.documentElement.classList.toggle("dark");
+                localStorage.setItem("suabancada_theme", isDark ? "dark" : "light");
+              }}
+              className="size-8 grid place-items-center rounded-lg border hover:bg-accent transition text-muted-foreground hover:text-foreground"
+              aria-label="Alternar tema"
+            >
+              <Sun className="size-4 hidden dark:block" />
+              <Moon className="size-4 block dark:hidden" />
+            </button>
+          </div>
         </div>
 
         <AppHeader
@@ -175,7 +189,7 @@ export function AppShell({
           onNovoOrcamento={() => setNovoOrcamento(true)}
           onOpenNav={() => setMobileNav(true)}
         />
-        <main className="flex-1 p-6 pt-20 lg:pt-8 lg:p-8 animate-in fade-in duration-200">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-4 lg:pt-8 animate-in fade-in duration-200">
           {/* Mobile-only page header & quick actions */}
           <div className="lg:hidden mb-5">
             <h2 className="text-xl font-bold tracking-tight text-foreground">{title}</h2>
