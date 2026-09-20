@@ -255,8 +255,8 @@ function OrcamentosPage() {
       let clienteId = "";
 
       // 1. Buscar se existe cliente com mesmo nome
-      const cleanName = orcamento.clienteNome.trim().toLowerCase();
-      const existing = clientes.find((c) => c.nome.trim().toLowerCase() === cleanName);
+      const cleanName = (orcamento.clienteNome || "").trim().toLowerCase();
+      const existing = clientes.find((c) => c.nome?.trim().toLowerCase() === cleanName);
 
       if (existing) {
         clienteId = existing.id;
@@ -265,7 +265,7 @@ function OrcamentosPage() {
         const { data: newClient, error: clientErr } = await supabase
           .from("clientes")
           .insert({
-            nome: orcamento.clienteNome,
+            nome: orcamento.clienteNome || "Cliente sem nome",
             telefone: orcamento.clienteTelefone || null,
             cidade: orcamento.clienteCidade || null,
             user_id: user.id,
@@ -278,23 +278,54 @@ function OrcamentosPage() {
         clienteId = newClient.id;
       }
 
-      const input: any = {
-        cliente_id: clienteId,
-        cliente_nome: orcamento.clienteNome,
-        telefone: orcamento.clienteTelefone,
-        cidade: orcamento.clienteCidade,
-        produto: orcamento.produtoDescricao,
-        material: orcamento.produtoMaterial,
-        prioridade: "media",
-        etapa: "pedido-recebido",
-        valor_total: Math.max(0, orcamento.valorSugerido - (orcamento.desconto || 0)),
-        valor_pago: 0,
+      // 3. Calcular prazos e datas
+      const todayStr = new Date().toISOString().split("T")[0];
+      const prazosDiasUteis = Number(orcamento.validadeDias) || 15;
+
+      const calculateBusinessDays = (startDateStr: string, days: number): string => {
+        if (!startDateStr || isNaN(days) || days <= 0) return "";
+        const parts = startDateStr.split("-");
+        let current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        let added = 0;
+        while (added < days) {
+          current.setDate(current.getDate() + 1);
+          const day = current.getDay();
+          if (day !== 0 && day !== 6) {
+            added++;
+          }
+        }
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, "0");
+        const d = String(current.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
       };
 
-      // 3. Criar pedido
-      await createPedido.mutateAsync(input);
+      const dataEntregaEstimada = calculateBusinessDays(todayStr, prazosDiasUteis) || todayStr;
+      const valorTotal = Math.max(0, (Number(orcamento.valorSugerido) || 0) - (Number(orcamento.desconto) || 0));
 
-      // 4. Remover orçamento permanentemente (Hard Delete)
+      const input = {
+        cliente_id: clienteId,
+        cliente_nome: orcamento.clienteNome || "Cliente sem nome",
+        telefone: orcamento.clienteTelefone || "",
+        cidade: orcamento.clienteCidade || "",
+        produto: orcamento.produtoDescricao || "Produto não informado",
+        material: orcamento.produtoMaterial || "",
+        prioridade: "media" as const,
+        etapa: "pedido-recebido" as const,
+        valor_total: valorTotal,
+        valor_pago: 0,
+        prazos_dias_uteis: prazosDiasUteis,
+        data_pedido: todayStr,
+        data_criacao: todayStr,
+        data_entrega_estimada: dataEntregaEstimada,
+        entrega: dataEntregaEstimada,
+        user_id: user.id,
+      };
+
+      // 4. Criar pedido
+      await createPedido.mutateAsync(input as any);
+
+      // 5. Remover orçamento permanentemente (Hard Delete)
       // LocalStorage
       try {
         const local = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
@@ -333,10 +364,9 @@ function OrcamentosPage() {
 
       setConfirmarConversao(null);
       refetch();
-    } catch (e) {
-      toast.error("Erro ao converter orçamento", {
-        description: e instanceof Error ? e.message : "",
-      });
+    } catch (error: any) {
+      console.error("Erro ao converter orçamento:", error);
+      toast.error(error?.message || "Erro ao converter orçamento");
     }
   };
 

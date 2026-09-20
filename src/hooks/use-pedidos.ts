@@ -346,6 +346,9 @@ export interface NovoPedidoInput {
   anexos?: string[];
   data_criacao?: string | null;
   data_entrega_estimada?: string | null;
+  prazos_dias_uteis?: number | string | null;
+  data_pedido?: string | null;
+  user_id?: string;
 }
 
 export function useCreatePedido() {
@@ -402,39 +405,72 @@ export function useCreatePedido() {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const dataStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
       const targetEtapa = input.etapa || "pedido-recebido";
       const etapaLabel = ETAPAS.find(e => e.id === targetEtapa)?.label || targetEtapa;
 
-      const payload = {
+      const clienteNome = input.cliente_nome || "Cliente sem nome";
+      const valorTotal = Number(input.valor_total) || 0;
+      const dataCriacao = input.data_criacao || input.data_pedido || todayStr;
+      const dataPedido = input.data_pedido || dataCriacao;
+      const prazosDiasUteis = input.prazos_dias_uteis !== undefined && input.prazos_dias_uteis !== null
+        ? Number(input.prazos_dias_uteis)
+        : 15;
+      const dataEntregaEstimada = input.data_entrega_estimada || input.entrega || null;
+      const entrega = input.entrega || dataEntregaEstimada || null;
+
+      const payload: Record<string, any> = {
         cliente_id: clienteId,
+        cliente_nome: clienteNome,
+        user_id: user.id,
         produto: input.produto || "Produto não informado",
         tipo: input.tipo || null,
         material: input.material || null,
         cor: input.cor || null,
         observacoes: input.observacoes || null,
-        entrega: input.entrega || null,
+        entrega: entrega,
         etapa: targetEtapa,
         prioridade: input.prioridade || "media",
-        valor_total: Number(input.valor_total) || 0,
+        valor_total: valorTotal,
         valor_pago: Number(input.valor_pago) || 0,
         desconto: Number(input.desconto) || 0,
         numero: String(Math.floor(100000 + Math.random() * 900000)),
-        user_id: user.id,
         anexos: input.anexos || [],
         historico_producao: [
           { etapa: etapaLabel, data: dataStr }
         ],
-        data_criacao: input.data_criacao || null,
-        data_entrega_estimada: input.data_entrega_estimada || null,
+        data_criacao: dataCriacao,
+        data_entrega_estimada: dataEntregaEstimada,
+        data_pedido: dataPedido,
+        prazos_dias_uteis: prazosDiasUteis,
       };
 
-      const { data: pedido, error: e2 } = await (supabase
-        .from("pedidos") as any)
-        .insert(payload)
-        .select("id")
-        .single();
-      if (e2) throw e2;
+      let currentPayload = { ...payload };
+      let pedido: any = null;
+      while (true) {
+        const { data, error: e2 } = await (supabase
+          .from("pedidos") as any)
+          .insert(currentPayload)
+          .select("id")
+          .single();
+
+        if (!e2) {
+          pedido = data;
+          break;
+        }
+
+        // Se uma coluna não existe no schema do Supabase (PGRST204), remove do payload e tenta novamente
+        if (e2.code === "PGRST204") {
+          const match = e2.message?.match(/Could not find the '([^']+)' column/);
+          if (match && match[1] && match[1] in currentPayload) {
+            delete currentPayload[match[1]];
+            continue;
+          }
+        }
+
+        throw e2;
+      }
 
       // 4. Inserir pagamento inicial se houver valor pago/entrada
       if (Number(input.valor_pago) > 0) {
@@ -508,28 +544,44 @@ export function useUpdatePedido() {
         updatedHist = [...currentHist, { etapa: etapaLabel, data: dataStr }];
       }
 
-      const { error } = await (supabase
-        .from("pedidos") as any)
-        .update({
-          produto: input.produto || "Produto não informado",
-          tipo: input.tipo || null,
-          material: input.material || null,
-          cor: input.cor || null,
-          observacoes: input.observacoes || null,
-          entrega: input.entrega || null,
-          etapa: input.etapa,
-          prioridade: input.prioridade,
-          valor_total: Number(input.valor_total) || 0,
-          valor_pago: Number(input.valor_pago) || 0,
-          desconto: Number(input.desconto) || 0,
-          anexos: input.anexos,
-          historico_producao: updatedHist,
-          data_criacao: input.data_criacao || null,
-          data_entrega_estimada: input.data_entrega_estimada || null,
-        })
-        .eq("id", id)
-        .eq("user_id", user.id);
-      if (error) throw error;
+      const updatePayload: Record<string, any> = {
+        produto: input.produto || "Produto não informado",
+        tipo: input.tipo || null,
+        material: input.material || null,
+        cor: input.cor || null,
+        observacoes: input.observacoes || null,
+        entrega: input.entrega || null,
+        etapa: input.etapa,
+        prioridade: input.prioridade,
+        valor_total: Number(input.valor_total) || 0,
+        valor_pago: Number(input.valor_pago) || 0,
+        desconto: Number(input.desconto) || 0,
+        anexos: input.anexos,
+        historico_producao: updatedHist,
+        data_criacao: input.data_criacao || null,
+        data_entrega_estimada: input.data_entrega_estimada || null,
+      };
+
+      let curUpdatePayload = { ...updatePayload };
+      while (true) {
+        const { error } = await (supabase
+          .from("pedidos") as any)
+          .update(curUpdatePayload)
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (!error) break;
+
+        if (error.code === "PGRST204") {
+          const match = error.message?.match(/Could not find the '([^']+)' column/);
+          if (match && match[1] && match[1] in curUpdatePayload) {
+            delete curUpdatePayload[match[1]];
+            continue;
+          }
+        }
+
+        throw error;
+      }
 
       // Try to find the payment by exact observation first
       let { data: existingPags, error: fetchErr } = await supabase
