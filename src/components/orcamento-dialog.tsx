@@ -29,15 +29,23 @@ export interface Orcamento {
   desconto?: number;
   clienteCpfCnpj?: string;
   formaPagamento?: string;
+  clienteEmail?: string;
+  clienteEndereco?: string;
+  observacoes?: string;
 }
 
-interface ItemRow {
+export interface ItemRow {
   descricao: string;
   material: string;
   medidas: string;
   valor: number;
   quantidade: number;
   searchQuery?: string;
+  produto_id?: string;
+  nome?: string;
+  preco_unitario?: number;
+  especificacoes_customizadas?: string;
+  imagem_url?: string;
 }
 
 interface OrcamentoDialogProps {
@@ -88,6 +96,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     clienteTelefone: "",
     clienteCidade: "",
     clienteCpfCnpj: "",
+    clienteEmail: "",
+    clienteEndereco: "",
+    observacoes: "",
     produtoDescricao: "",
     produtoMaterial: "",
     produtoMedidas: "",
@@ -100,6 +111,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   const baseForm = useMemo(() => {
     let metaCpfCnpj = "";
     let metaFormaPagamento = "À vista (Pix / Dinheiro)";
+    let metaEmail = "";
+    let metaEndereco = "";
+    let metaObservacoes = "";
     const desc = initialData?.produtoDescricao || "";
     if (desc.includes("===METADATA===")) {
       try {
@@ -109,6 +123,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
           const meta = JSON.parse(jsonPart);
           if (meta.clienteCpfCnpj) metaCpfCnpj = meta.clienteCpfCnpj;
           if (meta.formaPagamento) metaFormaPagamento = meta.formaPagamento;
+          if (meta.clienteEmail) metaEmail = meta.clienteEmail;
+          if (meta.clienteEndereco) metaEndereco = meta.clienteEndereco;
+          if (meta.observacoes) metaObservacoes = meta.observacoes;
         }
       } catch {}
     }
@@ -118,6 +135,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       clienteTelefone: initialData.clienteTelefone || "",
       clienteCidade: initialData.clienteCidade || "",
       clienteCpfCnpj: initialData.clienteCpfCnpj || metaCpfCnpj || "",
+      clienteEmail: initialData.clienteEmail || metaEmail || "",
+      clienteEndereco: initialData.clienteEndereco || metaEndereco || "",
+      observacoes: initialData.observacoes || metaObservacoes || "",
       produtoDescricao: initialData.produtoDescricao || "",
       produtoMaterial: initialData.produtoMaterial || "",
       produtoMedidas: initialData.produtoMedidas || "",
@@ -172,6 +192,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     form.clienteTelefone !== baseForm.clienteTelefone ||
     form.clienteCidade !== baseForm.clienteCidade ||
     form.clienteCpfCnpj !== baseForm.clienteCpfCnpj ||
+    form.clienteEmail !== baseForm.clienteEmail ||
+    form.clienteEndereco !== baseForm.clienteEndereco ||
+    form.observacoes !== baseForm.observacoes ||
     form.formaPagamento !== baseForm.formaPagamento ||
     Number(form.validadeDias) !== Number(baseForm.validadeDias) ||
     Number(form.desconto) !== Number(baseForm.desconto) ||
@@ -368,6 +391,55 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     }
   };
 
+  const handleSelectProduct = (idx: number, c: any) => {
+    let measuresStr = "";
+    let cleanDesc = "";
+    if (c.descricao) {
+      if (c.descricao.includes("===JSON_MEDIDAS===")) {
+        try {
+          const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+          if (parts.length > 1) {
+            const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+            const parsed = JSON.parse(jsonPart);
+            measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+          }
+        } catch {}
+      } else {
+        measuresStr = parseLegacyMedidas(c.descricao);
+      }
+      cleanDesc = c.descricao.split("===JSON_MEDIDAS===")[0].trim();
+    }
+
+    const specsArr: string[] = [];
+    if (cleanDesc) specsArr.push(cleanDesc);
+    if (c.material) specsArr.push(`Material: ${c.material}`);
+    if (c.cor_acabamento) specsArr.push(`Cor: ${c.cor_acabamento}`);
+    if (measuresStr) specsArr.push(`Medidas: ${measuresStr}`);
+    const especificacoesCustomizadas = specsArr.join(" | ") || c.tipo_movel || "";
+
+    const unitPrice = c.preco ? Number(c.preco) : 0;
+
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        return {
+          ...item,
+          produto_id: c.id,
+          nome: c.nome,
+          descricao: c.nome,
+          preco_unitario: unitPrice,
+          valor: unitPrice > 0 ? unitPrice : item.valor,
+          material: c.material || item.material || "",
+          medidas: measuresStr || item.medidas || "",
+          especificacoes_customizadas: especificacoesCustomizadas,
+          imagem_url: c.imagem_url || "",
+          searchQuery: c.nome,
+        };
+      })
+    );
+    setActiveItemSuggestIndex(null);
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const isLoading = salvando;
@@ -389,10 +461,15 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const finalValue = Math.max(0, originalValue - discountValue);
 
     const sanitizedItems = items.map((item) => ({
-      descricao: item.descricao?.trim() || "Item sem descrição",
+      produto_id: item.produto_id || undefined,
+      nome: item.nome || item.descricao?.trim() || "Item sem descrição",
+      descricao: item.descricao?.trim() || item.nome || "Item sem descrição",
+      preco_unitario: Number(item.preco_unitario ?? item.valor ?? 0),
+      especificacoes_customizadas: item.especificacoes_customizadas || undefined,
+      imagem_url: item.imagem_url || undefined,
       material: item.material?.trim() || "",
       medidas: item.medidas?.trim() || "",
-      valor: Math.max(0, Number(item.valor) || 0),
+      valor: Math.max(0, Number(item.valor || item.preco_unitario || 0)),
       quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
       searchQuery: item.searchQuery?.trim() || "",
     }));
@@ -401,7 +478,13 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
-    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({ clienteCpfCnpj: form.clienteCpfCnpj, formaPagamento: form.formaPagamento })}\n===END_METADATA===`;
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({
+      clienteCpfCnpj: form.clienteCpfCnpj,
+      formaPagamento: form.formaPagamento,
+      clienteEmail: form.clienteEmail,
+      clienteEndereco: form.clienteEndereco,
+      observacoes: form.observacoes,
+    })}\n===END_METADATA===`;
 
     const novoOrcamento: Orcamento = {
       id: budgetId,
@@ -410,6 +493,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
       clienteCpfCnpj: form.clienteCpfCnpj,
+      clienteEmail: form.clienteEmail,
+      clienteEndereco: form.clienteEndereco,
+      observacoes: form.observacoes,
       formaPagamento: form.formaPagamento,
       produtoDescricao: finalProdutoDescricao,
       produtoMaterial: materialString,
@@ -520,10 +606,15 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const finalValue = Math.max(0, originalValue - discountValue);
 
     const sanitizedItems = items.map((item) => ({
-      descricao: item.descricao?.trim() || "Item sem descrição",
+      produto_id: item.produto_id || undefined,
+      nome: item.nome || item.descricao?.trim() || "Item sem descrição",
+      descricao: item.descricao?.trim() || item.nome || "Item sem descrição",
+      preco_unitario: Number(item.preco_unitario ?? item.valor ?? 0),
+      especificacoes_customizadas: item.especificacoes_customizadas || undefined,
+      imagem_url: item.imagem_url || undefined,
       material: item.material?.trim() || "",
       medidas: item.medidas?.trim() || "",
-      valor: Math.max(0, Number(item.valor) || 0),
+      valor: Math.max(0, Number(item.valor || item.preco_unitario || 0)),
       quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
       searchQuery: item.searchQuery?.trim() || "",
     }));
@@ -532,7 +623,13 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const materialString = sanitizedItems.map((i) => i.material).filter(Boolean).join(", ") || "";
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
-    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({ clienteCpfCnpj: form.clienteCpfCnpj, formaPagamento: form.formaPagamento })}\n===END_METADATA===`;
+    const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({
+      clienteCpfCnpj: form.clienteCpfCnpj,
+      formaPagamento: form.formaPagamento,
+      clienteEmail: form.clienteEmail,
+      clienteEndereco: form.clienteEndereco,
+      observacoes: form.observacoes,
+    })}\n===END_METADATA===`;
 
     const novoOrcamento: Orcamento = {
       id: budgetId,
@@ -541,6 +638,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
       clienteCpfCnpj: form.clienteCpfCnpj,
+      clienteEmail: form.clienteEmail,
+      clienteEndereco: form.clienteEndereco,
+      observacoes: form.observacoes,
       formaPagamento: form.formaPagamento,
       produtoDescricao: finalProdutoDescricao,
       produtoMaterial: materialString,
@@ -687,6 +787,7 @@ Qualquer dúvida, estou à disposição!`;
 
         <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-2.5 md:max-h-[75vh]">
           {/* CLIENTE */}
+          {/* DADOS DO CLIENTE */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Dados do Cliente</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
@@ -711,14 +812,14 @@ Qualquer dúvida, estou à disposição!`;
                   placeholder="(00) 00000-0000"
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="text-xs font-medium">Cidade / Estado</label>
+              <div>
+                <label className="text-xs font-medium">Email</label>
                 <input
-                  type="text"
-                  value={form.clienteCidade}
-                  onChange={(e) => set("clienteCidade", e.target.value)}
+                  type="email"
+                  value={form.clienteEmail}
+                  onChange={(e) => set("clienteEmail", e.target.value)}
                   className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                  placeholder="Cidade, UF"
+                  placeholder="cliente@email.com"
                 />
               </div>
               <div>
@@ -729,6 +830,36 @@ Qualquer dúvida, estou à disposição!`;
                   onChange={(e) => set("clienteCpfCnpj", e.target.value)}
                   className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                   placeholder="CPF ou CNPJ"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Cidade / Estado</label>
+                <input
+                  type="text"
+                  value={form.clienteCidade}
+                  onChange={(e) => set("clienteCidade", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="Cidade, UF"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="text-xs font-medium">Endereço Completo</label>
+                <input
+                  type="text"
+                  value={form.clienteEndereco}
+                  onChange={(e) => set("clienteEndereco", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="Rua, Número, Bairro, CEP"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="text-xs font-medium">Observações Gerais</label>
+                <input
+                  type="text"
+                  value={form.observacoes}
+                  onChange={(e) => set("observacoes", e.target.value)}
+                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  placeholder="Observações sobre o cliente ou detalhes do projeto"
                 />
               </div>
             </div>
@@ -886,61 +1017,11 @@ Qualquer dúvida, estou à disposição!`;
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      const idx = activeItemSuggestIndex;
-                      updateItem(idx, "descricao", c.nome);
-                      updateItem(idx, "material", c.material || "");
-                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
-                      updateItem(idx, "searchQuery", c.nome);
-                      
-                      // Auto-fill measures
-                      let measuresStr = "";
-                      if (c.descricao) {
-                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
-                          try {
-                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
-                            if (parts.length > 1) {
-                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                              const parsed = JSON.parse(jsonPart);
-                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                            }
-                          } catch {}
-                        } else {
-                          measuresStr = parseLegacyMedidas(c.descricao);
-                        }
-                      }
-                      if (measuresStr) {
-                        updateItem(idx, "medidas", measuresStr);
-                      }
-                      setActiveItemSuggestIndex(null);
+                      handleSelectProduct(activeItemSuggestIndex, c);
                     }}
                     onTouchStart={(e) => {
                       e.preventDefault();
-                      const idx = activeItemSuggestIndex;
-                      updateItem(idx, "descricao", c.nome);
-                      updateItem(idx, "material", c.material || "");
-                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
-                      updateItem(idx, "searchQuery", c.nome);
-                      
-                      // Auto-fill measures
-                      let measuresStr = "";
-                      if (c.descricao) {
-                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
-                          try {
-                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
-                            if (parts.length > 1) {
-                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                              const parsed = JSON.parse(jsonPart);
-                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                            }
-                          } catch {}
-                        } else {
-                          measuresStr = parseLegacyMedidas(c.descricao);
-                        }
-                      }
-                      if (measuresStr) {
-                        updateItem(idx, "medidas", measuresStr);
-                      }
-                      setActiveItemSuggestIndex(null);
+                      handleSelectProduct(activeItemSuggestIndex, c);
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0"
                   >
@@ -1320,27 +1401,41 @@ const ProductCardItem = React.memo(({
           ref={(el) => {
             productInputRefs.current[idx] = el;
           }}
-          className="mt-1 relative"
+          className="mt-1 relative flex items-center gap-2"
         >
-          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={item.searchQuery || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              updateItem(idx, "searchQuery", val);
-              setActiveItemSuggestIndex(idx);
-            }}
-            onFocus={() => {
-              setActiveItemSuggestIndex(idx);
-            }}
-            placeholder="Buscar por produto..."
-            className="w-full h-10 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-          />
-          {(item.searchQuery || item.descricao) && (
-            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+          {item.imagem_url && (
+            <img
+              src={item.imagem_url}
+              alt={item.nome || item.descricao}
+              className="size-10 rounded-lg object-contain bg-background border p-0.5 flex-shrink-0"
+            />
           )}
+          <div className="relative flex-1">
+            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={item.searchQuery || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateItem(idx, "searchQuery", val);
+                setActiveItemSuggestIndex(idx);
+              }}
+              onFocus={() => {
+                setActiveItemSuggestIndex(idx);
+              }}
+              placeholder="Buscar por produto..."
+              className="w-full h-10 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+            />
+            {(item.searchQuery || item.descricao) && (
+              <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+            )}
+          </div>
         </div>
+        {item.especificacoes_customizadas && (
+          <p className="text-[11px] text-muted-foreground/80 mt-1.5 truncate">
+            <span className="font-medium text-foreground/80">Especificações:</span> {item.especificacoes_customizadas}
+          </p>
+        )}
       </div>
 
       {/* Inner Fields Grid */}

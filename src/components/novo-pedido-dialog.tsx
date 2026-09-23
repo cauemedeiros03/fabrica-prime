@@ -127,6 +127,11 @@ interface ItemRow {
   valor: number;
   quantidade: number;
   searchQuery?: string;
+  produto_id?: string;
+  nome?: string;
+  preco_unitario?: number;
+  especificacoes_customizadas?: string;
+  imagem_url?: string;
 }
 
 type EditState = (Partial<NovoPedidoInput> & { id?: string }) | null;
@@ -205,8 +210,12 @@ export function NovoPedidoDialog({
     } else {
       parsedItems = parsedItems.map((item) => ({
         ...item,
+        descricao: item.descricao || item.nome || "",
+        nome: item.nome || item.descricao || "",
+        preco_unitario: Number(item.preco_unitario ?? item.valor ?? 0),
+        valor: Number(item.valor ?? item.preco_unitario ?? 0),
         quantidade: item.quantidade || 1,
-        searchQuery: item.descricao || ""
+        searchQuery: item.descricao || item.nome || "",
       }));
     }
     return parsedItems;
@@ -429,6 +438,55 @@ export function NovoPedidoDialog({
     setItems((prev) => [...prev, { descricao: "", material: "", medidas: "", valor: 0, quantidade: 1, searchQuery: "" }]);
   };
 
+  const handleSelectProduct = (idx: number, c: any) => {
+    let measuresStr = "";
+    let cleanDesc = "";
+    if (c.descricao) {
+      if (c.descricao.includes("===JSON_MEDIDAS===")) {
+        try {
+          const parts = c.descricao.split("===JSON_MEDIDAS===\n");
+          if (parts.length > 1) {
+            const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+            const parsed = JSON.parse(jsonPart);
+            measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
+          }
+        } catch {}
+      } else {
+        measuresStr = parseLegacyMedidas(c.descricao);
+      }
+      cleanDesc = c.descricao.split("===JSON_MEDIDAS===")[0].trim();
+    }
+
+    const specsArr: string[] = [];
+    if (cleanDesc) specsArr.push(cleanDesc);
+    if (c.material) specsArr.push(`Material: ${c.material}`);
+    if (c.cor_acabamento) specsArr.push(`Cor: ${c.cor_acabamento}`);
+    if (measuresStr) specsArr.push(`Medidas: ${measuresStr}`);
+    const especificacoesCustomizadas = specsArr.join(" | ") || c.tipo_movel || "";
+
+    const unitPrice = c.preco ? Number(c.preco) : 0;
+
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        return {
+          ...item,
+          produto_id: c.id,
+          nome: c.nome,
+          descricao: c.nome,
+          preco_unitario: unitPrice,
+          valor: unitPrice > 0 ? unitPrice : item.valor,
+          material: c.material || item.material || "",
+          medidas: measuresStr || item.medidas || "",
+          especificacoes_customizadas: especificacoesCustomizadas,
+          imagem_url: c.imagem_url || "",
+          searchQuery: c.nome,
+        };
+      })
+    );
+    setActiveItemSuggestIndex(null);
+  };
+
   const updateItem = (idx: number, field: keyof ItemRow, value: any) => {
     setItems((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
@@ -618,10 +676,15 @@ export function NovoPedidoDialog({
 
       // Sanitize items list before building payloads
       const sanitizedItems = items.map((item) => ({
-        descricao: item.descricao?.trim() || "Item sem descrição",
+        produto_id: item.produto_id || undefined,
+        nome: item.nome || item.descricao?.trim() || "Item sem descrição",
+        descricao: item.descricao?.trim() || item.nome || "Item sem descrição",
+        preco_unitario: Number(item.preco_unitario ?? item.valor ?? 0),
+        especificacoes_customizadas: item.especificacoes_customizadas || undefined,
+        imagem_url: item.imagem_url || undefined,
         material: item.material?.trim() || "",
         medidas: item.medidas?.trim() || "",
-        valor: Math.max(0, Number(item.valor) || 0),
+        valor: Math.max(0, Number(item.valor || item.preco_unitario || 0)),
         quantidade: Math.max(1, Math.round(Number(item.quantidade)) || 1),
         searchQuery: item.searchQuery?.trim() || "",
       }));
@@ -1259,61 +1322,11 @@ export function NovoPedidoDialog({
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      const idx = activeItemSuggestIndex;
-                      updateItem(idx, "descricao", c.nome);
-                      updateItem(idx, "material", c.material || "");
-                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
-                      updateItem(idx, "searchQuery", c.nome);
-                      
-                      // Auto-fill measures
-                      let measuresStr = "";
-                      if (c.descricao) {
-                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
-                          try {
-                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
-                            if (parts.length > 1) {
-                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                              const parsed = JSON.parse(jsonPart);
-                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                            }
-                          } catch {}
-                        } else {
-                          measuresStr = parseLegacyMedidas(c.descricao);
-                        }
-                      }
-                      if (measuresStr) {
-                        updateItem(idx, "medidas", measuresStr);
-                      }
-                      setActiveItemSuggestIndex(null);
+                      handleSelectProduct(activeItemSuggestIndex, c);
                     }}
                     onTouchStart={(e) => {
                       e.preventDefault();
-                      const idx = activeItemSuggestIndex;
-                      updateItem(idx, "descricao", c.nome);
-                      updateItem(idx, "material", c.material || "");
-                      updateItem(idx, "valor", c.preco ? Number(c.preco) : items[idx].valor);
-                      updateItem(idx, "searchQuery", c.nome);
-                      
-                      // Auto-fill measures
-                      let measuresStr = "";
-                      if (c.descricao) {
-                        if (c.descricao.includes("===JSON_MEDIDAS===")) {
-                          try {
-                            const parts = c.descricao.split("===JSON_MEDIDAS===\n");
-                            if (parts.length > 1) {
-                              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
-                              const parsed = JSON.parse(jsonPart);
-                              measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
-                            }
-                          } catch {}
-                        } else {
-                          measuresStr = parseLegacyMedidas(c.descricao);
-                        }
-                      }
-                      if (measuresStr) {
-                        updateItem(idx, "medidas", measuresStr);
-                      }
-                      setActiveItemSuggestIndex(null);
+                      handleSelectProduct(activeItemSuggestIndex, c);
                     }}
                     className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0"
                   >
@@ -1584,27 +1597,41 @@ const ProductCardItem = React.memo(({
           ref={(el) => {
             productInputRefs.current[idx] = el;
           }}
-          className="mt-1 relative"
+          className="mt-1 relative flex items-center gap-2"
         >
-          <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            value={item.searchQuery || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              updateItem(idx, "searchQuery", val);
-              setActiveItemSuggestIndex(idx);
-            }}
-            onFocus={() => {
-              setActiveItemSuggestIndex(idx);
-            }}
-            placeholder="Buscar por produto..."
-            className="w-full h-9 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-          />
-          {(item.searchQuery || item.descricao) && (
-            <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+          {item.imagem_url && (
+            <img
+              src={item.imagem_url}
+              alt={item.nome || item.descricao}
+              className="size-9 rounded-lg object-contain bg-background border p-0.5 flex-shrink-0"
+            />
           )}
+          <div className="relative flex-1">
+            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={item.searchQuery || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateItem(idx, "searchQuery", val);
+                setActiveItemSuggestIndex(idx);
+              }}
+              onFocus={() => {
+                setActiveItemSuggestIndex(idx);
+              }}
+              placeholder="Buscar por produto..."
+              className="w-full h-9 pl-9 pr-8 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+            />
+            {(item.searchQuery || item.descricao) && (
+              <Check className="size-4 absolute right-3 top-1/2 -translate-y-1/2 text-success" />
+            )}
+          </div>
         </div>
+        {item.especificacoes_customizadas && (
+          <p className="text-[11px] text-muted-foreground/80 mt-1.5 truncate">
+            <span className="font-medium text-foreground/80">Especificações:</span> {item.especificacoes_customizadas}
+          </p>
+        )}
       </div>
 
       {/* Inner Fields Grid */}
