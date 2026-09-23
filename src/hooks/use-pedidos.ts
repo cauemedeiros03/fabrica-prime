@@ -129,7 +129,7 @@ export function usePedidos() {
           ascending: false,
         });
 
-            if (error) {
+      if (error) {
         console.error(
           "Erro ao procurar pedidos:",
           error
@@ -225,47 +225,47 @@ export function usePedido(id?: string) {
       }
 
       return {
-  ...data,
+        ...data,
 
-  cliente: data.cliente_nome ?? "",
-  valorTotal: Number(data.valor_total ?? 0),
-  valorPago: Number(data.valor_pago ?? 0),
+        cliente: data.cliente_nome ?? "",
+        valorTotal: Number(data.valor_total ?? 0),
+        valorPago: Number(data.valor_pago ?? 0),
 
-  criadoEm:
-    data.data_criacao ??
-    data.created_at ??
-    new Date().toISOString(),
+        criadoEm:
+          data.data_criacao ??
+          data.created_at ??
+          new Date().toISOString(),
 
-  atualizadoEm:
-    data.updated_at ??
-    data.created_at ??
-    null,
+        atualizadoEm:
+          data.updated_at ??
+          data.created_at ??
+          null,
 
-  entrega:
-    data.data_entrega_estimada ??
-    data.entrega ??
-    null,
+        entrega:
+          data.data_entrega_estimada ??
+          data.entrega ??
+          null,
 
-  telefone: (data as any).telefone ?? "",
-  email: (data as any).email ?? "",
-  cidade: (data as any).cidade ?? "",
-  produto: data.produto ?? "",
-  tipo: data.tipo ?? "",
-  material: data.material ?? "",
-  cor: data.cor ?? "",
+        telefone: (data as any).telefone ?? "",
+        email: (data as any).email ?? "",
+        cidade: (data as any).cidade ?? "",
+        produto: data.produto ?? "",
+        tipo: data.tipo ?? "",
+        material: data.material ?? "",
+        cor: data.cor ?? "",
 
-  desconto: Number(data.desconto ?? 0),
+        desconto: Number(data.desconto ?? 0),
 
-  anexos: Array.isArray(data.anexos)
-    ? data.anexos
-    : [],
+        anexos: Array.isArray(data.anexos)
+          ? data.anexos
+          : [],
 
-  prioridade:
-    data.prioridade ?? "media",
+        prioridade:
+          data.prioridade ?? "media",
 
-  etapa:
-    data.etapa ?? "pedido-recebido",
-} as Pedido;
+        etapa:
+          data.etapa ?? "pedido-recebido",
+      } as Pedido;
     },
   });
 }
@@ -302,11 +302,11 @@ export function useCreatePedido() {
 
       const numeroPedido = `PED-${Date.now()}`;
 
-const payload = {
-  numero: numeroPedido,
+      const payload = {
+        numero: numeroPedido,
 
-  cliente_id:
-    input.cliente_id ?? null,
+        cliente_id:
+          input.cliente_id ?? null,
 
         cliente_nome:
           input.cliente_nome?.trim() ||
@@ -1044,14 +1044,6 @@ export function useAddPagamento() {
         );
       }
 
-      const {
-        data: userData,
-      } =
-        await supabase.auth.getUser();
-
-      const userId =
-        userData?.user?.id;
-
       const pagamentoPayload = {
         pedido_id:
           pedidoId,
@@ -1066,12 +1058,6 @@ export function useAddPagamento() {
         observacao:
           input.observacao ??
           null,
-
-        ...(userId
-          ? {
-            user_id: userId,
-          }
-          : {}),
       };
 
       const {
