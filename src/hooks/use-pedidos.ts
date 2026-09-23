@@ -203,10 +203,6 @@ export function useMoverEtapaPedido() {
   });
 }
 
-/** Aliases para retrocompatibilidade com outros componentes */
-export const useAtualizarEtapa = useMoverEtapaPedido;
-export const useUpdateEtapaPedido = useMoverEtapaPedido;
-
 /** Hook para eliminar um pedido */
 export function useDeletePedido() {
   const queryClient = useQueryClient();
@@ -297,3 +293,15 @@ export function useConverterOrcamentoEmPedido() {
     },
   });
 }
+
+// ─── Aliases para retrocompatibilidade ────────────────────────────────────────
+export const useCriarPedido = useCreatePedido;
+export const useAtualizarPedido = useUpdatePedido;
+export const useEliminarPedido = useDeletePedido;
+export const useDeletarPedido = useDeletePedido;
+export const useAtualizarEtapa = useMoverEtapaPedido;
+export const useUpdateEtapaPedido = useMoverEtapaPedido;
+export const useMoverEtapa = useMoverEtapaPedido;
+export const useAtualizarStatusPedido = useMoverEtapaPedido;
+export const useAtualizarStatus = useMoverEtapaPedido;
+export const useConverterOrcamento = useConverterOrcamentoEmPedido;
