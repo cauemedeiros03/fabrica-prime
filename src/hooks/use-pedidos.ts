@@ -218,9 +218,13 @@ export function useCreatePedido() {
       const desconto =
         Number(input.desconto) || 0;
 
-      const payload = {
-        cliente_id:
-          input.cliente_id ?? null,
+      const numeroPedido = `PED-${Date.now()}`;
+
+const payload = {
+  numero: numeroPedido,
+
+  cliente_id:
+    input.cliente_id ?? null,
 
         cliente_nome:
           input.cliente_nome?.trim() ||
