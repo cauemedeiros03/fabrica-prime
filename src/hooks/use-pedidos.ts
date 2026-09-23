@@ -109,7 +109,6 @@ export const isDraggingMutation = {
   current: false,
 };
 
-
 /* ==========================================================================
    LISTAR PEDIDOS
    ========================================================================== */
@@ -119,10 +118,7 @@ export function usePedidos() {
     queryKey: ["pedidos"],
 
     queryFn: async () => {
-      const {
-        data,
-        error,
-      } = await supabase
+      const { data, error } = await supabase
         .from("pedidos")
         .select("*")
         .order("created_at", {
@@ -163,9 +159,10 @@ export function usePedidos() {
           p.entrega ??
           null,
 
-        telefone: (p as any).telefone ?? "",
-        email: (p as any).email ?? "",
-        cidade: (p as any).cidade ?? "",
+        telefone: p.telefone ?? "",
+        email: p.email ?? "",
+        cidade: p.cidade ?? "",
+
         produto: p.produto ?? "",
         tipo: p.tipo ?? "",
         material: p.material ?? "",
@@ -187,7 +184,6 @@ export function usePedidos() {
   });
 }
 
-
 /* ==========================================================================
    BUSCAR PEDIDO
    ========================================================================== */
@@ -203,10 +199,7 @@ export function usePedido(id?: string) {
         return null;
       }
 
-      const {
-        data,
-        error,
-      } = await supabase
+      const { data, error } = await supabase
         .from("pedidos")
         .select("*")
         .eq("id", id)
@@ -249,6 +242,7 @@ export function usePedido(id?: string) {
         telefone: (data as any).telefone ?? "",
         email: (data as any).email ?? "",
         cidade: (data as any).cidade ?? "",
+
         produto: data.produto ?? "",
         tipo: data.tipo ?? "",
         material: data.material ?? "",
@@ -270,22 +264,18 @@ export function usePedido(id?: string) {
   });
 }
 
-
 /* ==========================================================================
    CRIAR PEDIDO
    ========================================================================== */
 
 export function useCreatePedido() {
-  const queryClient =
-    useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (
       input: NovoPedidoInput
     ) => {
-      const {
-        data: userData,
-      } =
+      const { data: userData } =
         await supabase.auth.getUser();
 
       const userId =
@@ -300,7 +290,8 @@ export function useCreatePedido() {
       const desconto =
         Number(input.desconto) || 0;
 
-      const numeroPedido = `PED-${Date.now()}`;
+      const numeroPedido =
+        `PED-${Date.now()}`;
 
       const payload = {
         numero: numeroPedido,
@@ -378,16 +369,20 @@ export function useCreatePedido() {
           null,
 
         bairro:
-          input.bairro ?? null,
+          input.bairro ??
+          null,
 
         instagram:
-          input.instagram ?? null,
+          input.instagram ??
+          null,
 
         origem:
-          input.origem ?? null,
+          input.origem ??
+          null,
 
         anexos:
-          input.anexos ?? [],
+          input.anexos ??
+          [],
 
         data_criacao:
           input.data_criacao ??
@@ -429,31 +424,27 @@ export function useCreatePedido() {
       }
 
       /*
-       * Registra pagamento inicial.
+       * REGISTRA PAGAMENTO INICIAL
+       *
+       * IMPORTANTE:
+       * A tabela pagamentos NÃO possui user_id.
        */
       if (
         valorPago > 0 &&
         data?.id
       ) {
         const pagamentoPayload = {
-          pedido_id:
-            data.id,
-
-          valor:
-            valorPago,
-
+          pedido_id: data.id,
+          valor: valorPago,
           forma:
             input.forma_pagamento ||
             "Pix",
-
           observacao:
             "Pagamento inicial / entrada",
-
         };
 
         const {
-          error:
-          pagamentoError,
+          error: pagamentoError,
         } = await supabase
           .from("pagamentos")
           .insert(
@@ -506,7 +497,6 @@ export function useCreatePedido() {
     },
   });
 }
-
 
 /* ==========================================================================
    ATUALIZAR PEDIDO
@@ -615,7 +605,6 @@ export function useUpdatePedido() {
   });
 }
 
-
 /* ==========================================================================
    ATUALIZAR ETAPA / KANBAN
    ========================================================================== */
@@ -711,7 +700,6 @@ export function useMoverEtapaPedido() {
   });
 }
 
-
 /* ==========================================================================
    REAGENDAR ENTREGA
    ========================================================================== */
@@ -730,10 +718,6 @@ export function useReagendarEntrega() {
         );
       }
 
-      /*
-       * Aceitamos os três nomes para manter compatibilidade
-       * com diferentes componentes da aplicação.
-       */
       const novaData =
         input.data_entrega_estimada ??
         input.data_entrega ??
@@ -814,7 +798,6 @@ export function useReagendarEntrega() {
   });
 }
 
-
 /* ==========================================================================
    EXCLUIR PEDIDO
    ========================================================================== */
@@ -868,6 +851,10 @@ export function useDeletePedido() {
         queryKey: ["agenda"],
       });
 
+      queryClient.invalidateQueries({
+        queryKey: ["pagamentos"],
+      });
+
       toast.success(
         "Pedido excluído com sucesso!"
       );
@@ -887,7 +874,6 @@ export function useDeletePedido() {
   });
 }
 
-
 /* ==========================================================================
    DUPLICAR PEDIDO
    ========================================================================== */
@@ -900,8 +886,7 @@ export function useDuplicatePedido() {
     mutationFn: async (
       pedido: Pedido | string
     ) => {
-      let pedidoOriginal:
-        Pedido;
+      let pedidoOriginal: Pedido;
 
       if (
         typeof pedido === "string"
@@ -1009,7 +994,6 @@ export function useDuplicatePedido() {
   });
 }
 
-
 /* ==========================================================================
    ADICIONAR PAGAMENTO
    ========================================================================== */
@@ -1044,6 +1028,11 @@ export function useAddPagamento() {
         );
       }
 
+      /*
+       * IMPORTANTE:
+       * A tabela pagamentos não possui user_id.
+       * Portanto, NENHUM user_id é enviado aqui.
+       */
       const pagamentoPayload = {
         pedido_id:
           pedidoId,
@@ -1083,6 +1072,9 @@ export function useAddPagamento() {
         );
       }
 
+      /*
+       * Atualiza o total pago do pedido.
+       */
       const {
         data: pedido,
         error: pedidoError,
@@ -1102,7 +1094,10 @@ export function useAddPagamento() {
           valorPagoAtual +
           valor;
 
-        await supabase
+        const {
+          error:
+          updateError,
+        } = await supabase
           .from("pedidos")
           .update({
             valor_pago:
@@ -1112,6 +1107,13 @@ export function useAddPagamento() {
             "id",
             pedidoId
           );
+
+        if (updateError) {
+          console.error(
+            "Erro ao atualizar valor pago:",
+            updateError
+          );
+        }
       }
 
       return pagamento;
@@ -1140,6 +1142,13 @@ export function useAddPagamento() {
             pedidoId,
           ],
         });
+
+        queryClient.invalidateQueries({
+          queryKey: [
+            "pagamentos",
+            pedidoId,
+          ],
+        });
       }
 
       queryClient.invalidateQueries({
@@ -1164,7 +1173,6 @@ export function useAddPagamento() {
     },
   });
 }
-
 
 /* ==========================================================================
    PAGAMENTOS DO PEDIDO
@@ -1221,7 +1229,6 @@ export function usePagamentosPedido(
   });
 }
 
-
 /* ==========================================================================
    TODOS OS PAGAMENTOS
    ========================================================================== */
@@ -1263,7 +1270,6 @@ export function useAllPagamentos() {
     },
   });
 }
-
 
 /* ==========================================================================
    CRIAR VENDA DIRETA
@@ -1372,6 +1378,13 @@ export function useCreateVendaDireta() {
         );
       }
 
+      /*
+       * Pagamento da venda direta.
+       *
+       * IMPORTANTE:
+       * Não enviamos user_id porque
+       * pagamentos não possui essa coluna.
+       */
       if (
         valorPago > 0 &&
         pedido?.id
@@ -1389,12 +1402,6 @@ export function useCreateVendaDireta() {
 
           observacao:
             "Venda direta",
-
-          ...(userId
-            ? {
-              user_id: userId,
-            }
-            : {}),
         };
 
         const {
@@ -1453,7 +1460,6 @@ export function useCreateVendaDireta() {
   });
 }
 
-
 /* ==========================================================================
    HISTÓRICO DE ETAPAS
    ========================================================================== */
@@ -1510,7 +1516,6 @@ export function useEtapasHistorico(
     },
   });
 }
-
 
 /* ==========================================================================
    CONVERTER ORÇAMENTO EM PEDIDO
@@ -1739,7 +1744,6 @@ export function useConverterOrcamentoEmPedido() {
     },
   });
 }
-
 
 /* ==========================================================================
    ALIASES / COMPATIBILIDADE
