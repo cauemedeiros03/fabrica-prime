@@ -4,34 +4,34 @@ import { toast } from "sonner";
 
 export interface NovoPedidoInput {
   id?: string;
-  cliente_id?: string;
+  cliente_id?: string | null;
   cliente_nome: string;
-  telefone?: string;
-  email?: string;
-  cidade?: string;
+  telefone?: string | null;
+  email?: string | null;
+  cidade?: string | null;
   produto: string;
-  tipo?: string;
-  material?: string;
-  cor?: string;
-  observacoes?: string;
-  entrega?: string;
+  tipo?: string | null;
+  material?: string | null;
+  cor?: string | null;
+  observacoes?: string | null;
+  entrega?: string | null;
   prioridade: "baixa" | "media" | "alta" | "urgente";
   etapa: string;
   valor_total: number;
   valor_pago: number;
   desconto?: number;
-  forma_pagamento?: string;
-  cpf?: string;
-  cep?: string;
-  endereco?: string;
-  numero_endereco?: string;
-  complemento?: string;
-  bairro?: string;
-  instagram?: string;
-  origem?: string;
+  forma_pagamento?: string | null;
+  cpf?: string | null;
+  cep?: string | null;
+  endereco?: string | null;
+  numero_endereco?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+  instagram?: string | null;
+  origem?: string | null;
   anexos?: string[];
-  data_criacao?: string;
-  data_entrega_estimada?: string;
+  data_criacao?: string | null;
+  data_entrega_estimada?: string | null;
 }
 
 export interface Pedido extends NovoPedidoInput {
@@ -40,6 +40,9 @@ export interface Pedido extends NovoPedidoInput {
   updated_at?: string;
   user_id?: string;
 }
+
+/** Flag auxiliar para controlo de estado de arrasto no Kanban / Realtime */
+export const isDraggingMutation = { current: false };
 
 /** Hook para listar todos os pedidos */
 export function usePedidos() {
@@ -133,7 +136,6 @@ export function useCreatePedido() {
         throw new Error(error.message || "Erro ao criar o pedido no banco de dados.");
       }
 
-      // Registo inicial de pagamento se houver valor de entrada
       if (input.valor_pago > 0 && data?.id) {
         await supabase.from("pagamentos").insert({
           pedido_id: data.id,
@@ -183,6 +185,28 @@ export function useUpdatePedido() {
   });
 }
 
+/** Hook para mover a etapa do pedido no quadro Kanban */
+export function useMoverEtapaPedido() {
+  const update = useUpdatePedido();
+
+  return useMutation({
+    mutationFn: async ({ id, etapa }: { id: string; etapa: string }) => {
+      isDraggingMutation.current = true;
+      try {
+        return await update.mutateAsync({ id, etapa });
+      } finally {
+        setTimeout(() => {
+          isDraggingMutation.current = false;
+        }, 500);
+      }
+    },
+  });
+}
+
+/** Aliases para retrocompatibilidade com outros componentes */
+export const useAtualizarEtapa = useMoverEtapaPedido;
+export const useUpdateEtapaPedido = useMoverEtapaPedido;
+
 /** Hook para eliminar um pedido */
 export function useDeletePedido() {
   const queryClient = useQueryClient();
@@ -208,7 +232,7 @@ export function useDeletePedido() {
   });
 }
 
-/** Hook para converter um orçamento salvo diretamente num pedido ativo */
+/** Hook para converter um orçamento salvo num pedido ativo */
 export function useConverterOrcamentoEmPedido() {
   const queryClient = useQueryClient();
 
@@ -217,7 +241,6 @@ export function useConverterOrcamentoEmPedido() {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id;
 
-      // Cálculo de valor líquido
       const valorTotalSugerido = Number(orcamento.valorSugerido || orcamento.valor_sugerido || 0);
       const descontoVal = Number(orcamento.desconto || 0);
       const valorFinal = Math.max(0, valorTotalSugerido - descontoVal);
@@ -242,7 +265,6 @@ export function useConverterOrcamentoEmPedido() {
         ...(userId ? { user_id: userId } : {}),
       };
 
-      // 1. Criar o pedido na tabela principal
       const { data: novoPedido, error: createError } = await supabase
         .from("pedidos")
         .insert(payload as any)
@@ -254,11 +276,10 @@ export function useConverterOrcamentoEmPedido() {
         throw new Error(createError.message || "Falha ao criar o pedido a partir do orçamento.");
       }
 
-      // 2. Atualizar o estado do orçamento para "Aprovado" se existir no Supabase
       if (orcamento.id) {
-        await supabase
+        await (supabase as any)
           .from("orcamentos_salvos")
-          .update({ status: "Aprovado" } as any)
+          .update({ status: "Aprovado" })
           .eq("id", orcamento.id);
       }
 
