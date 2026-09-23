@@ -129,7 +129,7 @@ export function usePedidos() {
           ascending: false,
         });
 
-      if (error) {
+            if (error) {
         console.error(
           "Erro ao procurar pedidos:",
           error
@@ -141,7 +141,48 @@ export function usePedidos() {
         );
       }
 
-      return (data ?? []) as Pedido[];
+      return (data ?? []).map((p: any) => ({
+        ...p,
+
+        cliente: p.cliente_nome ?? "",
+        valorTotal: Number(p.valor_total ?? 0),
+        valorPago: Number(p.valor_pago ?? 0),
+
+        criadoEm:
+          p.data_criacao ??
+          p.created_at ??
+          new Date().toISOString(),
+
+        atualizadoEm:
+          p.updated_at ??
+          p.created_at ??
+          null,
+
+        entrega:
+          p.data_entrega_estimada ??
+          p.entrega ??
+          null,
+
+        telefone: (p as any).telefone ?? "",
+        email: (p as any).email ?? "",
+        cidade: (p as any).cidade ?? "",
+        produto: p.produto ?? "",
+        tipo: p.tipo ?? "",
+        material: p.material ?? "",
+        cor: p.cor ?? "",
+
+        desconto: Number(p.desconto ?? 0),
+
+        anexos: Array.isArray(p.anexos)
+          ? p.anexos
+          : [],
+
+        prioridade:
+          p.prioridade ?? "media",
+
+        etapa:
+          p.etapa ?? "pedido-recebido",
+      })) as Pedido[];
     },
   });
 }
@@ -183,7 +224,48 @@ export function usePedido(id?: string) {
         );
       }
 
-      return data as Pedido;
+      return {
+  ...data,
+
+  cliente: data.cliente_nome ?? "",
+  valorTotal: Number(data.valor_total ?? 0),
+  valorPago: Number(data.valor_pago ?? 0),
+
+  criadoEm:
+    data.data_criacao ??
+    data.created_at ??
+    new Date().toISOString(),
+
+  atualizadoEm:
+    data.updated_at ??
+    data.created_at ??
+    null,
+
+  entrega:
+    data.data_entrega_estimada ??
+    data.entrega ??
+    null,
+
+  telefone: (data as any).telefone ?? "",
+  email: (data as any).email ?? "",
+  cidade: (data as any).cidade ?? "",
+  produto: data.produto ?? "",
+  tipo: data.tipo ?? "",
+  material: data.material ?? "",
+  cor: data.cor ?? "",
+
+  desconto: Number(data.desconto ?? 0),
+
+  anexos: Array.isArray(data.anexos)
+    ? data.anexos
+    : [],
+
+  prioridade:
+    data.prioridade ?? "media",
+
+  etapa:
+    data.etapa ?? "pedido-recebido",
+} as Pedido;
     },
   });
 }
