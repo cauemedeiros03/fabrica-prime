@@ -101,11 +101,11 @@ function ProdutosPage() {
         .from("catalogo_produtos")
         .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em, imagem_url")
         .order("nome", { ascending: true });
-        
+
       console.log('Produtos fetch:', data, error);
-        
+
       if (error) throw error;
-      
+
       setProdutos(
         (data || []).map((p) => ({
           ...p,
@@ -660,7 +660,7 @@ function ProdutoDialog({
     try {
       const file = files[0];
       const compressedBlob = await compressImage(file);
-      
+
       const fileExt = "jpg";
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
       const filePath = `${fileName}`;
