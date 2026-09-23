@@ -68,8 +68,14 @@ export const PEDIDOS: Pedido[] = [
   { id: "9", numero: "#1039", cliente: "Helena Costa", telefone: "(41) 99876-5544", cidade: "Curitiba, PR", produto: "Aparador Hall Entrada", tipo: "Aparador", material: "Marfim maciça", cor: "Branco patina", valorTotal: 4800, valorPago: 2400, entrega: dia(5), criadoEm: dia(-10), etapa: "qualidade", prioridade: "media" },
 ];
 
-export const moeda = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export const moeda = (v: number | null | undefined) => {
+  const valor = Number(v ?? 0);
+
+  return valor.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+};
 
 export const dataBR = (iso: string) =>
   new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
