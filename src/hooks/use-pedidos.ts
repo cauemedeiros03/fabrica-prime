@@ -367,11 +367,6 @@ const payload = {
           observacao:
             "Pagamento inicial / entrada",
 
-          ...(userId
-            ? {
-              user_id: userId,
-            }
-            : {}),
         };
 
         const {
