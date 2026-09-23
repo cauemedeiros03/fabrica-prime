@@ -95,7 +95,6 @@ function PedidoViewerContent({
         pedido_id: p.id,
         valor,
         forma: novaForma || undefined,
-        pago_em: novaData,
       });
       toast.success("Pagamento registrado com sucesso!");
       setNovoValor("");
@@ -141,7 +140,7 @@ function PedidoViewerContent({
               )}
             </div>
             <h2 className="text-lg font-semibold tracking-tight mt-1">
-              {`Pedido #${p.numero?.toString().startsWith('#') ? p.numero.slice(1) : p.numero || p.id} — ${p.clientes?.nome || p.cliente || "Cliente não informado"}`}
+              {p.clientes?.nome || p.cliente || "Cliente não informado"}
             </h2>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 ml-4">
@@ -404,9 +403,9 @@ function PedidoViewerContent({
                 value={
                   p.material
                     ? ([...new Set(p.material.split(",").map((m: string) => m.trim()))] as string[])
-                        .filter(Boolean)
-                        .map((m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
-                        .join(", ")
+                      .filter(Boolean)
+                      .map((m: string) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase())
+                      .join(", ")
                     : null
                 }
               />
@@ -550,13 +549,12 @@ function ProducaoTimeline({
             {/* Coluna do ícone + linha vertical */}
             <div className="flex flex-col items-center">
               <div
-                className={`relative z-10 flex items-center justify-center size-6 rounded-full border-2 shrink-0 transition-all ${
-                  isCurrent
-                    ? "border-primary bg-primary shadow-sm shadow-primary/30"
-                    : isCompleted
+                className={`relative z-10 flex items-center justify-center size-6 rounded-full border-2 shrink-0 transition-all ${isCurrent
+                  ? "border-primary bg-primary shadow-sm shadow-primary/30"
+                  : isCompleted
                     ? "border-emerald-500 bg-emerald-500"
                     : "border-muted-foreground/25 bg-background"
-                }`}
+                  }`}
               >
                 {isCurrent ? (
                   <span className="size-2 rounded-full bg-primary-foreground" />
@@ -569,11 +567,10 @@ function ProducaoTimeline({
               {/* Linha vertical conectora */}
               {!isLast && (
                 <div
-                  className={`w-px flex-1 mt-0.5 ${
-                    isCompleted && idx < idxAtual
-                      ? "bg-emerald-500/50"
-                      : "bg-border"
-                  }`}
+                  className={`w-px flex-1 mt-0.5 ${isCompleted && idx < idxAtual
+                    ? "bg-emerald-500/50"
+                    : "bg-border"
+                    }`}
                 />
               )}
             </div>
@@ -581,13 +578,12 @@ function ProducaoTimeline({
             {/* Conteúdo textual */}
             <div className={`pb-4 flex-1 ${isLast ? "pb-0" : ""}`}>
               <p
-                className={`text-sm font-medium leading-tight ${
-                  isCurrent
-                    ? "text-primary"
-                    : isCompleted
+                className={`text-sm font-medium leading-tight ${isCurrent
+                  ? "text-primary"
+                  : isCompleted
                     ? "text-foreground"
                     : "text-muted-foreground/50"
-                }`}
+                  }`}
               >
                 {etapa.label}
               </p>
