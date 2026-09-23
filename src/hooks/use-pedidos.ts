@@ -1,29 +1,42 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+/* ==========================================================================
+   TIPOS
+   ========================================================================== */
+
 export interface NovoPedidoInput {
   id?: string;
+
   cliente_id?: string | null;
   cliente_nome: string;
+
   telefone?: string | null;
   email?: string | null;
   cidade?: string | null;
+
   produto: string;
   tipo?: string | null;
   material?: string | null;
   cor?: string | null;
+
   observacoes?: string | null;
   entrega?: string | null;
 
   prioridade: "baixa" | "media" | "alta" | "urgente";
 
-  // Mantemos string para não quebrar os componentes existentes.
   etapa: string;
 
   valor_total: number;
   valor_pago: number;
   desconto?: number;
+
   forma_pagamento?: string | null;
 
   cpf?: string | null;
@@ -44,31 +57,72 @@ export interface NovoPedidoInput {
 
 export interface Pedido extends NovoPedidoInput {
   id: string;
+
   created_at?: string;
   updated_at?: string;
+
   user_id?: string;
 }
 
-/**
- * Flag auxiliar para controle do Kanban / Realtime.
+export interface AddPagamentoInput {
+  pedido_id?: string;
+  pedidoId?: string;
+
+  valor: number;
+
+  forma?: string;
+  forma_pagamento?: string;
+
+  observacao?: string;
+}
+
+export interface VendaDiretaInput {
+  cliente_id?: string | null;
+  cliente_nome?: string | null;
+
+  produto?: string | null;
+
+  valor_total: number;
+  valor_pago?: number;
+
+  forma_pagamento?: string | null;
+
+  observacoes?: string | null;
+
+  data_venda?: string | null;
+}
+
+export interface ReagendarEntregaInput {
+  id: string;
+
+  data_entrega_estimada?: string | null;
+
+  data_entrega?: string | null;
+
+  entrega?: string | null;
+}
+
+/*
+ * Controle auxiliar utilizado pelo Kanban.
  */
 export const isDraggingMutation = {
   current: false,
 };
 
+
 /* ==========================================================================
-   PEDIDOS
+   LISTAR PEDIDOS
    ========================================================================== */
 
-/**
- * Lista todos os pedidos.
- */
 export function usePedidos() {
   return useQuery({
     queryKey: ["pedidos"],
 
     queryFn: async () => {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("pedidos")
         .select("*")
         .order("created_at", {
@@ -76,10 +130,14 @@ export function usePedidos() {
         });
 
       if (error) {
-        console.error("Erro ao buscar pedidos:", error);
+        console.error(
+          "Erro ao procurar pedidos:",
+          error
+        );
 
         throw new Error(
-          error.message || "Não foi possível carregar os pedidos."
+          error.message ||
+          "Não foi possível carregar os pedidos."
         );
       }
 
@@ -88,12 +146,15 @@ export function usePedidos() {
   });
 }
 
-/**
- * Busca um pedido específico.
- */
+
+/* ==========================================================================
+   BUSCAR PEDIDO
+   ========================================================================== */
+
 export function usePedido(id?: string) {
   return useQuery({
     queryKey: ["pedidos", id],
+
     enabled: Boolean(id),
 
     queryFn: async () => {
@@ -101,15 +162,18 @@ export function usePedido(id?: string) {
         return null;
       }
 
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("pedidos")
         .select("*")
         .eq("id", id)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error(
-          "Erro ao buscar detalhe do pedido:",
+          "Erro ao procurar detalhe do pedido:",
           error
         );
 
@@ -119,91 +183,116 @@ export function usePedido(id?: string) {
         );
       }
 
-      return data as Pedido | null;
+      return data as Pedido;
     },
   });
 }
+
 
 /* ==========================================================================
    CRIAR PEDIDO
    ========================================================================== */
 
 export function useCreatePedido() {
-  const queryClient = useQueryClient();
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: NovoPedidoInput) => {
+    mutationFn: async (
+      input: NovoPedidoInput
+    ) => {
       const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+        data: userData,
+      } =
+        await supabase.auth.getUser();
 
-      if (authError) {
-        console.error(
-          "Erro ao obter usuário:",
-          authError
-        );
+      const userId =
+        userData?.user?.id;
 
-        throw new Error(
-          "Não foi possível verificar o usuário autenticado."
-        );
-      }
+      const valorTotal =
+        Number(input.valor_total) || 0;
 
-      const userId = user?.id;
+      const valorPago =
+        Number(input.valor_pago) || 0;
 
-      const valorTotal = Number(input.valor_total) || 0;
-      const valorPago = Number(input.valor_pago) || 0;
-      const desconto = Number(input.desconto) || 0;
+      const desconto =
+        Number(input.desconto) || 0;
 
-      /*
-       * Usamos um payload separado para evitar que a tipagem
-       * automática do Supabase bloqueie campos existentes no
-       * banco mas que não estão refletidos corretamente nos
-       * tipos gerados.
-       */
       const payload = {
-        cliente_id: input.cliente_id ?? null,
+        cliente_id:
+          input.cliente_id ?? null,
+
         cliente_nome:
           input.cliente_nome?.trim() ||
           "Cliente sem nome",
 
-        telefone: input.telefone ?? null,
-        email: input.email ?? null,
-        cidade: input.cidade ?? null,
+        telefone:
+          input.telefone ?? null,
+
+        email:
+          input.email ?? null,
+
+        cidade:
+          input.cidade ?? null,
 
         produto:
           input.produto?.trim() ||
           "Produto não informado",
 
-        tipo: input.tipo ?? null,
-        material: input.material ?? null,
-        cor: input.cor ?? null,
+        tipo:
+          input.tipo ?? null,
 
-        observacoes: input.observacoes ?? null,
-        entrega: input.entrega ?? null,
+        material:
+          input.material ?? null,
 
-        prioridade: input.prioridade || "media",
-        etapa: input.etapa || "pedido-recebido",
+        cor:
+          input.cor ?? null,
 
-        valor_total: valorTotal,
-        valor_pago: valorPago,
+        observacoes:
+          input.observacoes ?? null,
+
+        entrega:
+          input.entrega ?? null,
+
+        prioridade:
+          input.prioridade ||
+          "media",
+
+        etapa:
+          input.etapa ||
+          "pedido-recebido",
+
+        valor_total:
+          valorTotal,
+
+        valor_pago:
+          valorPago,
+
         desconto,
 
         forma_pagamento:
-          input.forma_pagamento ?? null,
+          input.forma_pagamento ??
+          null,
 
-        cpf: input.cpf ?? null,
-        cep: input.cep ?? null,
-        endereco: input.endereco ?? null,
+        cpf:
+          input.cpf ?? null,
 
-        // Campo obrigatório indicado pelo TypeScript do banco
+        cep:
+          input.cep ?? null,
+
+        endereco:
+          input.endereco ?? null,
+
         numero_endereco:
-          input.numero_endereco ?? null,
+          input.numero_endereco ??
+          null,
 
         complemento:
-          input.complemento ?? null,
+          input.complemento ??
+          null,
 
-        bairro: input.bairro ?? null,
+        bairro:
+          input.bairro ?? null,
 
         instagram:
           input.instagram ?? null,
@@ -216,7 +305,9 @@ export function useCreatePedido() {
 
         data_criacao:
           input.data_criacao ??
-          new Date().toISOString().split("T")[0],
+          new Date()
+            .toISOString()
+            .split("T")[0],
 
         data_entrega_estimada:
           input.data_entrega_estimada ??
@@ -230,13 +321,10 @@ export function useCreatePedido() {
           : {}),
       };
 
-      /*
-       * O `as any` aqui é intencional.
-       *
-       * O banco possui campos/enums que não estão corretamente
-       * refletidos na tipagem atual gerada pelo Supabase.
-       */
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("pedidos")
         .insert(payload as any)
         .select()
@@ -254,16 +342,24 @@ export function useCreatePedido() {
         );
       }
 
-      /* ------------------------------------------------------------------
-         PAGAMENTO INICIAL
-         ------------------------------------------------------------------ */
-
-      if (valorPago > 0 && data?.id) {
+      /*
+       * Registra pagamento inicial.
+       */
+      if (
+        valorPago > 0 &&
+        data?.id
+      ) {
         const pagamentoPayload = {
-          pedido_id: data.id,
-          valor: valorPago,
+          pedido_id:
+            data.id,
+
+          valor:
+            valorPago,
+
           forma:
-            input.forma_pagamento || "Pix",
+            input.forma_pagamento ||
+            "Pix",
+
           observacao:
             "Pagamento inicial / entrada",
 
@@ -274,15 +370,14 @@ export function useCreatePedido() {
             : {}),
         };
 
-        /*
-         * O tipo gerado pelo Supabase está marcando user_id
-         * como `never`, então usamos o mesmo tratamento aqui.
-         */
         const {
-          error: pagamentoError,
+          error:
+          pagamentoError,
         } = await supabase
           .from("pagamentos")
-          .insert(pagamentoPayload as any);
+          .insert(
+            pagamentoPayload as any
+          );
 
         if (pagamentoError) {
           console.error(
@@ -308,28 +403,37 @@ export function useCreatePedido() {
         queryKey: ["financeiro"],
       });
 
+      queryClient.invalidateQueries({
+        queryKey: ["pagamentos"],
+      });
+
       toast.success(
         "Pedido criado com sucesso!"
       );
     },
 
-    onError: (error: Error) => {
+    onError: (
+      error: Error
+    ) => {
       toast.error(
         "Erro ao criar pedido",
         {
-          description: error.message,
+          description:
+            error.message,
         }
       );
     },
   });
 }
 
+
 /* ==========================================================================
    ATUALIZAR PEDIDO
    ========================================================================== */
 
 export function useUpdatePedido() {
-  const queryClient = useQueryClient();
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
     mutationFn: async (
@@ -337,7 +441,10 @@ export function useUpdatePedido() {
         id: string;
       }
     ) => {
-      const { id, ...fields } = input;
+      const {
+        id,
+        ...fields
+      } = input;
 
       if (!id) {
         throw new Error(
@@ -345,28 +452,31 @@ export function useUpdatePedido() {
         );
       }
 
-      /*
-       * Remove apenas undefined.
-       * null continua permitindo limpar um campo.
-       */
-      const cleanFields = Object.fromEntries(
-        Object.entries(fields).filter(
-          ([, value]) =>
-            value !== undefined
-        )
-      );
+      const cleanFields =
+        Object.fromEntries(
+          Object.entries(fields).filter(
+            ([, value]) =>
+              value !== undefined
+          )
+        );
 
       if (
-        Object.keys(cleanFields).length === 0
+        Object.keys(cleanFields)
+          .length === 0
       ) {
         throw new Error(
           "Nenhum campo foi informado para atualização."
         );
       }
 
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+      } = await supabase
         .from("pedidos")
-        .update(cleanFields as any)
+        .update(
+          cleanFields as any
+        )
         .eq("id", id)
         .select()
         .single();
@@ -386,7 +496,10 @@ export function useUpdatePedido() {
       return data as Pedido;
     },
 
-    onSuccess: (_, variables) => {
+    onSuccess: (
+      _data,
+      variables
+    ) => {
       queryClient.invalidateQueries({
         queryKey: ["pedidos"],
       });
@@ -401,25 +514,34 @@ export function useUpdatePedido() {
       queryClient.invalidateQueries({
         queryKey: ["financeiro"],
       });
+
+      queryClient.invalidateQueries({
+        queryKey: ["pagamentos"],
+      });
     },
 
-    onError: (error: Error) => {
+    onError: (
+      error: Error
+    ) => {
       toast.error(
         "Erro ao atualizar pedido",
         {
-          description: error.message,
+          description:
+            error.message,
         }
       );
     },
   });
 }
 
+
 /* ==========================================================================
-   KANBAN
+   ATUALIZAR ETAPA / KANBAN
    ========================================================================== */
 
 export function useMoverEtapaPedido() {
-  const queryClient = useQueryClient();
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
     mutationFn: async ({
@@ -441,18 +563,21 @@ export function useMoverEtapaPedido() {
         );
       }
 
-      isDraggingMutation.current = true;
+      isDraggingMutation.current =
+        true;
 
       try {
-        const { data, error } =
-          await supabase
-            .from("pedidos")
-            .update({
-              etapa,
-            } as any)
-            .eq("id", id)
-            .select()
-            .single();
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("pedidos")
+          .update({
+            etapa,
+          } as any)
+          .eq("id", id)
+          .select()
+          .single();
 
         if (error) {
           console.error(
@@ -475,7 +600,10 @@ export function useMoverEtapaPedido() {
       }
     },
 
-    onSuccess: (_, variables) => {
+    onSuccess: (
+      _data,
+      variables
+    ) => {
       queryClient.invalidateQueries({
         queryKey: ["pedidos"],
       });
@@ -488,46 +616,158 @@ export function useMoverEtapaPedido() {
       });
     },
 
-    onError: (error: Error) => {
+    onError: (
+      error: Error
+    ) => {
       toast.error(
         "Erro ao mover pedido",
         {
-          description: error.message,
+          description:
+            error.message,
         }
       );
     },
   });
 }
 
+
+/* ==========================================================================
+   REAGENDAR ENTREGA
+   ========================================================================== */
+
+export function useReagendarEntrega() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      input: ReagendarEntregaInput
+    ) => {
+      if (!input?.id) {
+        throw new Error(
+          "ID do pedido não informado."
+        );
+      }
+
+      /*
+       * Aceitamos os três nomes para manter compatibilidade
+       * com diferentes componentes da aplicação.
+       */
+      const novaData =
+        input.data_entrega_estimada ??
+        input.data_entrega ??
+        input.entrega;
+
+      if (!novaData) {
+        throw new Error(
+          "Nova data de entrega não informada."
+        );
+      }
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("pedidos")
+        .update({
+          data_entrega_estimada:
+            novaData,
+
+          entrega:
+            novaData,
+        } as any)
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(
+          "Erro ao reagendar entrega:",
+          error
+        );
+
+        throw new Error(
+          error.message ||
+          "Não foi possível reagendar a entrega."
+        );
+      }
+
+      return data as Pedido;
+    },
+
+    onSuccess: (
+      _data,
+      variables
+    ) => {
+      queryClient.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "pedidos",
+          variables.id,
+        ],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["agenda"],
+      });
+
+      toast.success(
+        "Entrega reagendada com sucesso!"
+      );
+    },
+
+    onError: (
+      error: Error
+    ) => {
+      toast.error(
+        "Erro ao reagendar entrega",
+        {
+          description:
+            error.message,
+        }
+      );
+    },
+  });
+}
+
+
 /* ==========================================================================
    EXCLUIR PEDIDO
    ========================================================================== */
 
 export function useDeletePedido() {
-  const queryClient = useQueryClient();
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (
+      id: string
+    ) => {
       if (!id) {
         throw new Error(
           "ID do pedido não informado."
         );
       }
 
-      const { error } = await supabase
+      const {
+        error,
+      } = await supabase
         .from("pedidos")
         .delete()
         .eq("id", id);
 
       if (error) {
         console.error(
-          "Erro ao eliminar pedido:",
+          "Erro ao excluir pedido:",
           error
         );
 
         throw new Error(
           error.message ||
-          "Erro ao eliminar o pedido."
+          "Erro ao excluir o pedido."
         );
       }
 
@@ -543,28 +783,675 @@ export function useDeletePedido() {
         queryKey: ["financeiro"],
       });
 
+      queryClient.invalidateQueries({
+        queryKey: ["agenda"],
+      });
+
       toast.success(
         "Pedido excluído com sucesso!"
       );
     },
 
-    onError: (error: Error) => {
+    onError: (
+      error: Error
+    ) => {
       toast.error(
         "Erro ao excluir pedido",
         {
-          description: error.message,
+          description:
+            error.message,
         }
       );
     },
   });
 }
 
+
+/* ==========================================================================
+   DUPLICAR PEDIDO
+   ========================================================================== */
+
+export function useDuplicatePedido() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      pedido: Pedido | string
+    ) => {
+      let pedidoOriginal:
+        Pedido;
+
+      if (
+        typeof pedido === "string"
+      ) {
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("pedidos")
+          .select("*")
+          .eq("id", pedido)
+          .single();
+
+        if (error) {
+          throw new Error(
+            error.message ||
+            "Não foi possível encontrar o pedido."
+          );
+        }
+
+        pedidoOriginal =
+          data as Pedido;
+      } else {
+        pedidoOriginal =
+          pedido;
+      }
+
+      const {
+        id: _id,
+        created_at: _createdAt,
+        updated_at: _updatedAt,
+        ...dados
+      } = pedidoOriginal;
+
+      const payload = {
+        ...dados,
+
+        cliente_nome:
+          dados.cliente_nome ||
+          "Cliente sem nome",
+
+        etapa:
+          "pedido-recebido",
+
+        valor_pago:
+          0,
+
+        data_criacao:
+          new Date()
+            .toISOString()
+            .split("T")[0],
+      };
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("pedidos")
+        .insert(
+          payload as any
+        )
+        .select()
+        .single();
+
+      if (error) {
+        console.error(
+          "Erro ao duplicar pedido:",
+          error
+        );
+
+        throw new Error(
+          error.message ||
+          "Não foi possível duplicar o pedido."
+        );
+      }
+
+      return data as Pedido;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro"],
+      });
+
+      toast.success(
+        "Pedido duplicado com sucesso!"
+      );
+    },
+
+    onError: (
+      error: Error
+    ) => {
+      toast.error(
+        "Erro ao duplicar pedido",
+        {
+          description:
+            error.message,
+        }
+      );
+    },
+  });
+}
+
+
+/* ==========================================================================
+   ADICIONAR PAGAMENTO
+   ========================================================================== */
+
+export function useAddPagamento() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      input: AddPagamentoInput
+    ) => {
+      const pedidoId =
+        input.pedido_id ??
+        input.pedidoId;
+
+      if (!pedidoId) {
+        throw new Error(
+          "ID do pedido não informado."
+        );
+      }
+
+      const valor =
+        Number(input.valor);
+
+      if (
+        !Number.isFinite(valor) ||
+        valor <= 0
+      ) {
+        throw new Error(
+          "Informe um valor de pagamento válido."
+        );
+      }
+
+      const {
+        data: userData,
+      } =
+        await supabase.auth.getUser();
+
+      const userId =
+        userData?.user?.id;
+
+      const pagamentoPayload = {
+        pedido_id:
+          pedidoId,
+
+        valor,
+
+        forma:
+          input.forma ??
+          input.forma_pagamento ??
+          "Pix",
+
+        observacao:
+          input.observacao ??
+          null,
+
+        ...(userId
+          ? {
+            user_id: userId,
+          }
+          : {}),
+      };
+
+      const {
+        data: pagamento,
+        error: pagamentoError,
+      } = await supabase
+        .from("pagamentos")
+        .insert(
+          pagamentoPayload as any
+        )
+        .select()
+        .single();
+
+      if (pagamentoError) {
+        console.error(
+          "Erro ao adicionar pagamento:",
+          pagamentoError
+        );
+
+        throw new Error(
+          pagamentoError.message ||
+          "Não foi possível registrar o pagamento."
+        );
+      }
+
+      const {
+        data: pedido,
+        error: pedidoError,
+      } = await supabase
+        .from("pedidos")
+        .select("valor_pago")
+        .eq("id", pedidoId)
+        .single();
+
+      if (!pedidoError) {
+        const valorPagoAtual =
+          Number(
+            pedido?.valor_pago
+          ) || 0;
+
+        const novoValorPago =
+          valorPagoAtual +
+          valor;
+
+        await supabase
+          .from("pedidos")
+          .update({
+            valor_pago:
+              novoValorPago,
+          } as any)
+          .eq(
+            "id",
+            pedidoId
+          );
+      }
+
+      return pagamento;
+    },
+
+    onSuccess: (
+      _data,
+      variables
+    ) => {
+      const pedidoId =
+        variables.pedido_id ??
+        variables.pedidoId;
+
+      queryClient.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["pagamentos"],
+      });
+
+      if (pedidoId) {
+        queryClient.invalidateQueries({
+          queryKey: [
+            "pedidos",
+            pedidoId,
+          ],
+        });
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro"],
+      });
+
+      toast.success(
+        "Pagamento registrado com sucesso!"
+      );
+    },
+
+    onError: (
+      error: Error
+    ) => {
+      toast.error(
+        "Erro ao registrar pagamento",
+        {
+          description:
+            error.message,
+        }
+      );
+    },
+  });
+}
+
+
+/* ==========================================================================
+   PAGAMENTOS DO PEDIDO
+   ========================================================================== */
+
+export function usePagamentosPedido(
+  pedidoId?: string
+) {
+  return useQuery({
+    queryKey: [
+      "pagamentos",
+      pedidoId,
+    ],
+
+    enabled:
+      Boolean(pedidoId),
+
+    queryFn: async () => {
+      if (!pedidoId) {
+        return [];
+      }
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("pagamentos")
+        .select("*")
+        .eq(
+          "pedido_id",
+          pedidoId
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        );
+
+      if (error) {
+        console.error(
+          "Erro ao buscar pagamentos do pedido:",
+          error
+        );
+
+        throw new Error(
+          error.message ||
+          "Não foi possível carregar os pagamentos."
+        );
+      }
+
+      return data ?? [];
+    },
+  });
+}
+
+
+/* ==========================================================================
+   TODOS OS PAGAMENTOS
+   ========================================================================== */
+
+export function useAllPagamentos() {
+  return useQuery({
+    queryKey: [
+      "pagamentos",
+      "todos",
+    ],
+
+    queryFn: async () => {
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("pagamentos")
+        .select("*")
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        );
+
+      if (error) {
+        console.error(
+          "Erro ao buscar todos os pagamentos:",
+          error
+        );
+
+        throw new Error(
+          error.message ||
+          "Não foi possível carregar os pagamentos."
+        );
+      }
+
+      return data ?? [];
+    },
+  });
+}
+
+
+/* ==========================================================================
+   CRIAR VENDA DIRETA
+   ========================================================================== */
+
+export function useCreateVendaDireta() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      input: VendaDiretaInput
+    ) => {
+      const {
+        data: userData,
+      } =
+        await supabase.auth.getUser();
+
+      const userId =
+        userData?.user?.id;
+
+      const valorTotal =
+        Number(input.valor_total) || 0;
+
+      const valorPago =
+        Number(input.valor_pago) || 0;
+
+      if (valorTotal <= 0) {
+        throw new Error(
+          "Informe um valor válido para a venda."
+        );
+      }
+
+      const payload = {
+        cliente_id:
+          input.cliente_id ??
+          null,
+
+        cliente_nome:
+          input.cliente_nome?.trim() ||
+          "Venda direta",
+
+        produto:
+          input.produto?.trim() ||
+          "Venda direta",
+
+        valor_total:
+          valorTotal,
+
+        valor_pago:
+          valorPago,
+
+        desconto:
+          0,
+
+        prioridade:
+          "media",
+
+        etapa:
+          "concluido",
+
+        forma_pagamento:
+          input.forma_pagamento ??
+          null,
+
+        observacoes:
+          input.observacoes ??
+          null,
+
+        data_criacao:
+          input.data_venda ??
+          new Date()
+            .toISOString()
+            .split("T")[0],
+
+        data_entrega_estimada:
+          null,
+
+        ...(userId
+          ? {
+            user_id: userId,
+          }
+          : {}),
+      };
+
+      const {
+        data: pedido,
+        error: pedidoError,
+      } = await supabase
+        .from("pedidos")
+        .insert(
+          payload as any
+        )
+        .select()
+        .single();
+
+      if (pedidoError) {
+        console.error(
+          "Erro ao criar venda direta:",
+          pedidoError
+        );
+
+        throw new Error(
+          pedidoError.message ||
+          "Não foi possível registrar a venda direta."
+        );
+      }
+
+      if (
+        valorPago > 0 &&
+        pedido?.id
+      ) {
+        const pagamentoPayload = {
+          pedido_id:
+            pedido.id,
+
+          valor:
+            valorPago,
+
+          forma:
+            input.forma_pagamento ??
+            "Pix",
+
+          observacao:
+            "Venda direta",
+
+          ...(userId
+            ? {
+              user_id: userId,
+            }
+            : {}),
+        };
+
+        const {
+          error:
+          pagamentoError,
+        } = await supabase
+          .from("pagamentos")
+          .insert(
+            pagamentoPayload as any
+          );
+
+        if (pagamentoError) {
+          console.error(
+            "Erro ao registrar pagamento da venda direta:",
+            pagamentoError
+          );
+
+          throw new Error(
+            `Venda criada, mas houve erro ao registrar o pagamento: ${pagamentoError.message}`
+          );
+        }
+      }
+
+      return pedido as Pedido;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["pagamentos"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro"],
+      });
+
+      toast.success(
+        "Venda direta registrada com sucesso!"
+      );
+    },
+
+    onError: (
+      error: Error
+    ) => {
+      toast.error(
+        "Erro ao registrar venda",
+        {
+          description:
+            error.message,
+        }
+      );
+    },
+  });
+}
+
+
+/* ==========================================================================
+   HISTÓRICO DE ETAPAS
+   ========================================================================== */
+
+export function useEtapasHistorico(
+  pedidoId?: string
+) {
+  return useQuery({
+    queryKey: [
+      "etapas-historico",
+      pedidoId,
+    ],
+
+    enabled:
+      Boolean(pedidoId),
+
+    queryFn: async () => {
+      if (!pedidoId) {
+        return [];
+      }
+
+      const {
+        data,
+        error,
+      } = await (
+        supabase as any
+      )
+        .from("etapas_pedido")
+        .select("*")
+        .eq(
+          "pedido_id",
+          pedidoId
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        );
+
+      if (error) {
+        console.error(
+          "Erro ao buscar histórico de etapas:",
+          error
+        );
+
+        throw new Error(
+          error.message ||
+          "Não foi possível carregar o histórico do pedido."
+        );
+      }
+
+      return data ?? [];
+    },
+  });
+}
+
+
 /* ==========================================================================
    CONVERTER ORÇAMENTO EM PEDIDO
    ========================================================================== */
 
 export function useConverterOrcamentoEmPedido() {
-  const queryClient = useQueryClient();
+  const queryClient =
+    useQueryClient();
 
   return useMutation({
     mutationFn: async (
@@ -577,18 +1464,12 @@ export function useConverterOrcamentoEmPedido() {
       }
 
       const {
-        data: { user },
-        error: authError,
+        data: userData,
       } =
         await supabase.auth.getUser();
 
-      if (authError) {
-        throw new Error(
-          "Não foi possível verificar o usuário autenticado."
-        );
-      }
-
-      const userId = user?.id;
+      const userId =
+        userData?.user?.id;
 
       const valorTotalSugerido =
         Number(
@@ -599,14 +1480,16 @@ export function useConverterOrcamentoEmPedido() {
 
       const descontoVal =
         Number(
-          orcamento.desconto ?? 0
+          orcamento.desconto ??
+          0
         );
 
-      const valorFinal = Math.max(
-        0,
-        valorTotalSugerido -
-        descontoVal
-      );
+      const valorFinal =
+        Math.max(
+          0,
+          valorTotalSugerido -
+          descontoVal
+        );
 
       const payload = {
         cliente_id:
@@ -642,16 +1525,15 @@ export function useConverterOrcamentoEmPedido() {
           orcamento.cliente_cpf_cnpj ??
           null,
 
+        cep:
+          orcamento.cep ??
+          null,
+
         endereco:
           orcamento.clienteEndereco ??
           orcamento.cliente_endereco ??
           null,
 
-        /*
-         * O banco exige numero.
-         * Tentamos todas as variações que podem existir
-         * no objeto de orçamento.
-         */
         numero_endereco:
           orcamento.numeroEndereco ??
           orcamento.numero_endereco ??
@@ -664,10 +1546,6 @@ export function useConverterOrcamentoEmPedido() {
 
         bairro:
           orcamento.bairro ??
-          null,
-
-        cep:
-          orcamento.cep ??
           null,
 
         produto:
@@ -687,7 +1565,8 @@ export function useConverterOrcamentoEmPedido() {
         valor_total:
           valorFinal,
 
-        valor_pago: 0,
+        valor_pago:
+          0,
 
         desconto:
           descontoVal,
@@ -715,7 +1594,9 @@ export function useConverterOrcamentoEmPedido() {
         error: createError,
       } = await supabase
         .from("pedidos")
-        .insert(payload as any)
+        .insert(
+          payload as any
+        )
         .select()
         .single();
 
@@ -731,24 +1612,17 @@ export function useConverterOrcamentoEmPedido() {
         );
       }
 
-      /* ------------------------------------------------------------------
-         ATUALIZAR ORÇAMENTO
-         ------------------------------------------------------------------ */
-
       if (orcamento.id) {
-        /*
-         * `orcamentos_salvos` não está presente na tipagem
-         * gerada atualmente pelo Supabase.
-         *
-         * O cast para any permite acessar a tabela existente
-         * sem bloquear a compilação.
-         */
         const {
-          error: orcamentoError,
-        } = await (supabase as any)
+          error:
+          orcamentoError,
+        } = await (
+          supabase as any
+        )
           .from("orcamentos_salvos")
           .update({
-            status: "Aprovado",
+            status:
+              "Aprovado",
           })
           .eq(
             "id",
@@ -759,10 +1633,6 @@ export function useConverterOrcamentoEmPedido() {
           console.error(
             "Erro ao atualizar status do orçamento:",
             orcamentoError
-          );
-
-          toast.warning(
-            "Pedido criado, mas o status do orçamento não foi atualizado."
           );
         }
       }
@@ -788,7 +1658,9 @@ export function useConverterOrcamentoEmPedido() {
       );
     },
 
-    onError: (error: Error) => {
+    onError: (
+      error: Error
+    ) => {
       toast.error(
         "Erro ao converter orçamento",
         {
@@ -801,8 +1673,9 @@ export function useConverterOrcamentoEmPedido() {
   });
 }
 
+
 /* ==========================================================================
-   ALIASES
+   ALIASES / COMPATIBILIDADE
    ========================================================================== */
 
 export const useCriarPedido =
@@ -834,3 +1707,6 @@ export const useAtualizarStatus =
 
 export const useConverterOrcamento =
   useConverterOrcamentoEmPedido;
+
+export const useUpdatePedidoEtapa =
+  useMoverEtapaPedido;
