@@ -37,7 +37,7 @@ function applyPhoneMask(raw: string): string {
 /** Formata altura, largura e profundidade em cm no padrão AxLxP */
 function formatMedidas(altura: string, largura: string, profundidade: string): string {
   if (!altura && !largura && !profundidade) return "";
-  
+
   const toCmStr = (valStr: string) => {
     const val = parseFloat(valStr.replace(",", "."));
     if (isNaN(val)) return valStr;
@@ -46,11 +46,11 @@ function formatMedidas(altura: string, largura: string, profundidade: string): s
     }
     return Math.round(val).toString();
   };
-  
+
   const a = toCmStr(altura || "0");
   const l = toCmStr(largura || "0");
   const p = toCmStr(profundidade || "0");
-  
+
   return `${a}x${l}x${p}`;
 }
 
@@ -182,7 +182,7 @@ export function NovoPedidoDialog({
         if (parts.length > 1) {
           obsAdicionais = parts[0].replace(/\n*Itens do Pedido:\n[\s\S]*$/, "").trim();
         }
-      } catch {}
+      } catch { }
     }
     return obsAdicionais;
   }, [initial]);
@@ -196,7 +196,7 @@ export function NovoPedidoDialog({
           const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
           parsedItems = JSON.parse(jsonPart);
         }
-      } catch {}
+      } catch { }
     }
     if (parsedItems.length === 0) {
       parsedItems = [{
@@ -267,18 +267,32 @@ export function NovoPedidoDialog({
       setProductSuggestions([]);
       return;
     }
+
     const query = items[activeItemSuggestIndex]?.searchQuery || "";
     let active = true;
 
     const timer = setTimeout(async () => {
       setLoadingSuggestions(true);
+
       try {
-        let qBuilder = supabase.from("catalogo_produtos").select("*");
-        if (query.trim()) {
-          qBuilder = qBuilder.ilike("nome", `%${query.trim()}%`);
+        let qBuilder = supabase
+          .from("catalogo_produtos")
+          .select("*");
+
+        const term = query.trim();
+
+        if (term) {
+          qBuilder = qBuilder.or(
+            `nome.ilike.%${term}%,tipo_movel.ilike.%${term}%,material.ilike.%${term}%`
+          );
         }
-        const { data, error } = await qBuilder.order("nome").limit(5);
+
+        const { data, error } = await qBuilder
+          .order("nome")
+          .limit(5);
+
         if (error) throw error;
+
         if (active) {
           setProductSuggestions(data || []);
         }
@@ -293,21 +307,13 @@ export function NovoPedidoDialog({
       active = false;
       clearTimeout(timer);
     };
-  }, [activeItemSuggestIndex, items, activeItemSuggestIndex !== null ? items[activeItemSuggestIndex]?.searchQuery : null]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        !target.closest('[data-product-suggest-portal="true"]') &&
-        !target.closest('input[placeholder="Buscar por produto..."]')
-      ) {
-        setActiveItemSuggestIndex(null);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [
+    activeItemSuggestIndex,
+    items,
+    activeItemSuggestIndex !== null
+      ? items[activeItemSuggestIndex]?.searchQuery
+      : null,
+  ]);
 
   useEffect(() => {
     if (activeItemSuggestIndex === null) return;
@@ -318,7 +324,7 @@ export function NovoPedidoDialog({
         const dropdownHeight = 200; // max-h-48 is 192px
         const spaceBelow = window.innerHeight - rect.bottom;
         const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-        
+
         setProductSuggestCoords({
           top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
           left: rect.left,
@@ -450,7 +456,7 @@ export function NovoPedidoDialog({
             const parsed = JSON.parse(jsonPart);
             measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
           }
-        } catch {}
+        } catch { }
       } else {
         measuresStr = parseLegacyMedidas(c.descricao);
       }
@@ -704,9 +710,8 @@ export function NovoPedidoDialog({
         })
         .join("\n");
 
-      const finalObs = `${observacoesAdicionais.trim()}${
-        observacoesAdicionais.trim() ? "\n\n" : ""
-      }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
+      const finalObs = `${observacoesAdicionais.trim()}${observacoesAdicionais.trim() ? "\n\n" : ""
+        }Itens do Pedido:\n${itemsText}\n\n===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===`;
 
       let estimatedDeliveryDate = form.entrega;
       const businessDays = parseInt(prazoDias, 10);
@@ -776,23 +781,20 @@ export function NovoPedidoDialog({
               }}
               className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
-              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
-                currentStep >= 1
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-muted"
-              }`}>
+              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${currentStep >= 1
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-muted"
+                }`}>
                 1
               </div>
-              <span className={`text-[10px] font-medium transition-colors ${
-                currentStep >= 1 ? "text-foreground font-semibold" : "text-muted-foreground"
-              }`}>
+              <span className={`text-[10px] font-medium transition-colors ${currentStep >= 1 ? "text-foreground font-semibold" : "text-muted-foreground"
+                }`}>
                 Cliente
               </span>
             </button>
             {/* Connector Line 1-2 */}
-            <div className={`h-[2px] flex-1 -mt-4 transition-colors ${
-              currentStep >= 2 ? "bg-primary" : "bg-muted"
-            }`} />
+            <div className={`h-[2px] flex-1 -mt-4 transition-colors ${currentStep >= 2 ? "bg-primary" : "bg-muted"
+              }`} />
             {/* Step 2 */}
             <button
               type="button"
@@ -805,23 +807,20 @@ export function NovoPedidoDialog({
               }}
               className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
-              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
-                currentStep >= 2
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-muted"
-              }`}>
+              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${currentStep >= 2
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-muted"
+                }`}>
                 2
               </div>
-              <span className={`text-[10px] font-medium transition-colors ${
-                currentStep >= 2 ? "text-foreground font-semibold" : "text-muted-foreground"
-              }`}>
+              <span className={`text-[10px] font-medium transition-colors ${currentStep >= 2 ? "text-foreground font-semibold" : "text-muted-foreground"
+                }`}>
                 Itens
               </span>
             </button>
             {/* Connector Line 2-3 */}
-            <div className={`h-[2px] flex-1 -mt-4 transition-colors ${
-              currentStep >= 3 ? "bg-primary" : "bg-muted"
-            }`} />
+            <div className={`h-[2px] flex-1 -mt-4 transition-colors ${currentStep >= 3 ? "bg-primary" : "bg-muted"
+              }`} />
             {/* Step 3 */}
             <button
               type="button"
@@ -835,16 +834,14 @@ export function NovoPedidoDialog({
               }}
               className="flex flex-col items-center gap-1 flex-1 relative focus:outline-none"
             >
-              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${
-                currentStep === 3
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-muted"
-              }`}>
+              <div className={`size-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors ${currentStep === 3
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-muted"
+                }`}>
                 3
               </div>
-              <span className={`text-[10px] font-medium transition-colors ${
-                currentStep === 3 ? "text-foreground font-semibold" : "text-muted-foreground"
-              }`}>
+              <span className={`text-[10px] font-medium transition-colors ${currentStep === 3 ? "text-foreground font-semibold" : "text-muted-foreground"
+                }`}>
                 Finalização
               </span>
             </button>
@@ -857,7 +854,7 @@ export function NovoPedidoDialog({
               {!isEdit && (
                 <div className="md:col-span-2">
                   <ClienteAutocomplete
-                    value={form.cliente_id}
+                    value={form.cliente_id ?? undefined}
                     onSelect={(c) =>
                       setForm((s) => ({
                         ...s,
@@ -893,9 +890,8 @@ export function NovoPedidoDialog({
                         set("cliente_nome", e.target.value);
                         if (e.target.value.trim()) setErrors((er) => ({ ...er, cliente_nome: undefined }));
                       }}
-                      className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
-                        errors.cliente_nome ? "border-destructive ring-1 ring-destructive/40" : ""
-                      }`}
+                      className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${errors.cliente_nome ? "border-destructive ring-1 ring-destructive/40" : ""
+                        }`}
                     />
                     {errors.cliente_nome && (
                       <p className="mt-1 text-xs text-destructive">{errors.cliente_nome}</p>
@@ -1095,9 +1091,8 @@ export function NovoPedidoDialog({
                       if (v > 0) setErrors((er) => ({ ...er, valor_total: undefined }));
                     }}
                     placeholder="R$ 0,00"
-                    className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${
-                      errors.valor_total ? "border-destructive ring-1 ring-destructive/40" : ""
-                    }`}
+                    className={`mt-1 w-full h-9 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 ${errors.valor_total ? "border-destructive ring-1 ring-destructive/40" : ""
+                      }`}
                   />
                   {errors.valor_total && (
                     <p className="mt-1 text-xs text-destructive">{errors.valor_total}</p>
@@ -1162,11 +1157,10 @@ export function NovoPedidoDialog({
                     onDragOver={handleDrag}
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
-                    className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                      dragActive
-                        ? "border-primary bg-primary/5 scale-[0.99]"
-                        : "border-muted-foreground/20 bg-background hover:bg-accent/40"
-                    }`}
+                    className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${dragActive
+                      ? "border-primary bg-primary/5 scale-[0.99]"
+                      : "border-muted-foreground/20 bg-background hover:bg-accent/40"
+                      }`}
                     onClick={() => document.getElementById("file-upload")?.click()}
                   >
                     <input
@@ -1284,10 +1278,10 @@ export function NovoPedidoDialog({
                 {isUploading
                   ? "Enviando arquivos..."
                   : saving
-                  ? "Salvando..."
-                  : isEdit
-                  ? "Salvar alterações"
-                  : "Criar pedido"}
+                    ? "Salvando..."
+                    : isEdit
+                      ? "Salvar alterações"
+                      : "Criar pedido"}
               </button>
             )}
           </div>

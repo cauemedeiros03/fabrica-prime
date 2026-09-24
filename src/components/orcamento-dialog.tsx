@@ -56,7 +56,7 @@ interface OrcamentoDialogProps {
 
 function formatMedidas(altura: string, largura: string, profundidade: string): string {
   if (!altura && !largura && !profundidade) return "";
-  
+
   const toCmStr = (valStr: string) => {
     const val = parseFloat(valStr.replace(",", "."));
     if (isNaN(val)) return valStr;
@@ -65,11 +65,11 @@ function formatMedidas(altura: string, largura: string, profundidade: string): s
     }
     return Math.round(val).toString();
   };
-  
+
   const a = toCmStr(altura || "0");
   const l = toCmStr(largura || "0");
   const p = toCmStr(profundidade || "0");
-  
+
   return `${a}x${l}x${p}`;
 }
 
@@ -127,7 +127,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
           if (meta.clienteEndereco) metaEndereco = meta.clienteEndereco;
           if (meta.observacoes) metaObservacoes = meta.observacoes;
         }
-      } catch {}
+      } catch { }
     }
 
     return initialData ? ({
@@ -172,7 +172,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
           const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
           parsedItems = JSON.parse(jsonPart);
         }
-      } catch {}
+      } catch { }
     }
     if (parsedItems.length === 0) {
       parsedItems = [{
@@ -214,7 +214,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       onOpenChange(v);
     }
   }, [handleClose, onOpenChange]);
-  
+
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     onAfterPrint: () => {
@@ -235,7 +235,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
             parsedItems = JSON.parse(jsonPart);
           }
-        } catch {}
+        } catch { }
       }
       if (parsedItems.length === 0) {
         parsedItems = [{
@@ -281,18 +281,32 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       setProductSuggestions([]);
       return;
     }
+
     const query = items[activeItemSuggestIndex]?.searchQuery || "";
     let active = true;
 
     const timer = setTimeout(async () => {
       setLoadingSuggestions(true);
+
       try {
-        let qBuilder = supabase.from("catalogo_produtos").select("*");
-        if (query.trim()) {
-          qBuilder = qBuilder.ilike("nome", `%${query.trim()}%`);
+        let qBuilder = supabase
+          .from("catalogo_produtos")
+          .select("*");
+
+        const term = query.trim();
+
+        if (term) {
+          qBuilder = qBuilder.or(
+            `nome.ilike.%${term}%,tipo_movel.ilike.%${term}%,material.ilike.%${term}%`
+          );
         }
-        const { data, error } = await qBuilder.order("nome").limit(5);
+
+        const { data, error } = await qBuilder
+          .order("nome")
+          .limit(5);
+
         if (error) throw error;
+
         if (active) {
           setProductSuggestions(data || []);
         }
@@ -307,27 +321,13 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       active = false;
       clearTimeout(timer);
     };
-  }, [activeItemSuggestIndex, items, activeItemSuggestIndex !== null ? items[activeItemSuggestIndex]?.searchQuery : null]);
-
-  useEffect(() => {
-    if (printData) {
-      handlePrint();
-    }
-  }, [printData]);
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        !target.closest('[data-product-suggest-portal="true"]') &&
-        !target.closest('input[placeholder="Buscar por produto..."]')
-      ) {
-        setActiveItemSuggestIndex(null);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [
+    activeItemSuggestIndex,
+    items,
+    activeItemSuggestIndex !== null
+      ? items[activeItemSuggestIndex]?.searchQuery
+      : null,
+  ]);
 
   useEffect(() => {
     if (activeItemSuggestIndex === null) return;
@@ -338,7 +338,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         const dropdownHeight = 200;
         const spaceBelow = window.innerHeight - rect.bottom;
         const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-        
+
         setProductSuggestCoords({
           top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
           left: rect.left,
@@ -403,7 +403,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
             const parsed = JSON.parse(jsonPart);
             measuresStr = formatMedidas(parsed.altura, parsed.largura, parsed.profundidade);
           }
-        } catch {}
+        } catch { }
       } else {
         measuresStr = parseLegacyMedidas(c.descricao);
       }
@@ -562,7 +562,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
 
       window.dispatchEvent(new Event("orcamentos_updated"));
       toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
-      
+
       setPrintData(novoOrcamento);
     } catch (err: any) {
       console.error("Erro ao salvar orçamento:", err);
@@ -989,70 +989,98 @@ Qualquer dúvida, estou à disposição!`;
         <PrintableOrcamento ref={printRef} orcamento={printData} config={config} />
       </div>
 
-      {activeItemSuggestIndex !== null && productSuggestCoords && createPortal(
-        <div
-          data-product-suggest-portal="true"
-          style={{
-            position: "fixed",
-            top: `${productSuggestCoords.top}px`,
-            left: `${productSuggestCoords.left}px`,
-            width: `${productSuggestCoords.width}px`,
-            zIndex: 9999,
-          }}
-          className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
-        >
-          {loadingSuggestions ? (
-            <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-              <Loader2 className="size-3.5 animate-spin" /> Carregando...
-            </div>
-          ) : productSuggestions.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              Nenhum produto no catálogo
-            </div>
-          ) : (
-            <ul className="py-1">
-              {productSuggestions.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectProduct(activeItemSuggestIndex, c);
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      handleSelectProduct(activeItemSuggestIndex, c);
-                    }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0"
-                  >
-                    {c.imagem_url ? (
-                      <img
-                        src={c.imagem_url}
-                        alt={c.nome}
-                        className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">
-                        <Sofa className="size-4" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">
-                        {c.nome}
-                        {c.preco != null && ` - ${moeda(c.preco)}`}
-                      </p>
-                      {c.material && (
-                        <p className="text-xs text-muted-foreground truncate">{c.material}</p>
+      {activeItemSuggestIndex !== null &&
+        productSuggestCoords &&
+        createPortal(
+          <div
+            data-product-suggest-portal="true"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            style={{
+              position: "fixed",
+              top: `${productSuggestCoords.top}px`,
+              left: `${productSuggestCoords.left}px`,
+              width: `${productSuggestCoords.width}px`,
+              zIndex: 999999,
+              pointerEvents: "auto",
+            }}
+            className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
+          >
+            {loadingSuggestions ? (
+              <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="size-3.5 animate-spin" />
+                Carregando...
+              </div>
+            ) : productSuggestions.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                Nenhum produto no catálogo
+              </div>
+            ) : (
+              <ul className="py-1">
+                {productSuggestions.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      style={{
+                        pointerEvents: "auto",
+                        touchAction: "manipulation",
+                      }}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        console.log("PRODUTO CLICADO:", c);
+                        console.log(
+                          "ÍNDICE:",
+                          activeItemSuggestIndex
+                        );
+
+                        if (activeItemSuggestIndex !== null) {
+                          handleSelectProduct(
+                            activeItemSuggestIndex,
+                            c
+                          );
+                        }
+                      }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0 cursor-pointer"
+                    >
+                      {c.imagem_url ? (
+                        <img
+                          src={c.imagem_url}
+                          alt={c.nome}
+                          className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">
+                          <Sofa className="size-4" />
+                        </div>
                       )}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>,
-        document.body
-      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">
+                          {c.nome}
+                          {c.preco != null &&
+                            ` - ${moeda(c.preco)}`}
+                        </p>
+
+                        {c.material && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {c.material}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>,
+          document.body
+        )}
     </Dialog>
   );
 }
@@ -1096,7 +1124,7 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
             if (parsed.clienteCpfCnpj) clienteCpfCnpj = parsed.clienteCpfCnpj;
             if (parsed.formaPagamento) formaPagamento = parsed.formaPagamento;
           }
-        } catch {}
+        } catch { }
       }
       return { clienteCpfCnpj, formaPagamento };
     }, [orcamento]);
@@ -1111,7 +1139,7 @@ export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoP
             const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
             itemsList = JSON.parse(jsonPart);
           }
-        } catch {}
+        } catch { }
       }
       if (itemsList.length === 0) {
         itemsList = [{
@@ -1417,10 +1445,12 @@ const ProductCardItem = React.memo(({
               value={item.searchQuery || ""}
               onChange={(e) => {
                 const val = e.target.value;
+                console.log("[ORÇAMENTO] digitando catálogo:", val, "item:", idx);
                 updateItem(idx, "searchQuery", val);
                 setActiveItemSuggestIndex(idx);
               }}
               onFocus={() => {
+                console.log("[ORÇAMENTO] foco no catálogo", idx);
                 setActiveItemSuggestIndex(idx);
               }}
               placeholder="Buscar por produto..."
