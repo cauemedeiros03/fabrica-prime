@@ -152,6 +152,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   const [salvando, setSalvando] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [printData, setPrintData] = useState<Orcamento | null>(null);
+  const [salvoComSucesso, setSalvoComSucesso] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -203,9 +204,16 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   );
 
   const handleClose = useCallback(() => {
-    if (isDirty && !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")) return;
+    if (
+      !salvoComSucesso &&
+      isDirty &&
+      !window.confirm("Você tem dados não salvos. Deseja fechar mesmo assim?")
+    ) {
+      return;
+    }
+
     onOpenChange(false);
-  }, [isDirty, onOpenChange]);
+  }, [isDirty, onOpenChange, salvoComSucesso]);
 
   const handleOpenChange = useCallback((v: boolean) => {
     if (!v) {
@@ -225,6 +233,8 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
 
   useEffect(() => {
     if (open) {
+      setSalvoComSucesso(false);
+      setPrintData(null);
       setForm(baseForm);
       let parsedItems: ItemRow[] = [];
       const desc = initialData?.produtoDescricao || "";
@@ -561,8 +571,13 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
       }
 
       window.dispatchEvent(new Event("orcamentos_updated"));
-      toast.success(isEdit ? "Orçamento atualizado com sucesso!" : "Orçamento gerado e salvo com sucesso!");
+      toast.success(
+        isEdit
+          ? "Orçamento atualizado com sucesso!"
+          : "Orçamento gerado e salvo com sucesso!"
+      );
 
+      setSalvoComSucesso(true);
       setPrintData(novoOrcamento);
     } catch (err: any) {
       console.error("Erro ao salvar orçamento:", err);

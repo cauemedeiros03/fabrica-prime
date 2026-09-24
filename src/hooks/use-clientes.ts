@@ -168,6 +168,82 @@ export function useUpdateCliente() {
   });
 }
 
+export function useSalvarClienteAutomaticamente() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (input: ClienteInput) => {
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      const nome = input.nome?.trim();
+
+      if (!nome) {
+        throw new Error("O nome do cliente é obrigatório.");
+      }
+
+      const { data: clientesExistentes, error: buscaError } =
+        await supabase
+          .from("clientes")
+          .select("id, nome")
+          .eq("user_id", user.id)
+          .ilike("nome", nome);
+
+      if (buscaError) throw buscaError;
+
+      const clienteExistente = clientesExistentes?.[0];
+
+      const dadosCliente = {
+        nome,
+        telefone: input.telefone?.trim() || null,
+        email: input.email?.trim() || null,
+        cidade: input.cidade?.trim() || null,
+        observacoes: input.observacoes?.trim() || null,
+        cpf: input.cpf?.trim() || null,
+        cep: input.cep?.trim() || null,
+        endereco: input.endereco?.trim() || null,
+        numero: input.numero?.trim() || null,
+        complemento: input.complemento?.trim() || null,
+        bairro: input.bairro?.trim() || null,
+        instagram: input.instagram?.trim() || null,
+        origem: input.origem?.trim() || null,
+        user_id: user.id,
+      };
+
+      if (clienteExistente) {
+        const { data, error } = await supabase
+          .from("clientes")
+          .update(dadosCliente)
+          .eq("id", clienteExistente.id)
+          .eq("user_id", user.id)
+          .select("id")
+          .single();
+
+        if (error) throw error;
+
+        return data.id as string;
+      }
+
+      const { data, error } = await supabase
+        .from("clientes")
+        .insert(dadosCliente)
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      return data.id as string;
+    },
+
+    onSuccess: (clienteId) => {
+      qc.invalidateQueries({ queryKey: ["clientes"] });
+      qc.invalidateQueries({ queryKey: ["cliente", clienteId] });
+    },
+  });
+}
+
 export function useDeleteCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useClientes } from "@/hooks/use-clientes";
+import { useSalvarClienteAutomaticamente } from "@/hooks/use-clientes";
 import { useCreatePedido } from "@/hooks/use-pedidos";
 import { moeda } from "@/lib/mock-data";
 import { useReactToPrint } from "react-to-print";
@@ -37,61 +37,215 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { OrcamentoDialog, PrintableOrcamento, type Orcamento } from "@/components/orcamento-dialog";
+import {
+  OrcamentoDialog,
+  PrintableOrcamento,
+  type Orcamento,
+} from "@/components/orcamento-dialog";
+
+type OrcamentoComItens = Orcamento & {
+  itens?: any[];
+};
 
 export const Route = createFileRoute("/orcamentos")({
   component: OrcamentosPage,
   head: () => ({ meta: [{ title: "Orçamentos · Sua bancada" }] }),
 });
 
-const mapDbRowToOrcamento = (row: any): Orcamento => {
-  let clienteCpfCnpj = row.clienteCpfCnpj || row.cliente_cpf_cnpj || "";
-  let formaPagamento = row.formaPagamento || row.forma_pagamento || "À vista (Pix / Dinheiro)";
-  const desc = row.produto_descricao || row.produtoDescricao || "";
-  if (desc.includes("===METADATA===")) {
+const mapDbRowToOrcamento = (row: any): OrcamentoComItens => {
+  const rawDescricao =
+    row.produto_descricao ||
+    row.produtoDescricao ||
+    "";
+
+  let clienteCpfCnpj =
+    row.clienteCpfCnpj ||
+    row.cliente_cpf_cnpj ||
+    "";
+
+  let formaPagamento =
+    row.formaPagamento ||
+    row.forma_pagamento ||
+    "À vista (Pix / Dinheiro)";
+
+  let clienteEmail =
+    row.clienteEmail ||
+    row.cliente_email ||
+    "";
+
+  let clienteEndereco =
+    row.clienteEndereco ||
+    row.cliente_endereco ||
+    "";
+
+  let observacoes =
+    row.observacoes ||
+    "";
+
+  let itens: any[] = [];
+
+  // Recupera os itens estruturados salvos dentro da descrição
+  if (rawDescricao.includes("===JSON_ITENS===")) {
     try {
-      const parts = desc.split("===METADATA===\n");
-      if (parts.length > 1) {
-        const jsonPart = parts[1].split("\n===END_METADATA===")[0];
-        const meta = JSON.parse(jsonPart);
-        if (meta.clienteCpfCnpj) clienteCpfCnpj = meta.clienteCpfCnpj;
-        if (meta.formaPagamento) formaPagamento = meta.formaPagamento;
+      const jsonPart = rawDescricao
+        .split("===JSON_ITENS===\n")[1]
+        ?.split("\n===END_JSON_ITENS===")[0];
+
+      if (jsonPart) {
+        const parsed = JSON.parse(jsonPart);
+
+        if (Array.isArray(parsed)) {
+          itens = parsed;
+        }
       }
-    } catch {}
+    } catch (error) {
+      console.warn("Não foi possível ler os itens do orçamento:", error);
+    }
   }
+
+  // Recupera os metadados salvos dentro da descrição
+  if (rawDescricao.includes("===METADATA===")) {
+    try {
+      const metadataPart = rawDescricao
+        .split("===METADATA===\n")[1]
+        ?.split("\n===END_METADATA===")[0];
+
+      if (metadataPart) {
+        const meta = JSON.parse(metadataPart);
+
+        if (meta.clienteCpfCnpj) {
+          clienteCpfCnpj = meta.clienteCpfCnpj;
+        }
+
+        if (meta.formaPagamento) {
+          formaPagamento = meta.formaPagamento;
+        }
+
+        if (meta.clienteEmail) {
+          clienteEmail = meta.clienteEmail;
+        }
+
+        if (meta.clienteEndereco) {
+          clienteEndereco = meta.clienteEndereco;
+        }
+
+        if (meta.observacoes) {
+          observacoes = meta.observacoes;
+        }
+      }
+    } catch (error) {
+      console.warn("Não foi possível ler os metadados do orçamento:", error);
+    }
+  }
+
+  // Remove os blocos técnicos para que eles nunca apareçam na interface
+  let produtoDescricao = rawDescricao
+    .split("===JSON_ITENS===")[0]
+    .trim();
+
+  // Se a descrição limpa ficar vazia, tenta usar os nomes dos produtos
+  if (!produtoDescricao && itens.length > 0) {
+    produtoDescricao = itens
+      .map((item) => item.nome || item.descricao || "Produto")
+      .join(", ");
+  }
+
+  const produtoMaterial =
+    row.produto_material ||
+    row.produtoMaterial ||
+    itens
+      .map((item) => item.material)
+      .filter(Boolean)
+      .join(", ");
+
+  const produtoMedidas =
+    row.produto_medidas ||
+    row.produtoMedidas ||
+    itens
+      .map((item) => item.medidas)
+      .filter(Boolean)
+      .join(" | ");
+
+  const valorSugerido = Number(
+    row.valor_sugerido ||
+    row.valorSugerido ||
+    itens.reduce(
+      (total, item) =>
+        total +
+        Number(item.preco_unitario ?? item.valor ?? 0) *
+        Number(item.quantidade ?? 1),
+      0
+    ) ||
+    0
+  );
 
   return {
     id: row.id,
     criadoEm: row.created_at || row.criadoEm,
-    clienteNome: row.prospecto_nome || row.cliente_nome || row.clienteNome,
-    clienteTelefone: row.prospecto_telefone || row.cliente_telefone || row.clienteTelefone || "",
-    clienteCidade: row.prospecto_cidade || row.cliente_cidade || row.clienteCidade || "",
-    produtoDescricao: row.produto_descricao || row.produtoDescricao,
-    produtoMaterial: row.produto_material || row.produtoMaterial || "",
-    produtoMedidas: row.produto_medidas || row.produtoMedidas || "",
-    valorSugerido: Number(row.valor_sugerido || row.valorSugerido),
-    desconto: Number(row.desconto || 0),
-    validadeDias: Number(row.validade_dias || row.validadeDias || 15),
+
+    clienteNome:
+      row.prospecto_nome ||
+      row.cliente_nome ||
+      row.clienteNome ||
+      "Cliente sem nome",
+
+    clienteTelefone:
+      row.prospecto_telefone ||
+      row.cliente_telefone ||
+      row.clienteTelefone ||
+      "",
+
+    clienteCidade:
+      row.prospecto_cidade ||
+      row.cliente_cidade ||
+      row.clienteCidade ||
+      "",
+
+    produtoDescricao,
+    produtoMaterial,
+    produtoMedidas,
+
+    valorSugerido,
+
+    desconto: Number(
+      row.desconto ||
+      row.desconto_valor ||
+      0
+    ),
+
+    validadeDias: Number(
+      row.validade_dias ||
+      row.validadeDias ||
+      15
+    ),
+
     status: row.status || "Pendente",
+
     clienteCpfCnpj,
     formaPagamento,
+    clienteEmail,
+    clienteEndereco,
+    observacoes,
+
+    itens,
   };
 };
 
 function OrcamentosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: clientes = [] } = useClientes();
+  const salvarClienteAutomaticamente =
+    useSalvarClienteAutomaticamente();
   const createPedido = useCreatePedido();
   const queryClient = useQueryClient();
-
   const [q, setQ] = useState("");
   const [view, setView] = useState<"grid" | "table">("grid");
   const [openNew, setOpenNew] = useState(false);
-  const [edit, setEdit] = useState<Orcamento | null>(null);
-  const [confirmarExcluir, setConfirmarExcluir] = useState<Orcamento | null>(null);
-  const [confirmarConversao, setConfirmarConversao] = useState<Orcamento | null>(null);
-  const [printData, setPrintData] = useState<Orcamento | null>(null);
+  const [edit, setEdit] = useState<OrcamentoComItens | null>(null);
+  const [visualizar, setVisualizar] = useState<OrcamentoComItens | null>(null);
+  const [confirmarExcluir, setConfirmarExcluir] = useState<OrcamentoComItens | null>(null);
+  const [confirmarConversao, setConfirmarConversao] = useState<OrcamentoComItens | null>(null);
+  const [printData, setPrintData] = useState<OrcamentoComItens | null>(null);
   const [config, setConfig] = useState<any>(null);
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -216,11 +370,28 @@ function OrcamentosPage() {
 
     // 1. LocalStorage
     try {
-      const local = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
-      const updated = local.filter((o: any) => o.id !== id);
-      localStorage.setItem("orcamentos_salvos", JSON.stringify(updated));
+      const local = JSON.parse(
+        localStorage.getItem("orcamentos_salvos") || "[]"
+      );
+
+      const updated = local.map((o: any) =>
+        o.id === id
+          ? {
+            ...o,
+            status: "Aprovado",
+          }
+          : o
+      );
+
+      localStorage.setItem(
+        "orcamentos_salvos",
+        JSON.stringify(updated)
+      );
     } catch (e) {
-      console.error(e);
+      console.error(
+        "Erro ao atualizar status no localStorage:",
+        e
+      );
     }
 
     // 2. Supabase
@@ -244,129 +415,351 @@ function OrcamentosPage() {
   // Converter Orçamento em Pedido Oficial
   const converter = async () => {
     if (!confirmarConversao) return;
+
     if (!user) {
       toast.error("Usuário não autenticado");
       return;
     }
-    const orcamento = confirmarConversao;
+
+    const orcamento = confirmarConversao as OrcamentoComItens;
     const id = orcamento.id;
 
     try {
-      let clienteId = "";
+      // =========================================================
+      // 1. SALVAR / ATUALIZAR CLIENTE AUTOMATICAMENTE
+      // =========================================================
 
-      // 1. Buscar se existe cliente com mesmo nome
-      const cleanName = (orcamento.clienteNome || "").trim().toLowerCase();
-      const existing = clientes.find((c) => c.nome?.trim().toLowerCase() === cleanName);
+      const clienteId =
+        await salvarClienteAutomaticamente.mutateAsync({
+          nome: orcamento.clienteNome || "Cliente sem nome",
+          telefone: orcamento.clienteTelefone || "",
+          email: orcamento.clienteEmail || "",
+          cidade: orcamento.clienteCidade || "",
+          cpf: orcamento.clienteCpfCnpj || "",
+          endereco: orcamento.clienteEndereco || "",
+          observacoes: orcamento.observacoes || "",
+        });
 
-      if (existing) {
-        clienteId = existing.id;
-      } else {
-        // 2. Fazer o INSERT definitivo na tabela 'clientes' (gerando a ficha oficial)
-        const { data: newClient, error: clientErr } = await supabase
-          .from("clientes")
-          .insert({
-            nome: orcamento.clienteNome || "Cliente sem nome",
-            telefone: orcamento.clienteTelefone || null,
-            cidade: orcamento.clienteCidade || null,
-            user_id: user.id,
-          })
-          .select("id")
-          .single();
+      // =========================================================
+      // 2. CALCULAR PRAZO E DATA DE ENTREGA
+      // =========================================================
 
-        if (clientErr) throw clientErr;
-        if (!newClient) throw new Error("Falha ao criar ficha do cliente");
-        clienteId = newClient.id;
-      }
-
-      // 3. Calcular prazos e datas
       const todayStr = new Date().toISOString().split("T")[0];
-      const prazosDiasUteis = Number(orcamento.validadeDias) || 15;
 
-      const calculateBusinessDays = (startDateStr: string, days: number): string => {
-        if (!startDateStr || isNaN(days) || days <= 0) return "";
+      const prazosDiasUteis =
+        Number(orcamento.validadeDias) || 15;
+
+      const calculateBusinessDays = (
+        startDateStr: string,
+        days: number
+      ): string => {
+        if (!startDateStr || isNaN(days) || days <= 0) {
+          return "";
+        }
+
         const parts = startDateStr.split("-");
-        let current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+
+        let current = new Date(
+          parseInt(parts[0], 10),
+          parseInt(parts[1], 10) - 1,
+          parseInt(parts[2], 10)
+        );
+
         let added = 0;
+
         while (added < days) {
           current.setDate(current.getDate() + 1);
+
           const day = current.getDay();
+
           if (day !== 0 && day !== 6) {
             added++;
           }
         }
+
         const y = current.getFullYear();
         const m = String(current.getMonth() + 1).padStart(2, "0");
         const d = String(current.getDate()).padStart(2, "0");
+
         return `${y}-${m}-${d}`;
       };
 
-      const dataEntregaEstimada = calculateBusinessDays(todayStr, prazosDiasUteis) || todayStr;
-      const valorTotal = Math.max(0, (Number(orcamento.valorSugerido) || 0) - (Number(orcamento.desconto) || 0));
+      const dataEntregaEstimada =
+        calculateBusinessDays(
+          todayStr,
+          prazosDiasUteis
+        ) || todayStr;
+
+      // =========================================================
+      // 3. RECUPERAR ITENS DO ORÇAMENTO
+      // =========================================================
+
+      const itens = Array.isArray(orcamento.itens)
+        ? orcamento.itens
+        : [];
+
+      // =========================================================
+      // 4. MONTAR NOME DOS PRODUTOS
+      // =========================================================
+
+      const nomesProdutos =
+        itens.length > 0
+          ? itens
+            .map(
+              (item: any) =>
+                item.nome ||
+                item.descricao ||
+                "Produto"
+            )
+            .filter(Boolean)
+            .join(", ")
+          : orcamento.produtoDescricao ||
+          "Produto não informado";
+
+      // =========================================================
+      // 5. MONTAR MATERIAIS
+      // =========================================================
+
+      const materiais =
+        itens.length > 0
+          ? itens
+            .map((item: any) => item.material)
+            .filter(Boolean)
+            .join(", ")
+          : orcamento.produtoMaterial || "";
+
+      // =========================================================
+      // 6. CALCULAR VALOR DOS ITENS
+      // =========================================================
+
+      const valorItens = itens.reduce(
+        (total: number, item: any) => {
+          const quantidade = Number(
+            item.quantidade ?? 1
+          );
+
+          const precoUnitario = Number(
+            item.preco_unitario ??
+            item.valor ??
+            0
+          );
+
+          return (
+            total +
+            quantidade * precoUnitario
+          );
+        },
+        0
+      );
+
+      const valorBase =
+        valorItens > 0
+          ? valorItens
+          : Number(orcamento.valorSugerido) || 0;
+
+      const desconto = Number(
+        orcamento.desconto || 0
+      );
+
+      const valorTotal = Math.max(
+        0,
+        valorBase - desconto
+      );
+
+      // =========================================================
+      // 7. PRESERVAR ITENS DENTRO DO PEDIDO
+      // =========================================================
+
+      const observacoesItens =
+        itens.length > 0
+          ? `===JSON_ITENS===
+${JSON.stringify(itens)}
+===END_JSON_ITENS===`
+          : "";
+
+      const observacoesFinais = [
+        orcamento.observacoes?.trim() || "",
+        observacoesItens,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      // =========================================================
+      // 8. MONTAR PEDIDO
+      // =========================================================
 
       const input = {
         cliente_id: clienteId,
-        cliente_nome: orcamento.clienteNome || "Cliente sem nome",
-        telefone: orcamento.clienteTelefone || "",
-        cidade: orcamento.clienteCidade || "",
-        produto: orcamento.produtoDescricao || "Produto não informado",
-        material: orcamento.produtoMaterial || "",
+
+        cliente_nome:
+          orcamento.clienteNome ||
+          "Cliente sem nome",
+
+        telefone:
+          orcamento.clienteTelefone || null,
+
+        email:
+          orcamento.clienteEmail || null,
+
+        cidade:
+          orcamento.clienteCidade || null,
+
+        cpf:
+          orcamento.clienteCpfCnpj || null,
+
+        endereco:
+          orcamento.clienteEndereco || null,
+
+        produto: nomesProdutos,
+
+        material: materiais,
+
+        observacoes:
+          observacoesFinais || null,
+
         prioridade: "media" as const,
+
         etapa: "pedido-recebido" as const,
+
         valor_total: valorTotal,
+
         valor_pago: 0,
-        prazos_dias_uteis: prazosDiasUteis,
-        data_pedido: todayStr,
-        data_criacao: todayStr,
-        data_entrega_estimada: dataEntregaEstimada,
-        entrega: dataEntregaEstimada,
+
+        desconto,
+
+        forma_pagamento:
+          orcamento.formaPagamento || null,
+
+        prazos_dias_uteis:
+          prazosDiasUteis,
+
+        data_pedido:
+          todayStr,
+
+        data_criacao:
+          todayStr,
+
+        data_entrega_estimada:
+          dataEntregaEstimada,
+
+        entrega:
+          dataEntregaEstimada,
+
         user_id: user.id,
       };
 
-      // 4. Criar pedido
-      await createPedido.mutateAsync(input as any);
+      // =========================================================
+      // 9. CRIAR PEDIDO
+      // =========================================================
 
-      // 5. Remover orçamento permanentemente (Hard Delete)
-      // LocalStorage
+      await createPedido.mutateAsync(
+        input as any
+      );
+
+      // =========================================================
+      // 10. MARCAR ORÇAMENTO COMO APROVADO
+      //     SEM APAGAR O ORÇAMENTO
+      // =========================================================
+
+      const {
+        error: updateOrcamentoError,
+      } = await (supabase as any)
+        .from("orcamentos_salvos")
+        .update({
+          status: "Aprovado",
+        })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (updateOrcamentoError) {
+        throw updateOrcamentoError;
+      }
+
+      // =========================================================
+      // 11. ATUALIZAR LOCALSTORAGE
+      // =========================================================
+
       try {
-        const local = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
-        const updated = local.filter((o: any) => o.id !== id);
-        localStorage.setItem("orcamentos_salvos", JSON.stringify(updated));
-      } catch (e) {
-        console.error("Erro ao deletar do localStorage:", e);
+        const local = JSON.parse(
+          localStorage.getItem(
+            "orcamentos_salvos"
+          ) || "[]"
+        );
+
+        const updated = local.map((o: any) =>
+          o.id === id
+            ? {
+              ...o,
+              status: "Aprovado",
+            }
+            : o
+        );
+
+        localStorage.setItem(
+          "orcamentos_salvos",
+          JSON.stringify(updated)
+        );
+      } catch (storageError) {
+        console.warn(
+          "Não foi possível atualizar o status no localStorage:",
+          storageError
+        );
       }
 
-      // Supabase
-      if (user) {
-        try {
-          const { error: delErr } = await (supabase as any)
-            .from("orcamentos_salvos")
-            .delete()
-            .eq("id", id)
-            .eq("user_id", user.id);
-          if (delErr) throw delErr;
-        } catch (e) {
-          console.warn("Erro ao deletar no Supabase:", e);
+      // =========================================================
+      // 12. ATUALIZAR CACHE DO TANSTACK QUERY
+      // =========================================================
+
+      queryClient.setQueryData(
+        ["orcamentos"],
+        (
+          oldData:
+            | OrcamentoComItens[]
+            | undefined
+        ) => {
+          if (!oldData) return [];
+
+          return oldData.map((o) =>
+            o.id === id
+              ? {
+                ...o,
+                status: "Aprovado",
+              }
+              : o
+          );
         }
-      }
+      );
 
-      // Atualizar cache local do TanStack Query imediatamente para garantir atualização em tempo real
-      queryClient.setQueryData(["orcamentos"], (oldData: Orcamento[] | undefined) => {
-        if (!oldData) return [];
-        return oldData.filter((o) => o.id !== id);
-      });
+      // =========================================================
+      // 13. FINALIZAÇÃO
+      // =========================================================
 
-      toast.success("Orçamento convertido em Pedido com sucesso!", {
-        action: {
-          label: "Ver Pedidos",
-          onClick: () => navigate({ to: "/pedidos" }),
-        },
-      });
+      toast.success(
+        "Orçamento convertido em Pedido com sucesso!",
+        {
+          action: {
+            label: "Ver Pedidos",
+            onClick: () =>
+              navigate({
+                to: "/pedidos",
+              }),
+          },
+        }
+      );
 
       setConfirmarConversao(null);
-      refetch();
+
+      await refetch();
     } catch (error: any) {
-      console.error("Erro ao converter orçamento:", error);
-      toast.error(error?.message || "Erro ao converter orçamento");
+      console.error(
+        "Erro ao converter orçamento:",
+        error
+      );
+
+      toast.error(
+        error?.message ||
+        "Erro ao converter orçamento"
+      );
     }
   };
 
@@ -417,7 +810,7 @@ function OrcamentosPage() {
           if (meta.clienteCpfCnpj) clienteCpfCnpj = meta.clienteCpfCnpj;
           if (meta.formaPagamento) formaPagamento = meta.formaPagamento;
         }
-      } catch {}
+      } catch { }
     }
 
     const msg = `Olá *${o.clienteNome}*, tudo bem? Segue o resumo da proposta comercial que preparamos:
@@ -449,11 +842,10 @@ Qualquer dúvida, estamos à disposição!`;
               <Calendar className="size-3" /> {dataEmissao}
             </span>
             <span
-              className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
-                isAprovado
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-              }`}
+              className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${isAprovado
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                }`}
             >
               {o.status || "Pendente"}
             </span>
@@ -467,7 +859,7 @@ Qualquer dúvida, estamos à disposição!`;
           <p className="text-sm font-medium text-muted-foreground mt-2 line-clamp-1">
             {o.produtoDescricao}
           </p>
-          
+
           <div className="mt-2 text-xs text-muted-foreground space-y-1">
             {o.produtoMaterial && (
               <p>
@@ -688,17 +1080,15 @@ Qualquer dúvida, estamos à disposição!`;
           <div className="h-10 p-1 bg-muted rounded-lg flex items-center shrink-0">
             <button
               onClick={() => setView("grid")}
-              className={`p-1.5 rounded-md transition ${
-                view === "grid" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`p-1.5 rounded-md transition ${view === "grid" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <LayoutGrid className="size-4" />
             </button>
             <button
               onClick={() => setView("table")}
-              className={`p-1.5 rounded-md transition ${
-                view === "table" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`p-1.5 rounded-md transition ${view === "table" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <List className="size-4" />
             </button>
@@ -795,11 +1185,10 @@ Qualquer dúvida, estamos à disposição!`;
                         </td>
                         <td className="px-4 py-3.5 text-center">
                           <span
-                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full inline-block ${
-                              isAprovado
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                            }`}
+                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full inline-block ${isAprovado
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              }`}
                           >
                             {o.status || "Pendente"}
                           </span>
@@ -862,7 +1251,7 @@ Qualquer dúvida, estamos à disposição!`;
 
       {/* 4. MODAIS E DIÁLOGOS */}
       <OrcamentoDialog open={openNew} onOpenChange={setOpenNew} />
-      
+
       <OrcamentoDialog
         open={!!edit}
         onOpenChange={(v) => !v && setEdit(null)}
