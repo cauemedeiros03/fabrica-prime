@@ -698,56 +698,198 @@ function ProdutoDialog({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition relative bg-slate-50/50 dark:bg-slate-900/50">
-
-      <input
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        id="product-image-upload"
-        className="hidden"
-        onChange={handleImageUpload}
-      />
-
-      {uploadingImage ? (
-        <div className="flex flex-col items-center gap-2 py-2">
-          <Loader2 className="size-6 animate-spin text-primary" />
-          <span className="text-xs text-muted-foreground">
-            Enviando imagem...
-          </span>
-        </div>
-      ) : form.imagem_url ? (
-        <div className="relative w-full flex items-center justify-center">
-          <img
-            src={form.imagem_url}
-            alt="Preview"
-            className="h-32 max-w-full rounded-lg object-contain bg-muted/40 p-1"
-          />
-
+    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full h-full md:h-auto md:max-w-md md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              {isEdit ? "Editar Produto" : "Novo Produto"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {isEdit ? "Atualize os detalhes no catálogo" : "Adicione um item ao seu catálogo"}
+            </p>
+          </div>
           <button
-            type="button"
-            onClick={() => set("imagem_url", "")}
-            className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+            onClick={() => onOpenChange(false)}
+            className="size-8 grid place-items-center rounded-lg hover:bg-accent"
           >
             <X className="size-4" />
           </button>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() =>
-            document.getElementById("product-image-upload")?.click()
-          }
-          className="w-full flex flex-col items-center justify-center cursor-pointer"
-        >
-          <div className="flex flex-col items-center gap-1.5 py-2">
-            <Camera className="size-6 text-muted-foreground" />
 
-            <span className="text-xs font-medium text-muted-foreground">
-              Tirar foto ou escolher imagem
-            </span>
+        <form onSubmit={onSubmit} className="px-6 py-5 space-y-4 flex-1 overflow-y-auto md:flex-none">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition cursor-pointer relative bg-slate-50/50 dark:bg-slate-900/50">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              id="product-image-upload"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+
+            <label
+              htmlFor="product-image-upload"
+              className="w-full flex flex-col items-center justify-center cursor-pointer"
+            >
+              {uploadingImage ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">
+                    Enviando imagem...
+                  </span>
+                </div>
+              ) : form.imagem_url ? (
+                <div className="relative w-full flex items-center justify-center">
+                  <img
+                    src={form.imagem_url}
+                    alt="Preview"
+                    className="h-32 max-w-full rounded-lg object-contain bg-muted/40 p-1"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      set("imagem_url", "");
+                    }}
+                    className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5 py-2">
+                  <Camera className="size-6 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Tirar foto ou escolher imagem
+                  </span>
+                </div>
+              )}
+            </label>
           </div>
-        </button>
-      )}
+
+          <div>
+            <label className="text-xs font-medium">Nome do Produto *</label>
+            <input
+              type="text"
+              value={form.nome}
+              onChange={(e) => set("nome", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: Mesa de Jantar 6 Lugares"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Preço (R$)</label>
+            <input
+              type="text"
+              value={form.preco !== undefined && form.preco !== null ? (form.preco * 100).toString().padStart(3, "0").replace(/(\d)(\d{2})$/, "$1,$2").replace(/(?=(\d{3})+(\D))\B/g, ".") : ""}
+              onChange={(e) => set("preco", formatCurrencyInput(e.target.value))}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="0,00"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Tipo do móvel</label>
+            <input
+              type="text"
+              value={form.tipo_movel || ""}
+              onChange={(e) => set("tipo_movel", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: Cadeira, Mesa, Armário"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Material</label>
+            <input
+              type="text"
+              value={form.material || ""}
+              onChange={(e) => set("material", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: MDF, Angelim-pedra, Ferro"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Cor / acabamento</label>
+            <input
+              type="text"
+              value={form.cor_acabamento || ""}
+              onChange={(e) => set("cor_acabamento", e.target.value)}
+              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Ex: Verniz fosco, Off-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-xs font-medium">Altura (m)</label>
+              <input
+                type="text"
+                value={altura}
+                onChange={(e) => setAltura(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 0.80"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Largura (m)</label>
+              <input
+                type="text"
+                value={largura}
+                onChange={(e) => setLargura(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 1.20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Profundidade (m)</label>
+              <input
+                type="text"
+                value={profundidade}
+                onChange={(e) => setProfundidade(e.target.value)}
+                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Ex: 0.90"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Descrição</label>
+            <textarea
+              value={form.descricao || ""}
+              onChange={(e) => set("descricao", e.target.value)}
+              rows={3}
+              className="mt-1 w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
+              placeholder="Detalhes, material..."
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
+            >
+              {saving && <Loader2 className="size-4 animate-spin" />}
+              {saving ? "Salvando..." : isEdit ? "Salvar alterações" : "Adicionar ao catálogo"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

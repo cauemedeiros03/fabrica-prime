@@ -27,14 +27,15 @@ export interface NovoPedidoInput {
   cor?: string | null;
 
   observacoes?: string | null;
+
   entrega?: string | null;
 
   prioridade: "baixa" | "media" | "alta" | "urgente";
-
   etapa: string;
 
   valor_total: number;
   valor_pago: number;
+
   desconto?: number;
 
   forma_pagamento?: string | null;
@@ -55,13 +56,82 @@ export interface NovoPedidoInput {
   data_entrega_estimada?: string | null;
 }
 
-export interface Pedido extends NovoPedidoInput {
+export interface Pedido {
   id: string;
 
-  created_at?: string;
-  updated_at?: string;
+  /* Campos do banco */
+  numero: string;
 
-  user_id?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  user_id?: string | null;
+
+  cliente_id?: string | null;
+  cliente_nome: string;
+
+  telefone: string;
+  email: string;
+  cidade: string;
+
+  produto: string;
+  tipo: string;
+  material: string;
+  cor: string;
+
+  observacoes?: string | null;
+
+  entrega: string;
+
+  prioridade: "baixa" | "media" | "alta" | "urgente";
+  etapa: string;
+
+  valor_total: number;
+  valor_pago: number;
+  desconto: number;
+
+  forma_pagamento?: string | null;
+
+  cpf?: string | null;
+  cep?: string | null;
+  endereco?: string | null;
+  numero_endereco?: string | null;
+  complemento?: string | null;
+  bairro?: string | null;
+
+  instagram?: string | null;
+  origem?: string | null;
+
+  anexos: string[];
+
+  data_criacao?: string | null;
+  data_entrega_estimada?: string | null;
+
+  /* Campos normalizados usados pela interface */
+  cliente: string;
+  clienteId?: string | null;
+
+  valorTotal: number;
+  valorPago: number;
+
+  criadoEm: string;
+  atualizadoEm: string | null;
+
+  /* Relação com clientes */
+  clientes?: {
+    id?: string;
+    nome?: string | null;
+    telefone?: string | null;
+    email?: string | null;
+    cidade?: string | null;
+  } | null;
+
+  /* Controle / arquivamento */
+  ativo?: boolean | null;
+  excluido?: boolean | null;
+  deleted?: boolean | null;
+
+  /* Kanban / histórico */
+  etapaAnterior?: string | null;
 }
 
 export interface AddPagamentoInput {
@@ -96,9 +166,7 @@ export interface ReagendarEntregaInput {
   id: string;
 
   data_entrega_estimada?: string | null;
-
   data_entrega?: string | null;
-
   entrega?: string | null;
 }
 
@@ -140,9 +208,33 @@ export function usePedidos() {
       return (data ?? []).map((p: any) => ({
         ...p,
 
+        numero: p.numero ?? "",
+
+        cliente_nome: p.cliente_nome ?? "",
         cliente: p.cliente_nome ?? "",
+        cliente_id: p.cliente_id ?? null,
+        clienteId: p.cliente_id ?? null,
+
+        clientes: p.clientes ?? null,
+
+        telefone: p.telefone ?? "",
+        email: p.email ?? "",
+        cidade: p.cidade ?? "",
+
+        produto: p.produto ?? "",
+        tipo: p.tipo ?? "",
+        material: p.material ?? "",
+        cor: p.cor ?? "",
+
+        observacoes: p.observacoes ?? null,
+
+        valor_total: Number(p.valor_total ?? 0),
+        valor_pago: Number(p.valor_pago ?? 0),
+
         valorTotal: Number(p.valor_total ?? 0),
         valorPago: Number(p.valor_pago ?? 0),
+
+        desconto: Number(p.desconto ?? 0),
 
         criadoEm:
           p.data_criacao ??
@@ -157,18 +249,12 @@ export function usePedidos() {
         entrega:
           p.data_entrega_estimada ??
           p.entrega ??
+          "",
+
+        data_entrega_estimada:
+          p.data_entrega_estimada ??
+          p.entrega ??
           null,
-
-        telefone: p.telefone ?? "",
-        email: p.email ?? "",
-        cidade: p.cidade ?? "",
-
-        produto: p.produto ?? "",
-        tipo: p.tipo ?? "",
-        material: p.material ?? "",
-        cor: p.cor ?? "",
-
-        desconto: Number(p.desconto ?? 0),
 
         anexos: Array.isArray(p.anexos)
           ? p.anexos
@@ -179,6 +265,18 @@ export function usePedidos() {
 
         etapa:
           p.etapa ?? "pedido-recebido",
+
+        etapaAnterior:
+          p.etapa_anterior ?? null,
+
+        ativo:
+          p.ativo ?? true,
+
+        excluido:
+          p.excluido ?? false,
+
+        deleted:
+          p.deleted ?? false,
       })) as Pedido[];
     },
   });
@@ -220,9 +318,61 @@ export function usePedido(id?: string) {
       return {
         ...data,
 
-        cliente: data.cliente_nome ?? "",
-        valorTotal: Number(data.valor_total ?? 0),
-        valorPago: Number(data.valor_pago ?? 0),
+        numero: (data as any).numero ?? "",
+
+        cliente_nome:
+          data.cliente_nome ?? "",
+
+        cliente:
+          data.cliente_nome ?? "",
+
+        cliente_id:
+          (data as any).cliente_id ?? null,
+
+        clienteId:
+          (data as any).cliente_id ?? null,
+
+        clientes:
+          (data as any).clientes ?? null,
+
+        telefone:
+          (data as any).telefone ?? "",
+
+        email:
+          (data as any).email ?? "",
+
+        cidade:
+          (data as any).cidade ?? "",
+
+        produto:
+          data.produto ?? "",
+
+        tipo:
+          data.tipo ?? "",
+
+        material:
+          data.material ?? "",
+
+        cor:
+          data.cor ?? "",
+
+        observacoes:
+          data.observacoes ?? null,
+
+        valor_total:
+          Number(data.valor_total ?? 0),
+
+        valor_pago:
+          Number(data.valor_pago ?? 0),
+
+        valorTotal:
+          Number(data.valor_total ?? 0),
+
+        valorPago:
+          Number(data.valor_pago ?? 0),
+
+        desconto:
+          Number(data.desconto ?? 0),
 
         criadoEm:
           data.data_criacao ??
@@ -236,29 +386,36 @@ export function usePedido(id?: string) {
 
         entrega:
           data.data_entrega_estimada ??
-          data.entrega ??
+          (data as any).entrega ??
+          "",
+
+        data_entrega_estimada:
+          data.data_entrega_estimada ??
+          (data as any).entrega ??
           null,
 
-        telefone: (data as any).telefone ?? "",
-        email: (data as any).email ?? "",
-        cidade: (data as any).cidade ?? "",
-
-        produto: data.produto ?? "",
-        tipo: data.tipo ?? "",
-        material: data.material ?? "",
-        cor: data.cor ?? "",
-
-        desconto: Number(data.desconto ?? 0),
-
-        anexos: Array.isArray(data.anexos)
-          ? data.anexos
-          : [],
+        anexos:
+          Array.isArray(data.anexos)
+            ? data.anexos
+            : [],
 
         prioridade:
           data.prioridade ?? "media",
 
         etapa:
           data.etapa ?? "pedido-recebido",
+
+        etapaAnterior:
+          (data as any).etapa_anterior ?? null,
+
+        ativo:
+          (data as any).ativo ?? true,
+
+        excluido:
+          (data as any).excluido ?? false,
+
+        deleted:
+          (data as any).deleted ?? false,
       } as Pedido;
     },
   });
@@ -426,8 +583,7 @@ export function useCreatePedido() {
       /*
        * REGISTRA PAGAMENTO INICIAL
        *
-       * IMPORTANTE:
-       * A tabela pagamentos NÃO possui user_id.
+       * A tabela pagamentos não possui user_id.
        */
       if (
         valorPago > 0 &&
@@ -503,8 +659,7 @@ export function useCreatePedido() {
    ========================================================================== */
 
 export function useUpdatePedido() {
-  const queryClient =
-    useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (
@@ -532,8 +687,7 @@ export function useUpdatePedido() {
         );
 
       if (
-        Object.keys(cleanFields)
-          .length === 0
+        Object.keys(cleanFields).length === 0
       ) {
         throw new Error(
           "Nenhum campo foi informado para atualização."
@@ -545,9 +699,7 @@ export function useUpdatePedido() {
         error,
       } = await supabase
         .from("pedidos")
-        .update(
-          cleanFields as any
-        )
+        .update(cleanFields as any)
         .eq("id", id)
         .select()
         .single();
@@ -617,9 +769,11 @@ export function useMoverEtapaPedido() {
     mutationFn: async ({
       id,
       etapa,
+      etapaAnterior,
     }: {
       id: string;
       etapa: string;
+      etapaAnterior?: string | null;
     }) => {
       if (!id) {
         throw new Error(
@@ -661,7 +815,11 @@ export function useMoverEtapaPedido() {
           );
         }
 
-        return data as Pedido;
+        return {
+          ...(data as any),
+          etapaAnterior:
+            etapaAnterior ?? null,
+        } as Pedido;
       } finally {
         setTimeout(() => {
           isDraggingMutation.current =
@@ -907,8 +1065,60 @@ export function useDuplicatePedido() {
           );
         }
 
-        pedidoOriginal =
-          data as Pedido;
+        pedidoOriginal = {
+          ...(data as any),
+          numero:
+            (data as any).numero ?? "",
+          cliente_nome:
+            (data as any).cliente_nome ?? "",
+          cliente:
+            (data as any).cliente_nome ?? "",
+          telefone:
+            (data as any).telefone ?? "",
+          email:
+            (data as any).email ?? "",
+          cidade:
+            (data as any).cidade ?? "",
+          produto:
+            (data as any).produto ?? "",
+          tipo:
+            (data as any).tipo ?? "",
+          material:
+            (data as any).material ?? "",
+          cor:
+            (data as any).cor ?? "",
+          valor_total:
+            Number((data as any).valor_total ?? 0),
+          valor_pago:
+            Number((data as any).valor_pago ?? 0),
+          valorTotal:
+            Number((data as any).valor_total ?? 0),
+          valorPago:
+            Number((data as any).valor_pago ?? 0),
+          desconto:
+            Number((data as any).desconto ?? 0),
+          criadoEm:
+            (data as any).data_criacao ??
+            (data as any).created_at ??
+            new Date().toISOString(),
+          atualizadoEm:
+            (data as any).updated_at ??
+            (data as any).created_at ??
+            null,
+          entrega:
+            (data as any).data_entrega_estimada ??
+            (data as any).entrega ??
+            "",
+          anexos:
+            Array.isArray((data as any).anexos)
+              ? (data as any).anexos
+              : [],
+          prioridade:
+            (data as any).prioridade ?? "media",
+          etapa:
+            (data as any).etapa ??
+            "pedido-recebido",
+        } as Pedido;
       } else {
         pedidoOriginal =
           pedido;
@@ -918,6 +1128,16 @@ export function useDuplicatePedido() {
         id: _id,
         created_at: _createdAt,
         updated_at: _updatedAt,
+
+        /* Campos somente da interface */
+        cliente: _cliente,
+        clienteId: _clienteId,
+        valorTotal: _valorTotal,
+        valorPago: _valorPago,
+        criadoEm: _criadoEm,
+        atualizadoEm: _atualizadoEm,
+        etapaAnterior: _etapaAnterior,
+
         ...dados
       } = pedidoOriginal;
 
@@ -963,7 +1183,12 @@ export function useDuplicatePedido() {
         );
       }
 
-      return data as Pedido;
+      /*
+       * O pedidos.tsx usa o retorno diretamente
+       * como parâmetro de rota. Portanto retornamos
+       * somente o ID do novo pedido.
+       */
+      return data.id as string;
     },
 
     onSuccess: () => {
@@ -1028,11 +1253,6 @@ export function useAddPagamento() {
         );
       }
 
-      /*
-       * IMPORTANTE:
-       * A tabela pagamentos não possui user_id.
-       * Portanto, NENHUM user_id é enviado aqui.
-       */
       const pagamentoPayload = {
         pedido_id:
           pedidoId,
@@ -1378,13 +1598,6 @@ export function useCreateVendaDireta() {
         );
       }
 
-      /*
-       * Pagamento da venda direta.
-       *
-       * IMPORTANTE:
-       * Não enviamos user_id porque
-       * pagamentos não possui essa coluna.
-       */
       if (
         valorPago > 0 &&
         pedido?.id
@@ -1743,6 +1956,23 @@ export function useConverterOrcamentoEmPedido() {
       );
     },
   });
+}
+
+/* ==========================================================================
+   DATA DE REFERÊNCIA PARA ARQUIVAMENTO
+   ========================================================================== */
+
+export function getDataReferenciaArquivamento(
+  pedido: Pedido
+): string {
+  return (
+    pedido.atualizadoEm ??
+    pedido.criadoEm ??
+    pedido.updated_at ??
+    pedido.created_at ??
+    pedido.data_criacao ??
+    new Date().toISOString()
+  );
 }
 
 /* ==========================================================================
