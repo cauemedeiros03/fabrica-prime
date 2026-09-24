@@ -21,6 +21,7 @@ import {
   X,
   Package,
   Camera,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,18 +36,25 @@ function cleanDescription(desc: string | null | undefined): string {
   return desc.split("===JSON_MEDIDAS===")[0].trim();
 }
 
-function parseLegacyMedidasToMeters(desc: string): { altura: string; largura: string; profundidade: string } {
+function parseLegacyMedidasToMeters(desc: string): {
+  altura: string;
+  largura: string;
+  profundidade: string;
+} {
   const clean = desc.trim();
   const parts = clean.split(/\s*[x×*]\s*/);
+
   if (parts.length === 3) {
     const p0 = parseFloat(parts[0].replace(",", "."));
     const p1 = parseFloat(parts[1].replace(",", "."));
     const p2 = parseFloat(parts[2].replace(",", "."));
+
     if (!isNaN(p0) && !isNaN(p1) && !isNaN(p2)) {
       const formatToMeterStr = (v: number) => {
         if (v >= 10) return (v / 100).toFixed(2);
         return v.toFixed(2);
       };
+
       // For legacy format: "1.20×0.90×0.80" -> Largura x Profundidade x Altura
       // Altura = p2, Largura = p0, Profundidade = p1
       return {
@@ -56,17 +64,37 @@ function parseLegacyMedidasToMeters(desc: string): { altura: string; largura: st
       };
     }
   }
-  return { altura: "", largura: "", profundidade: "" };
+
+  return {
+    altura: "",
+    largura: "",
+    profundidade: "",
+  };
 }
 
-function parseMedidas(desc: string | null | undefined): { altura: string; largura: string; profundidade: string } {
-  if (!desc) return { altura: "", largura: "", profundidade: "" };
+function parseMedidas(
+  desc: string | null | undefined
+): {
+  altura: string;
+  largura: string;
+  profundidade: string;
+} {
+  if (!desc) {
+    return {
+      altura: "",
+      largura: "",
+      profundidade: "",
+    };
+  }
+
   if (desc.includes("===JSON_MEDIDAS===")) {
     try {
       const parts = desc.split("===JSON_MEDIDAS===\n");
+
       if (parts.length > 1) {
         const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
         const parsed = JSON.parse(jsonPart);
+
         return {
           altura: parsed.altura || "",
           largura: parsed.largura || "",
@@ -77,6 +105,7 @@ function parseMedidas(desc: string | null | undefined): { altura: string; largur
       console.error("Erro ao fazer parse de medidas JSON:", e);
     }
   }
+
   return parseLegacyMedidasToMeters(desc);
 }
 
@@ -89,20 +118,27 @@ function ProdutosPage() {
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [edit, setEdit] = useState<(ProdutoInput & { id: string }) | null>(null);
+  const [edit, setEdit] = useState<
+    (ProdutoInput & { id: string }) | null
+  >(null);
   const [confirmar, setConfirmar] = useState<Produto | null>(null);
-  const [selectedProduto, setSelectedProduto] = useState<Produto | null>(null); // State to handle the active product pop-up details modal
+  const [selectedProduto, setSelectedProduto] =
+    useState<Produto | null>(null);
 
   const fetchProdutos = async () => {
     if (!user?.id) return;
+
     setIsLoading(true);
+
     try {
       const { data, error } = await supabase
         .from("catalogo_produtos")
-        .select("id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em, imagem_url")
+        .select(
+          "id, nome, descricao, preco, tipo_movel, material, cor_acabamento, criado_em, imagem_url"
+        )
         .order("nome", { ascending: true });
 
-      console.log('Produtos fetch:', data, error);
+      console.log("Produtos fetch:", data, error);
 
       if (error) throw error;
 
@@ -127,7 +163,9 @@ function ProdutosPage() {
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase();
+
     if (!q) return produtos;
+
     return produtos.filter(
       (p) =>
         p.nome.toLowerCase().includes(q) ||
@@ -149,24 +187,33 @@ function ProdutosPage() {
 
   const apagar = async () => {
     if (!confirmar) return;
+
     try {
       await del.mutateAsync(confirmar.id);
+
       toast.success(`${confirmar.nome} removido`);
+
       fetchProdutos();
     } catch (e) {
       toast.error("Não foi possível remover", {
         description: e instanceof Error ? e.message : "",
       });
+
       console.error("Erro ao remover:", e);
     }
+
     setConfirmar(null);
   };
 
   return (
-    <AppShell title="Produtos" subtitle={`${produtos.length} item(ns) no catálogo`}>
+    <AppShell
+      title="Produtos"
+      subtitle={`${produtos.length} item(ns) no catálogo`}
+    >
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -174,11 +221,13 @@ function ProdutosPage() {
             className="w-full h-10 pl-9 pr-3 rounded-lg border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
           />
         </div>
+
         <button
           onClick={() => setOpen(true)}
           className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
         >
-          <Plus className="size-4" /> Novo produto
+          <Plus className="size-4" />
+          Novo produto
         </button>
       </div>
 
@@ -189,16 +238,22 @@ function ProdutosPage() {
       ) : filtrados.length === 0 ? (
         <div className="rounded-2xl border bg-card p-10 text-center">
           <PackageOpen className="size-10 mx-auto text-muted-foreground/40 mb-3" />
+
           <p className="font-medium">Nenhum produto encontrado</p>
+
           <p className="text-sm text-muted-foreground mt-1">
-            {query ? "Tente outro termo de busca." : "Cadastre o primeiro produto no catálogo."}
+            {query
+              ? "Tente outro termo de busca."
+              : "Cadastre o primeiro produto no catálogo."}
           </p>
+
           {!query && (
             <button
               onClick={() => setOpen(true)}
               className="mt-4 h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90"
             >
-              <Plus className="size-4" /> Cadastrar produto
+              <Plus className="size-4" />
+              Cadastrar produto
             </button>
           )}
         </div>
@@ -210,7 +265,6 @@ function ProdutosPage() {
               onClick={() => setSelectedProduto(p)}
               className="group overflow-hidden rounded-2xl border bg-card shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-elevated)] transition flex flex-col h-full relative cursor-pointer"
             >
-              {/* Imagem Banner com Proporção Preservada */}
               <div className="relative overflow-hidden w-full h-56 bg-muted/40 dark:bg-muted/20 border-b flex items-center justify-center p-3">
                 {p.imagem_url ? (
                   <img
@@ -222,11 +276,12 @@ function ProdutosPage() {
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
                     <Package className="size-9 stroke-[1.5]" />
-                    <span className="text-[11px] font-medium">Sem imagem</span>
+                    <span className="text-[11px] font-medium">
+                      Sem imagem
+                    </span>
                   </div>
                 )}
 
-                {/* Ações (Desktop: Hover, Mobile: Fixo) */}
                 <div className="absolute top-2.5 right-2.5 flex items-center gap-1 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                   <button
                     onClick={(e) => {
@@ -239,6 +294,7 @@ function ProdutosPage() {
                   >
                     <Pencil className="size-3.5" />
                   </button>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -253,34 +309,45 @@ function ProdutosPage() {
                 </div>
               </div>
 
-              {/* Informações */}
               <div className="p-5 flex-1 flex flex-col justify-between min-w-0">
                 <div className="space-y-1.5 flex-1">
-                  <h3 className="font-semibold text-base tracking-tight line-clamp-2 text-foreground" title={p.nome}>
+                  <h3
+                    className="font-semibold text-base tracking-tight line-clamp-2 text-foreground"
+                    title={p.nome}
+                  >
                     {p.nome}
                   </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2" title={cleanDescription(p.descricao)}>
+
+                  <p
+                    className="text-xs text-muted-foreground line-clamp-2"
+                    title={cleanDescription(p.descricao)}
+                  >
                     {cleanDescription(p.descricao) || "Sem descrição"}
                   </p>
-                  {(p.tipo_movel || p.material || p.cor_acabamento) && (
-                    <div className="pt-1.5 flex flex-wrap gap-1">
-                      {p.tipo_movel && (
-                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                          {p.tipo_movel}
-                        </span>
-                      )}
-                      {p.material && (
-                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                          {p.material}
-                        </span>
-                      )}
-                      {p.cor_acabamento && (
-                        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                          {p.cor_acabamento}
-                        </span>
-                      )}
-                    </div>
-                  )}
+
+                  {(p.tipo_movel ||
+                    p.material ||
+                    p.cor_acabamento) && (
+                      <div className="pt-1.5 flex flex-wrap gap-1">
+                        {p.tipo_movel && (
+                          <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            {p.tipo_movel}
+                          </span>
+                        )}
+
+                        {p.material && (
+                          <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            {p.material}
+                          </span>
+                        )}
+
+                        {p.cor_acabamento && (
+                          <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            {p.cor_acabamento}
+                          </span>
+                        )}
+                      </div>
+                    )}
                 </div>
 
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
@@ -294,7 +361,6 @@ function ProdutosPage() {
         </div>
       )}
 
-      {/* MODAL DE CRIAÇÃO / EDIÇÃO */}
       <ProdutoDialog
         open={open || !!edit}
         onOpenChange={(v) => {
@@ -309,7 +375,6 @@ function ProdutosPage() {
         }}
       />
 
-      {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
       {confirmar && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4"
@@ -319,10 +384,15 @@ function ProdutosPage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-2xl bg-card border p-6 shadow-[var(--shadow-elevated)]"
           >
-            <h3 className="font-semibold tracking-tight">Remover item?</h3>
+            <h3 className="font-semibold tracking-tight">
+              Remover item?
+            </h3>
+
             <p className="text-sm text-muted-foreground mt-1">
-              Deseja remover <strong>{confirmar.nome}</strong> do catálogo?
+              Deseja remover <strong>{confirmar.nome}</strong> do
+              catálogo?
             </p>
+
             <div className="flex justify-end gap-2 mt-5">
               <button
                 onClick={() => setConfirmar(null)}
@@ -330,135 +400,193 @@ function ProdutosPage() {
               >
                 Cancelar
               </button>
+
               <button
                 onClick={apagar}
                 disabled={del.isPending}
                 className="h-9 px-4 inline-flex items-center gap-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
               >
-                {del.isPending && <Loader2 className="size-4 animate-spin" />} Remover
+                {del.isPending && (
+                  <Loader2 className="size-4 animate-spin" />
+                )}
+                Remover
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE DETALHES DO PRODUTO */}
-      {selectedProduto && (() => {
-        const medidas = parseMedidas(selectedProduto.descricao);
-        const descPura = cleanDescription(selectedProduto.descricao);
-        return (
-          <div
-            className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto"
-            onClick={() => setSelectedProduto(null)}
-          >
+      {selectedProduto &&
+        (() => {
+          const medidas = parseMedidas(selectedProduto.descricao);
+          const descPura = cleanDescription(selectedProduto.descricao);
+
+          return (
             <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+              className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 overflow-y-auto"
+              onClick={() => setSelectedProduto(null)}
             >
-              {/* Cabeçalho */}
-              <div className="flex items-center justify-between px-6 py-4 border-b">
-                <h2 className="text-lg font-semibold tracking-tight">Detalhes do Produto</h2>
-                <button
-                  onClick={() => setSelectedProduto(null)}
-                  className="size-8 grid place-items-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-lg rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b">
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    Detalhes do Produto
+                  </h2>
 
-              {/* Imagem Banner */}
-              <div className="w-full bg-muted/50 dark:bg-card flex items-center justify-center rounded-t-xl overflow-hidden p-4 min-h-[300px] max-h-[500px] border-b">
-                {selectedProduto.imagem_url ? (
-                  <img
-                    src={selectedProduto.imagem_url}
-                    alt={selectedProduto.nome}
-                    className="w-auto h-auto max-w-full max-h-[460px] object-contain block mx-auto drop-shadow-sm"
-                  />
-                ) : (
-                  <div className="w-full h-64 bg-muted/30 flex flex-col items-center justify-center gap-2">
-                    <Package className="size-16 stroke-[1.5] text-muted-foreground/40" />
-                    <span className="text-xs text-muted-foreground/60 font-medium">Sem imagem disponível</span>
-                  </div>
-                )}
-              </div>
+                  <button
+                    onClick={() => setSelectedProduto(null)}
+                    className="size-8 grid place-items-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
 
-              {/* Conteúdo */}
-              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div>
-                  <h3 className="font-bold text-xl text-foreground tracking-tight">{selectedProduto.nome}</h3>
-                  {descPura ? (
-                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap leading-relaxed">
-                      {descPura}
-                    </p>
+                <div className="w-full bg-muted/50 dark:bg-card flex items-center justify-center rounded-t-xl overflow-hidden p-4 min-h-[300px] max-h-[500px] border-b">
+                  {selectedProduto.imagem_url ? (
+                    <img
+                      src={selectedProduto.imagem_url}
+                      alt={selectedProduto.nome}
+                      className="w-auto h-auto max-w-full max-h-[460px] object-contain block mx-auto drop-shadow-sm"
+                    />
                   ) : (
-                    <p className="text-sm text-muted-foreground/60 italic mt-2">Sem descrição adicional</p>
+                    <div className="w-full h-64 bg-muted/30 flex flex-col items-center justify-center gap-2">
+                      <Package className="size-16 stroke-[1.5] text-muted-foreground/40" />
+                      <span className="text-xs text-muted-foreground/60 font-medium">
+                        Sem imagem disponível
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                <div className="border rounded-xl overflow-hidden bg-muted/30">
-                  <table className="w-full text-sm border-collapse text-left">
-                    <tbody>
-                      <tr className="border-b bg-muted/10">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">Nome</th>
-                        <td className="px-4 py-2.5 text-foreground font-medium">{selectedProduto.nome}</td>
-                      </tr>
-                      <tr className="border-b">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">Preço</th>
-                        <td className="px-4 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">
-                          {selectedProduto.preco != null ? moeda(selectedProduto.preco) : "Sob consulta"}
-                        </td>
-                      </tr>
-                      <tr className="border-b bg-muted/10">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Tipo do Móvel</th>
-                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.tipo_movel || "-"}</td>
-                      </tr>
-                      <tr className="border-b">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Material</th>
-                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.material || "-"}</td>
-                      </tr>
-                      <tr className="border-b bg-muted/10">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Cor/Acabamento</th>
-                        <td className="px-4 py-2.5 text-foreground">{selectedProduto.cor_acabamento || "-"}</td>
-                      </tr>
-                      <tr className="border-b">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Altura</th>
-                        <td className="px-4 py-2.5 text-foreground">{medidas.altura ? `${medidas.altura} m` : "-"}</td>
-                      </tr>
-                      <tr className="border-b bg-muted/10">
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Largura</th>
-                        <td className="px-4 py-2.5 text-foreground">{medidas.largura ? `${medidas.largura} m` : "-"}</td>
-                      </tr>
-                      <tr>
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground">Profundidade</th>
-                        <td className="px-4 py-2.5 text-foreground">{medidas.profundidade ? `${medidas.profundidade} m` : "-"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div>
+                    <h3 className="font-bold text-xl text-foreground tracking-tight">
+                      {selectedProduto.nome}
+                    </h3>
+
+                    {descPura ? (
+                      <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap leading-relaxed">
+                        {descPura}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground/60 italic mt-2">
+                        Sem descrição adicional
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="border rounded-xl overflow-hidden bg-muted/30">
+                    <table className="w-full text-sm border-collapse text-left">
+                      <tbody>
+                        <tr className="border-b bg-muted/10">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">
+                            Nome
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground font-medium">
+                            {selectedProduto.nome}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground w-1/3">
+                            Preço
+                          </th>
+                          <td className="px-4 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {selectedProduto.preco != null
+                              ? moeda(selectedProduto.preco)
+                              : "Sob consulta"}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b bg-muted/10">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Tipo do Móvel
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {selectedProduto.tipo_movel || "-"}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Material
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {selectedProduto.material || "-"}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b bg-muted/10">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Cor/Acabamento
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {selectedProduto.cor_acabamento || "-"}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Altura
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {medidas.altura
+                              ? `${medidas.altura} m`
+                              : "-"}
+                          </td>
+                        </tr>
+
+                        <tr className="border-b bg-muted/10">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Largura
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {medidas.largura
+                              ? `${medidas.largura} m`
+                              : "-"}
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                            Profundidade
+                          </th>
+                          <td className="px-4 py-2.5 text-foreground">
+                            {medidas.profundidade
+                              ? `${medidas.profundidade} m`
+                              : "-"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 px-6 py-4 bg-muted/30 border-t">
+                  <button
+                    onClick={() => {
+                      abrirEditar(selectedProduto);
+                      setSelectedProduto(null);
+                    }}
+                    className="h-9 px-4 inline-flex items-center gap-2 rounded-lg border bg-card hover:bg-accent text-sm font-medium transition-colors"
+                  >
+                    <Pencil className="size-3.5" />
+                    Editar
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedProduto(null)}
+                    className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Fechar
+                  </button>
                 </div>
               </div>
-
-              {/* Rodapé */}
-              <div className="flex items-center justify-end gap-2 px-6 py-4 bg-muted/30 border-t">
-                <button
-                  onClick={() => {
-                    abrirEditar(selectedProduto);
-                    setSelectedProduto(null);
-                  }}
-                  className="h-9 px-4 inline-flex items-center gap-2 rounded-lg border bg-card hover:bg-accent text-sm font-medium transition-colors"
-                >
-                  <Pencil className="size-3.5" /> Editar
-                </button>
-                <button
-                  onClick={() => setSelectedProduto(null)}
-                  className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  Fechar
-                </button>
-              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </AppShell>
   );
 }
@@ -500,33 +628,58 @@ function ProdutoDialog({
           ...initial,
           imagem_url: initial.imagem_url || "",
         });
-        // Extract dimensions
+
         const rawDesc = initial.descricao || "";
+
         if (rawDesc.includes("===JSON_MEDIDAS===")) {
           try {
             const parts = rawDesc.split("===JSON_MEDIDAS===\n");
+
             if (parts.length > 1) {
-              setForm((prev) => ({ ...prev, descricao: parts[0].trim() }));
-              const jsonPart = parts[1].split("\n===END_JSON_MEDIDAS===")[0];
+              setForm((prev) => ({
+                ...prev,
+                descricao: parts[0].trim(),
+              }));
+
+              const jsonPart = parts[1].split(
+                "\n===END_JSON_MEDIDAS==="
+              )[0];
+
               const parsed = JSON.parse(jsonPart);
+
               setAltura(parsed.altura || "");
               setLargura(parsed.largura || "");
               setProfundidade(parsed.profundidade || "");
             }
           } catch {
-            setForm((prev) => ({ ...prev, descricao: rawDesc }));
+            setForm((prev) => ({
+              ...prev,
+              descricao: rawDesc,
+            }));
+
             setAltura("");
             setLargura("");
             setProfundidade("");
           }
         } else {
-          // Legacy check
           const legacy = parseLegacyMedidasToMeters(rawDesc);
-          if (legacy.altura || legacy.largura || legacy.profundidade) {
-            setForm((prev) => ({ ...prev, descricao: "" }));
+
+          if (
+            legacy.altura ||
+            legacy.largura ||
+            legacy.profundidade
+          ) {
+            setForm((prev) => ({
+              ...prev,
+              descricao: "",
+            }));
           } else {
-            setForm((prev) => ({ ...prev, descricao: rawDesc }));
+            setForm((prev) => ({
+              ...prev,
+              descricao: rawDesc,
+            }));
           }
+
           setAltura(legacy.altura);
           setLargura(legacy.largura);
           setProfundidade(legacy.profundidade);
@@ -541,6 +694,7 @@ function ProdutoDialog({
           cor_acabamento: "",
           imagem_url: "",
         });
+
         setAltura("");
         setLargura("");
         setProfundidade("");
@@ -548,31 +702,43 @@ function ProdutoDialog({
     }
   }, [open, initial]);
 
-  const set = <K extends keyof ProdutoInput>(k: K, v: ProdutoInput[K]) =>
-    setForm((s) => ({ ...s, [k]: v }));
+  const set = <K extends keyof ProdutoInput>(
+    k: K,
+    v: ProdutoInput[K]
+  ) => setForm((s) => ({ ...s, [k]: v }));
 
   const formatCurrencyInput = (val: string) => {
     const raw = val.replace(/\D/g, "");
+
     if (!raw) return undefined;
+
     return Number(raw) / 100;
   };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
     if (!form.nome.trim()) {
       toast.error("O nome do produto é obrigatório");
       return;
     }
+
     try {
-      // Build final description with JSON metadata
       let finalDescricao = (form.descricao || "").trim();
-      if (altura.trim() || largura.trim() || profundidade.trim()) {
+
+      if (
+        altura.trim() ||
+        largura.trim() ||
+        profundidade.trim()
+      ) {
         const metadataPart = `===JSON_MEDIDAS===\n${JSON.stringify({
           altura: altura.trim(),
           largura: largura.trim(),
           profundidade: profundidade.trim(),
         })}\n===END_JSON_MEDIDAS===`;
-        finalDescricao = `${finalDescricao}${finalDescricao ? "\n\n" : ""}${metadataPart}`;
+
+        finalDescricao = `${finalDescricao}${finalDescricao ? "\n\n" : ""
+          }${metadataPart}`;
       }
 
       const payload = {
@@ -581,57 +747,92 @@ function ProdutoDialog({
       };
 
       if (isEdit && initial) {
-        await update.mutateAsync({ ...payload, id: initial.id });
+        await update.mutateAsync({
+          ...payload,
+          id: initial.id,
+        });
+
         toast.success("Produto atualizado");
-        onSuccess?.({ ...payload, id: initial.id });
+
+        onSuccess?.({
+          ...payload,
+          id: initial.id,
+        });
       } else {
         const id = await create.mutateAsync(payload);
+
         toast.success("Produto cadastrado");
-        onSuccess?.({ ...payload, id, created_at: new Date().toISOString() });
+
+        onSuccess?.({
+          ...payload,
+          id,
+          created_at: new Date().toISOString(),
+        });
       }
+
       onOpenChange(false);
     } catch (err: any) {
       console.error("Erro ao salvar produto:", err);
-      toast.error("Erro ao salvar", { description: err?.message || "" });
+
+      toast.error("Erro ao salvar", {
+        description: err?.message || "",
+      });
     }
   };
 
   if (!open) return null;
+
   const saving = create.isPending || update.isPending;
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Compressão da imagem sem cortar nenhuma parte dela
+  // ───────────────────────────────────────────────────────────────────────────
   const compressImage = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+
       reader.readAsDataURL(file);
+
       reader.onload = (event) => {
         const img = new Image();
+
         img.src = event.target?.result as string;
+
         img.onload = () => {
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
+
           const MAX_WIDTH = 1200;
           const MAX_HEIGHT = 1200;
+
           let width = img.width;
           let height = img.height;
 
-          // Calculate pure aspect ratio without ANY center cropping or clipping
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
+              height = Math.round(
+                (height * MAX_WIDTH) / width
+              );
               width = MAX_WIDTH;
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
+              width = Math.round(
+                (width * MAX_HEIGHT) / height
+              );
               height = MAX_HEIGHT;
             }
           }
 
           canvas.width = width;
           canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return reject(new Error('Canvas context failed'));
 
-          // Use exactly 5 arguments to draw the WHOLE image into the WHOLE canvas area (Zero clipping allowed)
+          const ctx = canvas.getContext("2d");
+
+          if (!ctx) {
+            reject(new Error("Canvas context failed"));
+            return;
+          }
+
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob(
@@ -639,31 +840,51 @@ function ProdutoDialog({
               if (blob) {
                 resolve(blob);
               } else {
-                reject(new Error('Serialization failed'));
+                reject(new Error("Serialization failed"));
               }
             },
-            'image/jpeg',
-            0.7 // 70% quality compression to reach ~100KB footprint cleanly
+            "image/jpeg",
+            0.7
           );
         };
+
         img.onerror = (err) => reject(err);
       };
+
       reader.onerror = (err) => reject(err);
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = e.target.files;
+
     if (!files || files.length === 0) return;
 
+    const file = files[0];
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Arquivo inválido", {
+        description: "Selecione uma imagem JPG, PNG, WEBP ou similar.",
+      });
+
+      e.target.value = "";
+      return;
+    }
+
     setUploadingImage(true);
+
     try {
-      const file = files[0];
       const compressedBlob = await compressImage(file);
 
       const fileExt = "jpg";
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-      const filePath = `${fileName}`;
+
+      const fileName = `${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}.${fileExt}`;
+
+      const filePath = fileName;
 
       const { error: uploadError } = await supabase.storage
         .from("produtos")
@@ -676,20 +897,33 @@ function ProdutoDialog({
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("produtos").getPublicUrl(filePath);
+      } = supabase.storage
+        .from("produtos")
+        .getPublicUrl(filePath);
 
       set("imagem_url", publicUrl);
+
       toast.success("Imagem enviada com sucesso!");
     } catch (err: any) {
       console.error("Erro ao enviar imagem:", err);
-      const errMsg = err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "";
+
+      const errMsg =
+        err?.message ||
+        (typeof err === "string"
+          ? err
+          : JSON.stringify(err)) ||
+        "";
+
       if (errMsg.toLowerCase().includes("bucket not found")) {
         toast.error("Erro de Configuração", {
-          description: "A pasta 'produtos' não foi localizada no Storage do Supabase. Por favor, crie o bucket público.",
+          description:
+            "A pasta 'produtos' não foi localizada no Storage do Supabase. Por favor, crie o bucket público.",
           duration: 8000,
         });
       } else {
-        toast.error("Erro ao enviar imagem", { description: errMsg });
+        toast.error("Erro ao enviar imagem", {
+          description: errMsg,
+        });
       }
     } finally {
       setUploadingImage(false);
@@ -698,186 +932,106 @@ function ProdutoDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm md:p-4 overflow-y-auto">
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full h-full md:h-auto md:max-w-md md:rounded-2xl bg-card border shadow-[var(--shadow-elevated)] flex flex-col"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">
-              {isEdit ? "Editar Produto" : "Novo Produto"}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {isEdit ? "Atualize os detalhes no catálogo" : "Adicione um item ao seu catálogo"}
-            </p>
-          </div>
+    <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition relative bg-slate-50/50 dark:bg-slate-900/50">
+
+      {/* CÂMERA */}
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        id="product-image-camera"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
+
+      {/* GALERIA / ARQUIVOS */}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        id="product-image-gallery"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
+
+      {uploadingImage ? (
+        <div className="flex flex-col items-center gap-2 py-4">
+          <Loader2 className="size-6 animate-spin text-primary" />
+
+          <span className="text-xs text-muted-foreground">
+            Enviando imagem...
+          </span>
+        </div>
+      ) : form.imagem_url ? (
+        <div className="relative w-full flex items-center justify-center">
+          <img
+            src={form.imagem_url}
+            alt="Preview do produto"
+            className="h-32 max-w-full rounded-lg object-contain bg-muted/40 p-1"
+          />
+
           <button
-            onClick={() => onOpenChange(false)}
-            className="size-8 grid place-items-center rounded-lg hover:bg-accent"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              set("imagem_url", "");
+            }}
+            className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+            aria-label="Remover imagem"
           >
             <X className="size-4" />
           </button>
         </div>
+      ) : (
+        <div className="w-full flex flex-col items-center gap-3 py-2">
 
-        <form onSubmit={onSubmit} className="px-6 py-5 space-y-4 flex-1 overflow-y-auto md:flex-none">
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition cursor-pointer relative bg-slate-50/50 dark:bg-slate-900/50">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              id="product-image-upload"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-            <label htmlFor="product-image-upload" className="w-full flex flex-col items-center justify-center cursor-pointer">
-              {uploadingImage ? (
-                <div className="flex flex-col items-center gap-2 py-2">
-                  <Loader2 className="size-6 animate-spin text-primary" />
-                  <span className="text-xs text-muted-foreground">Enviando imagem...</span>
-                </div>
-              ) : form.imagem_url ? (
-                <div className="relative w-full flex items-center justify-center">
-                  <img src={form.imagem_url} alt="Preview" className="h-32 max-w-full rounded-lg object-contain bg-muted/40 p-1" />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      set("imagem_url", "");
-                    }}
-                    className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1.5 py-2">
-                  <Camera className="size-6 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Tirar foto ou escolher imagem</span>
-                </div>
-              )}
-            </label>
+          <div className="flex items-center justify-center size-12 rounded-full bg-primary/10">
+            <ImageIcon className="size-6 text-primary" />
           </div>
 
-          <div>
-            <label className="text-xs font-medium">Nome do Produto *</label>
-            <input
-              type="text"
-              value={form.nome}
-              onChange={(e) => set("nome", e.target.value)}
-              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Ex: Mesa de Jantar 6 Lugares"
-            />
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">
+              Adicionar foto do produto
+            </p>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              Tire uma foto ou escolha uma imagem da galeria
+            </p>
           </div>
 
-          <div>
-            <label className="text-xs font-medium">Preço (R$)</label>
-            <input
-              type="text"
-              value={form.preco !== undefined && form.preco !== null ? (form.preco * 100).toString().padStart(3, "0").replace(/(\d)(\d{2})$/, "$1,$2").replace(/(?=(\d{3})+(\D))\B/g, ".") : ""}
-              onChange={(e) => set("preco", formatCurrencyInput(e.target.value))}
-              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="0,00"
-            />
-          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
 
-          <div>
-            <label className="text-xs font-medium">Tipo do móvel</label>
-            <input
-              type="text"
-              value={form.tipo_movel || ""}
-              onChange={(e) => set("tipo_movel", e.target.value)}
-              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Ex: Cadeira, Mesa, Armário"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Material</label>
-            <input
-              type="text"
-              value={form.material || ""}
-              onChange={(e) => set("material", e.target.value)}
-              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Ex: MDF, Angelim-pedra, Ferro"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Cor / acabamento</label>
-            <input
-              type="text"
-              value={form.cor_acabamento || ""}
-              onChange={(e) => set("cor_acabamento", e.target.value)}
-              className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Ex: Verniz fosco, Off-white"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-xs font-medium">Altura (m)</label>
-              <input
-                type="text"
-                value={altura}
-                onChange={(e) => setAltura(e.target.value)}
-                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                placeholder="Ex: 0.80"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium">Largura (m)</label>
-              <input
-                type="text"
-                value={largura}
-                onChange={(e) => setLargura(e.target.value)}
-                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                placeholder="Ex: 1.20"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium">Profundidade (m)</label>
-              <input
-                type="text"
-                value={profundidade}
-                onChange={(e) => setProfundidade(e.target.value)}
-                className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-                placeholder="Ex: 0.90"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium">Descrição</label>
-            <textarea
-              value={form.descricao || ""}
-              onChange={(e) => set("descricao", e.target.value)}
-              rows={3}
-              className="mt-1 w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30"
-              placeholder="Detalhes, material..."
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t">
+            {/* BOTÃO CÂMERA */}
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
-              className="h-10 px-4 rounded-lg border text-sm hover:bg-accent"
+              onClick={() => {
+                document
+                  .getElementById("product-image-camera")
+                  ?.click();
+              }}
+              className="h-10 px-4 flex-1 inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent transition-colors"
             >
-              Cancelar
+              <Camera className="size-4" />
+              Tirar foto
             </button>
+
+            {/* BOTÃO GALERIA */}
             <button
-              type="submit"
-              disabled={saving}
-              className="h-10 px-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-60"
+              type="button"
+              onClick={() => {
+                document
+                  .getElementById("product-image-gallery")
+                  ?.click();
+              }}
+              className="h-10 px-4 flex-1 inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent transition-colors"
             >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? "Salvando..." : isEdit ? "Salvar alterações" : "Adicionar ao catálogo"}
+              <ImageIcon className="size-4" />
+              Escolher da galeria
             </button>
+
           </div>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
