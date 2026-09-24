@@ -934,21 +934,14 @@ function ProdutoDialog({
   return (
     <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/20 rounded-xl p-4 hover:border-primary/50 transition relative bg-slate-50/50 dark:bg-slate-900/50">
 
-      {/* CÂMERA */}
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        id="product-image-camera"
-        className="hidden"
-        onChange={handleImageUpload}
-      />
-
-      {/* GALERIA / ARQUIVOS */}
+      {/* INPUT ÚNICO DE IMAGEM
+          Sem "capture": o celular mostra o seletor nativo
+          com opções como Fototeca/Galeria, Tirar foto
+          e Escolher arquivos. */}
       <input
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
-        id="product-image-gallery"
+        id="product-image-upload"
         className="hidden"
         onChange={handleImageUpload}
       />
@@ -978,6 +971,7 @@ function ProdutoDialog({
             }}
             className="absolute top-0 right-0 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
             aria-label="Remover imagem"
+            title="Remover imagem"
           >
             <X className="size-4" />
           </button>
@@ -995,41 +989,23 @@ function ProdutoDialog({
             </p>
 
             <p className="text-xs text-muted-foreground mt-1">
-              Tire uma foto ou escolha uma imagem da galeria
+              Toque para escolher uma foto ou tirar uma nova
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
+          <button
+            type="button"
+            onClick={() => {
+              document
+                .getElementById("product-image-upload")
+                ?.click();
+            }}
+            className="h-10 px-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent transition-colors"
+          >
+            <ImageIcon className="size-4" />
+            Adicionar imagem
+          </button>
 
-            {/* BOTÃO CÂMERA */}
-            <button
-              type="button"
-              onClick={() => {
-                document
-                  .getElementById("product-image-camera")
-                  ?.click();
-              }}
-              className="h-10 px-4 flex-1 inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent transition-colors"
-            >
-              <Camera className="size-4" />
-              Tirar foto
-            </button>
-
-            {/* BOTÃO GALERIA */}
-            <button
-              type="button"
-              onClick={() => {
-                document
-                  .getElementById("product-image-gallery")
-                  ?.click();
-              }}
-              className="h-10 px-4 flex-1 inline-flex items-center justify-center gap-2 rounded-lg border bg-background text-sm font-medium hover:bg-accent transition-colors"
-            >
-              <ImageIcon className="size-4" />
-              Escolher da galeria
-            </button>
-
-          </div>
         </div>
       )}
     </div>
