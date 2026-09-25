@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { Search, UserPlus, Check } from "lucide-react";
 import { type Cliente } from "@/hooks/use-clientes";
 import { supabase } from "@/integrations/supabase/client";
@@ -158,40 +157,6 @@ export function ClienteAutocomplete({
   // POSICIONAMENTO DO DROPDOWN
   // ============================================================
 
-  useEffect(() => {
-    if (!open) return;
-
-    const updatePosition = () => {
-      if (!inputContainerRef.current) return;
-
-      const rect = inputContainerRef.current.getBoundingClientRect();
-
-      const dropdownHeight = 280;
-      const spaceBelow = window.innerHeight - rect.bottom;
-
-      const showAbove =
-        spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-
-      setCoords({
-        top: showAbove
-          ? rect.top - dropdownHeight - 4
-          : rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-      });
-    };
-
-    updatePosition();
-
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open]);
-
   // ============================================================
   // FECHAR AO CLICAR FORA
   // ============================================================
@@ -338,102 +303,86 @@ export function ClienteAutocomplete({
           DROPDOWN
       ====================================================== */}
 
-      {open &&
-        !disabled &&
-        coords &&
-        createPortal(
-          <div
-            data-autocomplete-portal="true"
-            style={{
-              position: "fixed",
-              top: `${coords.top}px`,
-              left: `${coords.left}px`,
-              width: `${coords.width}px`,
-              zIndex: 9999,
-            }}
-            className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-72 overflow-y-auto"
-          >
-            {/* ==================================================
-                RESULTADOS
-            ================================================== */}
+    {open && !disabled && (
+  <div
+    data-autocomplete-portal="true"
+    className="absolute left-0 right-0 top-full mt-1 z-[100] rounded-lg border bg-popover shadow-lg max-h-72 overflow-y-auto"
+  >
+    {loadingResults ? (
+      <div className="px-3 py-3 text-xs text-muted-foreground">
+        Buscando clientes...
+      </div>
+    ) : results.length === 0 ? (
+      <div className="px-3 py-3 text-xs text-muted-foreground">
+        Nenhum cliente encontrado
+      </div>
+    ) : (
+      <ul className="py-1">
+        {results.map((c) => (
+          <li key={c.id}>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-            {results.length === 0 ? (
-              <div className="px-3 py-3 text-xs text-muted-foreground">
-                {loadingResults
-                  ? "Buscando clientes..."
-                  : "Nenhum cliente encontrado"}
-              </div>
-            ) : (
-              <ul className="py-1">
-                {results.map((cliente) => (
-                  <li key={cliente.id}>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-accent active:bg-accent/80 text-sm transition-colors"
-                      onPointerDown={(event) => {
-                        /*
-                         * IMPORTANTE:
-                         *
-                         * Usamos pointerdown em vez de click.
-                         * Assim a seleção acontece antes do input
-                         * perder o foco e antes do dropdown ser
-                         * fechado pelo evento externo.
-                         */
-                        event.preventDefault();
-                        event.stopPropagation();
+                onSelect(c);
+                setQuery(c.nome);
+                setOpen(false);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-                        handleSelectCliente(cliente);
-                      }}
-                    >
-                      <p className="font-medium truncate">
-                        {cliente.nome}
-                      </p>
+                onSelect(c);
+                setQuery(c.nome);
+                setOpen(false);
+              }}
+              className="w-full text-left px-3 py-2.5 hover:bg-accent active:bg-accent text-sm cursor-pointer"
+            >
+              <p className="font-medium truncate">
+                {c.nome}
+              </p>
 
-                      <p className="text-xs text-muted-foreground truncate">
-                        {[
-                          cliente.telefone,
-                          cliente.cidade,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") ||
-                          cliente.email ||
-                          "—"}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <p className="text-xs text-muted-foreground truncate">
+                {[c.telefone, c.cidade]
+                  .filter(Boolean)
+                  .join(" · ") || c.email || "—"}
+              </p>
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
 
-            {/* ==================================================
-                CADASTRAR NOVO
-            ================================================== */}
+    {query.trim() && !exactMatch && onCreateNew && (
+      <button
+        type="button"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
 
-            {query.trim() &&
-              !exactMatch &&
-              onCreateNew && (
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2.5 border-t hover:bg-accent active:bg-accent/80 text-sm flex items-center gap-2 text-primary"
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
+          onCreateNew(query.trim());
+          setOpen(false);
+        }}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
 
-                    handleCreateNew();
-                  }}
-                >
-                  <UserPlus className="size-4" />
-
-                  Cadastrar novo:
-
-                  <span className="font-medium">
-                    {query.trim()}
-                  </span>
-                </button>
-              )}
-          </div>,
-          document.body
-        )}
+          onCreateNew(query.trim());
+          setOpen(false);
+        }}
+        className="w-full text-left px-3 py-2.5 border-t hover:bg-accent active:bg-accent text-sm flex items-center gap-2 text-primary cursor-pointer"
+      >
+        <UserPlus className="size-4" />
+        Cadastrar novo:
+        <span className="font-medium">
+          {query.trim()}
+        </span>
+      </button>
+    )}
+  </div>
+)}  
     </div>
   );
 }
