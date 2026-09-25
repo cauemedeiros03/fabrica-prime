@@ -1540,113 +1540,167 @@ export const PrintableOrcamento = forwardRef<
       </div>
 
       {/* PROJETO / ITENS */}
-      <div
-        className="mt-8 break-inside-avoid"
-        style={{
-          pageBreakInside: "avoid",
-          breakInside: "avoid",
-        }}
-      >
-        <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
-          Itens e Especificações
-        </h3>
+<div
+  className="mt-8 break-inside-avoid"
+  style={{
+    pageBreakInside: "avoid",
+    breakInside: "avoid",
+  }}
+>
+  <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+    Itens e Especificações
+  </h3>
 
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
-                <th className="py-2.5 px-3 text-left w-8">
-                  #
-                </th>
+  <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <table className="w-full text-sm border-collapse">
+      <thead>
+        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
+          <th className="py-2.5 px-3 text-left w-8">
+            #
+          </th>
 
-                <th className="py-2.5 px-3 text-left">
-                  Móvel / Projeto
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Móvel / Projeto
+          </th>
 
-                <th className="py-2.5 px-3 text-left">
-                  Material
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Material
+          </th>
 
-                <th className="py-2.5 px-3 text-left">
-                  Medidas
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Medidas
+          </th>
 
-                <th className="py-2.5 px-3 text-center w-12">
-                  Qtd.
-                </th>
+          <th className="py-2.5 px-3 text-center w-12">
+            Qtd.
+          </th>
 
-                <th className="py-2.5 px-3 text-right">
-                  Valor Unit.
-                </th>
+          <th className="py-2.5 px-3 text-right">
+            Valor Unit.
+          </th>
 
-                <th className="py-2.5 px-3 text-right">
-                  Subtotal
-                </th>
-              </tr>
-            </thead>
+          <th className="py-2.5 px-3 text-right">
+            Subtotal
+          </th>
+        </tr>
+      </thead>
 
-            <tbody className="divide-y divide-slate-100">
-              {parsedItems.map((item, index) => {
-                const quantidade = Number(
-                  item.quantidade || 1
-                );
+      <tbody className="divide-y divide-slate-100">
+        {parsedItems.map((item, index) => {
+          const quantidade = Math.max(
+            1,
+            Number(item.quantidade || 1)
+          );
 
-                const valor = Number(
-                  item.valor ??
-                    item.preco_unitario ??
-                    0
-                );
+          const valor = Number(
+            item.valor ??
+              item.preco_unitario ??
+              0
+          );
 
-                const subtotal =
-                  quantidade * valor;
+          const subtotal =
+            quantidade * valor;
 
-                return (
-                  <tr
-                    key={index}
-                    className="break-inside-avoid"
-                    style={{
-                      pageBreakInside: "avoid",
-                      breakInside: "avoid",
-                    }}
-                  >
-                    <td className="py-3 px-3 text-slate-400 font-medium">
-                      {index + 1}
-                    </td>
+          const descricao =
+            item.descricao ||
+            item.nome ||
+            "Não informado";
 
-                    <td className="py-3 px-3 text-slate-900 font-semibold">
-                      {item.descricao ||
-                        item.nome ||
-                        "Não informado"}
-                    </td>
+          const nomeCatalogo =
+            item.nome &&
+            item.nome !== item.descricao
+              ? item.nome
+              : "";
 
-                    <td className="py-3 px-3 text-slate-600">
-                      {item.material || "—"}
-                    </td>
+          const especificacoes =
+            item.especificacoes_customizadas ||
+            "";
 
-                    <td className="py-3 px-3 text-slate-600 font-mono text-xs">
-                      {cleanLatexMedidas(
-                        item.medidas || ""
-                      ) || "—"}
-                    </td>
+          return (
+            <tr
+              key={index}
+              className="break-inside-avoid align-top"
+              style={{
+                pageBreakInside: "avoid",
+                breakInside: "avoid",
+              }}
+            >
+              <td className="py-3 px-3 text-slate-400 font-medium">
+                {index + 1}
+              </td>
 
-                    <td className="py-3 px-3 text-center text-slate-800">
-                      {quantidade}
-                    </td>
+              <td className="py-3 px-3">
+                <div className="flex items-start gap-3">
+                  {item.imagem_url ? (
+                    <div className="w-14 h-14 shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                      <img
+                        src={item.imagem_url}
+                        alt={descricao}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : null}
 
-                    <td className="py-3 px-3 text-right text-slate-800 tabular-nums">
-                      {formatMoeda(valor)}
-                    </td>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {descricao}
+                    </p>
 
-                    <td className="py-3 px-3 text-right text-slate-900 font-semibold tabular-nums">
-                      {formatMoeda(subtotal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    {nomeCatalogo && (
+                      <p className="mt-0.5 text-[10px] text-slate-500">
+                        Produto do catálogo: {nomeCatalogo}
+                      </p>
+                    )}
+
+                    {item.produto_id && (
+                      <p className="mt-0.5 text-[9px] text-slate-400">
+                        Código: {item.produto_id}
+                      </p>
+                    )}
+
+                    {especificacoes && (
+                      <div className="mt-2 rounded-md bg-slate-50 border border-slate-100 px-2 py-1.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                          Especificações
+                        </p>
+
+                        <p className="mt-0.5 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed">
+                          {especificacoes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </td>
+
+              <td className="py-3 px-3 text-slate-600">
+                {item.material || "—"}
+              </td>
+
+              <td className="py-3 px-3 text-slate-600 font-mono text-xs">
+                {cleanLatexMedidas(
+                  item.medidas || ""
+                ) || "—"}
+              </td>
+
+              <td className="py-3 px-3 text-center text-slate-800">
+                {quantidade}
+              </td>
+
+              <td className="py-3 px-3 text-right text-slate-800 tabular-nums whitespace-nowrap">
+                {formatMoeda(valor)}
+              </td>
+
+              <td className="py-3 px-3 text-right text-slate-900 font-semibold tabular-nums whitespace-nowrap">
+                {formatMoeda(subtotal)}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       {/* OBSERVAÇÕES */}
       {orcamento.observacoes && (

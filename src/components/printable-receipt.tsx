@@ -428,120 +428,171 @@ export const PrintableReceipt = forwardRef<
       </div>
 
       {/* ITENS DO PEDIDO */}
-      <div
-        className="mt-8 break-inside-avoid"
-        style={{
-          pageBreakInside: "avoid",
-          breakInside: "avoid",
-        }}
-      >
-        <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
-          Itens do Pedido
-        </h3>
+<div
+  className="mt-8 break-inside-avoid"
+  style={{
+    pageBreakInside: "avoid",
+    breakInside: "avoid",
+  }}
+>
+  <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+    Itens do Pedido
+  </h3>
 
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
-                <th className="py-2.5 px-4 text-left w-12">
-                  #
-                </th>
+  <div className="border border-slate-200 rounded-xl overflow-hidden">
+    <table className="w-full text-sm border-collapse">
+      <thead>
+        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
+          <th className="py-2.5 px-3 text-left w-10">
+            #
+          </th>
 
-                <th className="py-2.5 px-4 text-left">
-                  Móvel / Projeto
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Móvel / Projeto
+          </th>
 
-                <th className="py-2.5 px-4 text-left">
-                  Material
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Material
+          </th>
 
-                <th className="py-2.5 px-4 text-left">
-                  Medidas
-                </th>
+          <th className="py-2.5 px-3 text-left">
+            Medidas
+          </th>
 
-                <th className="py-2.5 px-4 text-center w-12">
-                  Qtd
-                </th>
+          <th className="py-2.5 px-3 text-center w-12">
+            Qtd
+          </th>
 
-                <th className="py-2.5 px-4 text-right w-24">
-                  Valor Unit.
-                </th>
+          <th className="py-2.5 px-3 text-right w-24">
+            Valor Unit.
+          </th>
 
-                <th className="py-2.5 px-4 text-right w-24">
-                  Subtotal
-                </th>
-              </tr>
-            </thead>
+          <th className="py-2.5 px-3 text-right w-24">
+            Subtotal
+          </th>
+        </tr>
+      </thead>
 
-            <tbody className="divide-y divide-slate-100">
-              {finalItems.map((item: any, index: number) => {
-                const cleanMed = cleanLatexMedidas(
-                  item.medidas || ""
-                );
+      <tbody className="divide-y divide-slate-100">
+        {finalItems.map((item: any, index: number) => {
+          const cleanMed = cleanLatexMedidas(
+            item.medidas || ""
+          );
 
-                const cleanMat =
-                  item.material || "—";
+          const cleanMat =
+            item.material || "—";
 
-                const cleanDesc =
-                  item.descricao ||
-                  item.nome ||
-                  "";
+          const cleanDesc =
+            item.descricao ||
+            item.nome ||
+            "Não informado";
 
-                const qtd = Number(
-                  item.quantidade || 1
-                );
+          const productName =
+            item.nome &&
+            item.nome !== item.descricao
+              ? item.nome
+              : "";
 
-                const valUnit = Number(
-                  item.valor ??
-                    item.preco_unitario ??
-                    0
-                );
+          const specifications =
+            item.especificacoes_customizadas ||
+            "";
 
-                const subtotal = qtd * valUnit;
+          const qtd = Math.max(
+            1,
+            Number(item.quantidade || 1)
+          );
 
-                return (
-                  <tr
-                    key={index}
-                    className="break-inside-avoid"
-                    style={{
-                      pageBreakInside: "avoid",
-                      breakInside: "avoid",
-                    }}
-                  >
-                    <td className="py-3 px-4 text-slate-400 font-medium">
-                      {index + 1}
-                    </td>
+          const valUnit = Number(
+            item.valor ??
+              item.preco_unitario ??
+              0
+          );
 
-                    <td className="py-3 px-4 text-slate-900 font-semibold">
-                      {cleanDesc || "Não informado"}
-                    </td>
+          const subtotal = qtd * valUnit;
 
-                    <td className="py-3 px-4 text-slate-600">
-                      {cleanMat}
-                    </td>
+          return (
+            <tr
+              key={index}
+              className="break-inside-avoid align-top"
+              style={{
+                pageBreakInside: "avoid",
+                breakInside: "avoid",
+              }}
+            >
+              <td className="py-3 px-3 text-slate-400 font-medium">
+                {index + 1}
+              </td>
 
-                    <td className="py-3 px-4 text-slate-600 font-mono text-xs">
-                      {cleanMed || "—"}
-                    </td>
+              <td className="py-3 px-3">
+                <div className="flex items-start gap-3">
+                  {item.imagem_url ? (
+                    <div className="w-14 h-14 shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                      <img
+                        src={item.imagem_url}
+                        alt={cleanDesc}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : null}
 
-                    <td className="py-3 px-4 text-center text-slate-800">
-                      {qtd}
-                    </td>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {cleanDesc}
+                    </p>
 
-                    <td className="py-3 px-4 text-right text-slate-800 tabular-nums">
-                      {moeda(valUnit)}
-                    </td>
+                    {productName && (
+                      <p className="mt-0.5 text-[10px] text-slate-500">
+                        Produto do catálogo: {productName}
+                      </p>
+                    )}
 
-                    <td className="py-3 px-4 text-right text-slate-900 font-semibold tabular-nums">
-                      {moeda(subtotal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    {item.produto_id && (
+                      <p className="mt-0.5 text-[9px] text-slate-400">
+                        Código: {item.produto_id}
+                      </p>
+                    )}
+
+                    {specifications && (
+                      <div className="mt-2 rounded-md bg-slate-50 border border-slate-100 px-2 py-1.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                          Especificações
+                        </p>
+
+                        <p className="mt-0.5 text-[10px] text-slate-600 whitespace-pre-wrap leading-relaxed">
+                          {specifications}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </td>
+
+              <td className="py-3 px-3 text-slate-600">
+                {cleanMat}
+              </td>
+
+              <td className="py-3 px-3 text-slate-600 font-mono text-xs">
+                {cleanMed || "—"}
+              </td>
+
+              <td className="py-3 px-3 text-center text-slate-800">
+                {qtd}
+              </td>
+
+              <td className="py-3 px-3 text-right text-slate-800 tabular-nums whitespace-nowrap">
+                {moeda(valUnit)}
+              </td>
+
+              <td className="py-3 px-3 text-right text-slate-900 font-semibold tabular-nums whitespace-nowrap">
+                {moeda(subtotal)}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       {/* OBSERVAÇÕES */}
       {cleanObs && (
