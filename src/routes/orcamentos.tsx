@@ -14,6 +14,7 @@ import {
   Plus,
   Loader2,
   FileText,
+  Eye,
   LayoutGrid,
   List,
   Printer,
@@ -42,6 +43,7 @@ import {
   PrintableOrcamento,
   type Orcamento,
 } from "@/components/orcamento-dialog";
+import OrcamentoViewerDialog from "@/components/orcamento-viewer-dialog";
 
 type OrcamentoComItens = Orcamento & {
   itens?: any[];
@@ -957,9 +959,16 @@ Qualquer dúvida, estamos à disposição!`;
                 {moeda(o.valorSugerido - (o.desconto || 0))}
               </span>
             </div>
-
-            {/* Menu de Ações - Desktop */}
-            <div className="hidden md:flex items-center gap-1">
+            
+{/* Menu de Ações - Desktop */}
+<div className="hidden md:flex items-center gap-1">
+  <button
+    onClick={() => setVisualizar(o)}
+    className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
+    title="Visualizar orçamento"
+  >
+    <Eye className="size-3.5" />
+  </button>
               <button
                 onClick={() => setPrintData(o)}
                 className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
@@ -1009,12 +1018,12 @@ Qualquer dúvida, estamos à disposição!`;
           <div className="flex md:hidden items-center justify-between gap-2 w-full mt-2 pt-2 border-t border-dashed">
             {o.clienteTelefone ? (
               <button
-                onClick={() => handleWhatsApp(o)}
-                className="w-10 h-10 grid place-items-center rounded-lg border border-green-600/30 bg-card text-success hover:bg-green-600/10 transition-colors"
-                title="Enviar WhatsApp"
-              >
-                <MessageCircle className="size-4" />
-              </button>
+  onClick={() => setVisualizar(o)}
+  className="w-10 h-10 grid place-items-center rounded-lg border bg-card hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+  title="Visualizar orçamento"
+>
+  <Eye className="size-4" />
+</button>
             ) : (
               <div className="w-10 h-10" />
             )}
@@ -1263,6 +1272,14 @@ Qualquer dúvida, estamos à disposição!`;
                         </td>
                         <td className="pl-4 pr-5 py-3.5 text-right">
                           <div className="inline-flex items-center gap-1.5">
+
+                          <button
+  onClick={() => setVisualizar(o)}
+  className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
+  title="Visualizar orçamento"
+>
+  <Eye className="size-3.5" />
+</button>
                             <button
                               onClick={() => setPrintData(o)}
                               className="size-8 grid place-items-center rounded-lg border hover:bg-accent text-muted-foreground hover:text-foreground transition"
@@ -1325,6 +1342,31 @@ Qualquer dúvida, estamos à disposição!`;
         onOpenChange={(v) => !v && setEdit(null)}
         initialData={edit}
       />
+
+      <OrcamentoViewerDialog
+  open={!!visualizar}
+  onOpenChange={(open) => {
+    if (!open) {
+      setVisualizar(null);
+    }
+  }}
+  orcamento={visualizar}
+  onEdit={(orcamento) => {
+    setVisualizar(null);
+    setEdit(orcamento);
+  }}
+  onPrint={(orcamento) => {
+    setVisualizar(null);
+    setPrintData(orcamento);
+  }}
+  onWhatsApp={(orcamento) => {
+    handleWhatsApp(orcamento);
+  }}
+  onApprove={(orcamento) => {
+    setVisualizar(null);
+    setConfirmarConversao(orcamento);
+  }}
+/>
 
       {/* Modal Confirmação de Exclusão */}
       {confirmarExcluir && (
