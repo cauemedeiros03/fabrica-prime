@@ -347,30 +347,66 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   ]);
 
   useEffect(() => {
-    if (activeItemSuggestIndex === null) return;
-    const updatePosition = () => {
-      const anchor = productInputRefs.current[activeItemSuggestIndex];
-      if (anchor) {
-        const rect = anchor.getBoundingClientRect();
-        const dropdownHeight = 200;
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+  if (activeItemSuggestIndex === null) return;
 
-        setProductSuggestCoords({
-          top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
-          left: rect.left,
-          width: rect.width,
-        });
-      }
-    };
-    updatePosition();
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [activeItemSuggestIndex]);
+  const updatePosition = () => {
+    const anchor = productInputRefs.current[activeItemSuggestIndex];
+
+    if (anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const dropdownHeight = 200;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const showAbove =
+        spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+      setProductSuggestCoords({
+        top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  };
+
+  updatePosition();
+
+  window.addEventListener("scroll", updatePosition, true);
+  window.addEventListener("resize", updatePosition);
+
+  return () => {
+    window.removeEventListener("scroll", updatePosition, true);
+    window.removeEventListener("resize", updatePosition);
+  };
+}, [activeItemSuggestIndex]);
+
+// FECHAR CATÁLOGO AO CLICAR FORA
+useEffect(() => {
+  if (activeItemSuggestIndex === null) return;
+
+  const handleOutsidePointerDown = (event: PointerEvent) => {
+    const target = event.target as HTMLElement | null;
+
+    if (!target) return;
+
+    const clickedCatalog = target.closest(
+      '[data-product-suggest-portal="true"]'
+    );
+
+    const clickedInput = target.closest(
+      '[data-product-input="true"]'
+    );
+
+    if (!clickedCatalog && !clickedInput) {
+      setActiveItemSuggestIndex(null);
+      setProductSuggestCoords(null);
+    }
+  };
+
+  document.addEventListener("pointerdown", handleOutsidePointerDown);
+
+  return () => {
+    document.removeEventListener("pointerdown", handleOutsidePointerDown);
+  };
+}, [activeItemSuggestIndex]);
 
   const calculatedTotal = useMemo(() => {
     return items.reduce((sum, item) => sum + (Number(item.quantidade || 1) * Number(item.valor || 0)), 0);
@@ -402,10 +438,9 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     setItems((prev) => prev.filter((_, i) => i !== idx));
     productInputRefs.current = productInputRefs.current.filter((_, i) => i !== idx);
     if (activeItemSuggestIndex === idx) {
-      setActiveItemSuggestIndex(null);
-    } else if (activeItemSuggestIndex !== null && activeItemSuggestIndex > idx) {
-      setActiveItemSuggestIndex(activeItemSuggestIndex - 1);
-    }
+  setActiveItemSuggestIndex(null);
+  setProductSuggestCoords(null);
+}
   };
 
   const handleSelectProduct = (idx: number, c: any) => {
@@ -793,23 +828,26 @@ Qualquer dúvida, estou à disposição!`;
         onInteractOutside={(e) => { e.preventDefault(); }}
         onPointerDownOutside={(e) => { e.preventDefault(); }}
         onEscapeKeyDown={(e) => {
-          e.preventDefault();
-          handleClose();
-        }}
+  if (activeItemSuggestIndex !== null) {
+    e.preventDefault();
+    setActiveItemSuggestIndex(null);
+    setProductSuggestCoords(null);
+    return;
+  }
+
+  e.preventDefault();
+  handleClose();
+}}
       >
-        <DialogHeader className="px-6 py-4 border-b flex flex-row items-start justify-between">
-          <div>
-            <DialogTitle className="text-lg font-semibold tracking-tight text-amber-600 dark:text-amber-400">
-              Formulário de Orçamento Rápido
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Gere propostas comerciais sem impactar a Linha de Produção ou o Financeiro
-            </DialogDescription>
-          </div>
-          <button type="button" onClick={handleClose} className="size-10 grid place-items-center rounded-lg hover:bg-accent" aria-label="Fechar modal">
-            <X className="size-5" />
-          </button>
-        </DialogHeader>
+        <DialogHeader className="px-6 py-4 border-b">
+  <DialogTitle className="text-lg font-semibold tracking-tight text-amber-600 dark:text-amber-400">
+    Formulário de Orçamento Rápido
+  </DialogTitle>
+
+  <DialogDescription className="text-xs text-muted-foreground mt-1">
+    Gere propostas comerciais sem impactar a Linha de Produção ou o Financeiro
+  </DialogDescription>
+</DialogHeader>
 
         <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-2.5 md:max-h-[75vh]">
           {/* CLIENTE */}
@@ -1035,92 +1073,109 @@ Qualquer dúvida, estou à disposição!`;
         productSuggestCoords &&
         createPortal(
           <div
-            data-product-suggest-portal="true"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-            }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-            }}
-            style={{
-              position: "fixed",
-              top: `${productSuggestCoords.top}px`,
-              left: `${productSuggestCoords.left}px`,
-              width: `${productSuggestCoords.width}px`,
-              zIndex: 999999,
-              pointerEvents: "auto",
-            }}
-            className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] max-h-48 overflow-y-auto"
-          >
-            {loadingSuggestions ? (
-              <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="size-3.5 animate-spin" />
-                Carregando...
+  data-product-suggest-portal="true"
+  onMouseDown={(e) => {
+    e.stopPropagation();
+  }}
+  onPointerDown={(e) => {
+    e.stopPropagation();
+  }}
+  style={{
+    position: "fixed",
+    top: `${productSuggestCoords.top}px`,
+    left: `${productSuggestCoords.left}px`,
+    width: `${productSuggestCoords.width}px`,
+    zIndex: 999999,
+    pointerEvents: "auto",
+  }}
+  className="rounded-lg border bg-popover shadow-[var(--shadow-elevated)] overflow-hidden"
+>
+  <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+    <span className="text-xs font-semibold">
+      Catálogo de Produtos
+    </span>
+
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setActiveItemSuggestIndex(null);
+        setProductSuggestCoords(null);
+      }}
+      className="size-7 grid place-items-center rounded-md hover:bg-accent"
+      aria-label="Fechar catálogo"
+      title="Fechar catálogo"
+    >
+      <X className="size-4" />
+    </button>
+  </div>
+
+  <div className="max-h-48 overflow-y-auto">
+    {loadingSuggestions ? (
+      <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+        <Loader2 className="size-3.5 animate-spin" />
+        Carregando...
+      </div>
+    ) : productSuggestions.length === 0 ? (
+      <div className="px-3 py-2 text-xs text-muted-foreground">
+        Nenhum produto no catálogo
+      </div>
+    ) : (
+      <ul className="py-1">
+        {productSuggestions.map((c) => (
+          <li key={c.id}>
+            <button
+              type="button"
+              style={{
+                pointerEvents: "auto",
+                touchAction: "manipulation",
+              }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (activeItemSuggestIndex !== null) {
+                  handleSelectProduct(
+                    activeItemSuggestIndex,
+                    c
+                  );
+                }
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0 cursor-pointer"
+            >
+              {c.imagem_url ? (
+                <img
+                  src={c.imagem_url}
+                  alt={c.nome}
+                  className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">
+                  <Sofa className="size-4" />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">
+                  {c.nome}
+                  {c.preco != null && ` - ${moeda(c.preco)}`}
+                </p>
+
+                {c.material && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {c.material}
+                  </p>
+                )}
               </div>
-            ) : productSuggestions.length === 0 ? (
-              <div className="px-3 py-2 text-xs text-muted-foreground">
-                Nenhum produto no catálogo
-              </div>
-            ) : (
-              <ul className="py-1">
-                {productSuggestions.map((c) => (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      style={{
-                        pointerEvents: "auto",
-                        touchAction: "manipulation",
-                      }}
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        console.log("PRODUTO CLICADO:", c);
-                        console.log(
-                          "ÍNDICE:",
-                          activeItemSuggestIndex
-                        );
-
-                        if (activeItemSuggestIndex !== null) {
-                          handleSelectProduct(
-                            activeItemSuggestIndex,
-                            c
-                          );
-                        }
-                      }}
-                      className="w-full text-left px-3 py-1.5 hover:bg-accent text-sm flex items-center min-w-0 cursor-pointer"
-                    >
-                      {c.imagem_url ? (
-                        <img
-                          src={c.imagem_url}
-                          alt={c.nome}
-                          className="w-8 h-8 rounded-md object-contain p-0.5 mr-2 bg-muted flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-md mr-2 bg-slate-100 flex-shrink-0 flex items-center justify-center text-muted-foreground">
-                          <Sofa className="size-4" />
-                        </div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">
-                          {c.nome}
-                          {c.preco != null &&
-                            ` - ${moeda(c.preco)}`}
-                        </p>
-
-                        {c.material && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {c.material}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>,
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>,
           document.body
         )}
     </Dialog>
@@ -1468,11 +1523,12 @@ const ProductCardItem = React.memo(({
       <div className="mb-3 pr-9">
         <label className="text-xs font-medium text-muted-foreground">Buscar no Catálogo</label>
         <div
-          ref={(el) => {
-            productInputRefs.current[idx] = el;
-          }}
-          className="mt-1 relative flex items-center gap-2"
-        >
+  ref={(el) => {
+    productInputRefs.current[idx] = el;
+  }}
+  data-product-input="true"
+  className="mt-1 relative flex items-center gap-2"
+>
           {item.imagem_url && (
             <img
               src={item.imagem_url}
