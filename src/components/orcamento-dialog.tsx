@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Loader2, Printer, MessageCircle, X, Search, Check, Trash2, Plus, Sofa } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
 import { supabase } from "@/lib/supabase";
 import { useReactToPrint } from "react-to-print";
 import { moeda } from "@/lib/mock-data";
@@ -14,9 +15,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 
+
 export interface Orcamento {
   id: string;
   criadoEm: string;
+  cliente_id?: string | null;
   clienteNome: string;
   clienteTelefone: string;
   clienteCidade: string;
@@ -92,6 +95,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   const { user } = useAuth();
 
   const emptyForm = useMemo(() => ({
+    cliente_id: "",
     clienteNome: "",
     clienteTelefone: "",
     clienteCidade: "",
@@ -109,6 +113,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
   }), []);
 
   const baseForm = useMemo(() => {
+    let metaClienteId = "";
     let metaCpfCnpj = "";
     let metaFormaPagamento = "À vista (Pix / Dinheiro)";
     let metaEmail = "";
@@ -121,6 +126,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
         if (parts.length > 1) {
           const jsonPart = parts[1].split("\n===END_METADATA===")[0];
           const meta = JSON.parse(jsonPart);
+          if (meta.cliente_id) metaClienteId = meta.cliente_id;
           if (meta.clienteCpfCnpj) metaCpfCnpj = meta.clienteCpfCnpj;
           if (meta.formaPagamento) metaFormaPagamento = meta.formaPagamento;
           if (meta.clienteEmail) metaEmail = meta.clienteEmail;
@@ -131,6 +137,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     }
 
     return initialData ? ({
+      cliente_id: initialData.cliente_id || metaClienteId || "",
       clienteNome: initialData.clienteNome || "",
       clienteTelefone: initialData.clienteTelefone || "",
       clienteCidade: initialData.clienteCidade || "",
@@ -489,6 +496,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
     const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({
+      cliente_id: form.cliente_id || null,
       clienteCpfCnpj: form.clienteCpfCnpj,
       formaPagamento: form.formaPagamento,
       clienteEmail: form.clienteEmail,
@@ -499,6 +507,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
+      cliente_id: form.cliente_id || null,
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
@@ -639,6 +648,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const medidasString = sanitizedItems.map((i) => i.medidas).filter(Boolean).join(", ") || "";
 
     const finalProdutoDescricao = `${produtoString} ===JSON_ITENS===\n${JSON.stringify(sanitizedItems)}\n===END_JSON_ITENS===\n===METADATA===\n${JSON.stringify({
+      cliente_id: form.cliente_id || null,
       clienteCpfCnpj: form.clienteCpfCnpj,
       formaPagamento: form.formaPagamento,
       clienteEmail: form.clienteEmail,
@@ -649,6 +659,7 @@ export function OrcamentoDialog({ open, onOpenChange, initialData }: OrcamentoDi
     const novoOrcamento: Orcamento = {
       id: budgetId,
       criadoEm: createdDate,
+      cliente_id: form.cliente_id || null,
       clienteNome: form.clienteNome,
       clienteTelefone: form.clienteTelefone,
       clienteCidade: form.clienteCidade,
@@ -807,16 +818,32 @@ Qualquer dúvida, estou à disposição!`;
             <p className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1.5">Dados do Cliente</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               <div className="md:col-span-2">
-                <label className="text-xs font-medium">Nome do Cliente *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.clienteNome}
-                  onChange={(e) => set("clienteNome", e.target.value)}
-                  className="mt-1 w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                  placeholder="Nome completo"
+                <ClienteAutocomplete
+                  value={form.cliente_id || undefined}
+                  onSelect={(cliente) => {
+                    if (!cliente) return;
+
+                    setForm((s) => ({
+                      ...s,
+                      cliente_id: cliente.id,
+                      clienteNome: cliente.nome || "",
+                      clienteTelefone: cliente.telefone || "",
+                      clienteCidade: cliente.cidade || "",
+                      clienteCpfCnpj: cliente.cpf || "",
+                      clienteEmail: cliente.email || "",
+                      clienteEndereco: cliente.endereco || "",
+                    }));
+                  }}
+                  onCreateNew={(nome) => {
+                    setForm((s) => ({
+                      ...s,
+                      cliente_id: "",
+                      clienteNome: nome,
+                    }));
+                  }}
                 />
               </div>
+
               <div>
                 <label className="text-xs font-medium">Telefone</label>
                 <input

@@ -58,6 +58,8 @@ const mapDbRowToOrcamento = (row: any): OrcamentoComItens => {
     row.produtoDescricao ||
     "";
 
+  let clienteId: string | null = row.cliente_id || row.clienteId || null;
+
   let clienteCpfCnpj =
     row.clienteCpfCnpj ||
     row.cliente_cpf_cnpj ||
@@ -112,6 +114,10 @@ const mapDbRowToOrcamento = (row: any): OrcamentoComItens => {
 
       if (metadataPart) {
         const meta = JSON.parse(metadataPart);
+
+        if (meta.cliente_id) {
+          clienteId = meta.cliente_id;
+        }
 
         if (meta.clienteCpfCnpj) {
           clienteCpfCnpj = meta.clienteCpfCnpj;
@@ -181,6 +187,7 @@ const mapDbRowToOrcamento = (row: any): OrcamentoComItens => {
 
   return {
     id: row.id,
+    cliente_id: clienteId,
     criadoEm: row.created_at || row.criadoEm,
 
     clienteNome:
@@ -423,22 +430,83 @@ function OrcamentosPage() {
 
     const orcamento = confirmarConversao as OrcamentoComItens;
     const id = orcamento.id;
+    const normalizarNome = (valor: string) =>
+      valor
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase();
 
     try {
       // =========================================================
       // 1. SALVAR / ATUALIZAR CLIENTE AUTOMATICAMENTE
       // =========================================================
 
-      const clienteId =
-        await salvarClienteAutomaticamente.mutateAsync({
-          nome: orcamento.clienteNome || "Cliente sem nome",
-          telefone: orcamento.clienteTelefone || "",
-          email: orcamento.clienteEmail || "",
-          cidade: orcamento.clienteCidade || "",
-          cpf: orcamento.clienteCpfCnpj || "",
-          endereco: orcamento.clienteEndereco || "",
-          observacoes: orcamento.observacoes || "",
+      let clienteId: string | null = null;
+
+      // 1. Se o orçamento já tiver ID de cliente, usa diretamente.
+      if ((orcamento as any).cliente_id) {
+        clienteId = (orcamento as any).cliente_id;
+      }
+
+      // 2. Caso não tenha ID, tenta reaproveitar um cliente existente.
+      //    Se houver mais de um candidato, não escolhe sozinho: o usuário
+      //    precisa selecionar explicitamente o cadastro correto no orçamento.
+      if (!clienteId && orcamento.clienteNome?.trim()) {
+        const nomeBusca = normalizarNome(orcamento.clienteNome);
+        const telefoneBusca = String(orcamento.clienteTelefone || "").replace(/\D/g, "");
+        const cpfBusca = String(orcamento.clienteCpfCnpj || "").replace(/\D/g, "");
+        const emailBusca = String(orcamento.clienteEmail || "").trim().toLowerCase();
+
+        const { data: clientesExistentes, error: buscaClienteError } =
+          await supabase
+            .from("clientes")
+            .select("id, nome, telefone, cpf, email")
+            .eq("user_id", user.id);
+
+        if (buscaClienteError) {
+          throw buscaClienteError;
+        }
+
+        const candidatos = (clientesExistentes || []).filter((cliente: any) => {
+          const nomeIgual = normalizarNome(cliente.nome || "") === nomeBusca;
+          const telefoneIgual = telefoneBusca && String(cliente.telefone || "").replace(/\D/g, "") === telefoneBusca;
+          const cpfIgual = cpfBusca && String(cliente.cpf || "").replace(/\D/g, "") === cpfBusca;
+          const emailIgual = emailBusca && String(cliente.email || "").trim().toLowerCase() === emailBusca;
+          return Boolean(nomeIgual || telefoneIgual || cpfIgual || emailIgual);
         });
+
+        if (candidatos.length === 1) {
+          clienteId = candidatos[0].id;
+        } else if (candidatos.length > 1) {
+          throw new Error(
+            "Encontramos mais de um cadastro possível para este cliente. Edite o orçamento e selecione o cliente existente antes de aprovar."
+          );
+        }
+      }
+
+      // 3. Só cria cliente se realmente não encontrou nenhum.
+      if (!clienteId) {
+        clienteId =
+          await salvarClienteAutomaticamente.mutateAsync({
+            nome:
+              orcamento.clienteNome ||
+              "Cliente sem nome",
+            telefone:
+              orcamento.clienteTelefone || "",
+            email:
+              orcamento.clienteEmail || "",
+            cidade:
+              orcamento.clienteCidade || "",
+            cpf:
+              orcamento.clienteCpfCnpj || "",
+            endereco:
+              orcamento.clienteEndereco || "",
+            observacoes:
+              orcamento.observacoes || "",
+          });
+      }
 
       // =========================================================
       // 2. CALCULAR PRAZO E DATA DE ENTREGA

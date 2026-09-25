@@ -38,57 +38,102 @@ export interface ClienteInput {
   origem?: string;
 }
 
+/* ==========================================================================
+   LISTAR CLIENTES
+   ========================================================================== */
+
 export function useClientes() {
   const { user } = useAuth();
+
   return useQuery({
     queryKey: ["clientes", user?.id],
     enabled: !!user?.id,
+
     queryFn: async () => {
-      if (!user?.id) throw new Error("Usuário não autenticado");
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at")
+        .select(
+          "id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at"
+        )
         .eq("user_id", user.id)
         .order("nome", { ascending: true });
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
+
       return (data ?? []) as Cliente[];
     },
   });
 }
 
+/* ==========================================================================
+   BUSCAR CLIENTE
+   ========================================================================== */
+
 export function useCliente(id: string | undefined) {
   const { user } = useAuth();
+
   return useQuery({
     queryKey: ["cliente", id, user?.id],
     enabled: !!id && !!user?.id,
+
     queryFn: async () => {
-      if (!user?.id) throw new Error("Usuário não autenticado");
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { data, error } = await supabase
         .from("clientes")
-        .select("id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at")
+        .select(
+          "id, user_id, nome, telefone, email, cidade, observacoes, cpf, cep, endereco, numero, complemento, bairro, instagram, origem, created_at, updated_at"
+        )
         .eq("id", id!)
         .eq("user_id", user.id)
         .single();
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
+
       return data as Cliente;
     },
   });
 }
 
+/* ==========================================================================
+   PEDIDOS DO CLIENTE
+   ========================================================================== */
+
 export function usePedidosCliente(clienteId: string | undefined) {
   const { user } = useAuth();
+
   return useQuery({
     queryKey: ["pedidos-cliente", clienteId, user?.id],
     enabled: !!clienteId && !!user?.id,
+
     queryFn: async () => {
-      if (!user?.id) throw new Error("Usuário não autenticado");
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { data, error } = await supabase
         .from("pedidos")
-        .select("id, numero, produto, valor_total, valor_pago, entrega, etapa, prioridade, created_at")
+        .select(
+          "id, numero, produto, valor_total, valor_pago, entrega, etapa, prioridade, created_at"
+        )
         .eq("cliente_id", clienteId!)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
+
       return (data ?? []).map((p) => ({
         ...p,
         valor_total: Number(p.valor_total),
@@ -98,14 +143,20 @@ export function usePedidosCliente(clienteId: string | undefined) {
   });
 }
 
-
+/* ==========================================================================
+   CRIAR CLIENTE
+   ========================================================================== */
 
 export function useCreateCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();
+
   return useMutation({
     mutationFn: async (input: ClienteInput) => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { data, error } = await supabase
         .from("clientes")
         .insert({
@@ -126,19 +177,39 @@ export function useCreateCliente() {
         })
         .select("id")
         .single();
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
+
       return data.id as string;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clientes"] }),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["clientes"],
+      });
+    },
   });
 }
+
+/* ==========================================================================
+   ATUALIZAR CLIENTE
+   ========================================================================== */
 
 export function useUpdateCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();
+
   return useMutation({
-    mutationFn: async ({ id, ...input }: ClienteInput & { id: string }) => {
-      if (!user) throw new Error("Usuário não autenticado");
+    mutationFn: async ({
+      id,
+      ...input
+    }: ClienteInput & { id: string }) => {
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { error } = await supabase
         .from("clientes")
         .update({
@@ -158,15 +229,31 @@ export function useUpdateCliente() {
         })
         .eq("id", id)
         .eq("user_id", user.id);
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["clientes"] });
-      qc.invalidateQueries({ queryKey: ["cliente", vars.id] });
-      qc.invalidateQueries({ queryKey: ["pedidos"] });
+
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({
+        queryKey: ["clientes"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["cliente", variables.id],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
     },
   });
 }
+
+/* ==========================================================================
+   SALVAR CLIENTE AUTOMATICAMENTE
+   ========================================================================== */
 
 export function useSalvarClienteAutomaticamente() {
   const qc = useQueryClient();
@@ -184,16 +271,30 @@ export function useSalvarClienteAutomaticamente() {
         throw new Error("O nome do cliente é obrigatório.");
       }
 
+      const normalizarNome = (valor: string) =>
+        valor
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .toLowerCase();
+
+      const nomeNormalizado = normalizarNome(nome);
+
       const { data: clientesExistentes, error: buscaError } =
         await supabase
           .from("clientes")
-          .select("id, nome")
-          .eq("user_id", user.id)
-          .ilike("nome", nome);
+          .select("*")
+          .eq("user_id", user.id);
 
-      if (buscaError) throw buscaError;
+      if (buscaError) {
+        throw buscaError;
+      }
 
-      const clienteExistente = clientesExistentes?.[0];
+      const clienteExistente = (clientesExistentes ?? []).find(
+        (cliente) =>
+          normalizarNome(cliente.nome || "") === nomeNormalizado
+      );
 
       const dadosCliente = {
         nome,
@@ -212,6 +313,14 @@ export function useSalvarClienteAutomaticamente() {
         user_id: user.id,
       };
 
+      /*
+       * IMPORTANTE:
+       * Se já existir um cliente com o mesmo nome, atualizamos esse
+       * cadastro e devolvemos o ID dele.
+       *
+       * Isso impede a criação de duplicados ao converter orçamento
+       * em pedido.
+       */
       if (clienteExistente) {
         const { data, error } = await supabase
           .from("clientes")
@@ -221,50 +330,93 @@ export function useSalvarClienteAutomaticamente() {
           .select("id")
           .single();
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
 
         return data.id as string;
       }
 
+      /*
+       * Só chega aqui se realmente não existir cliente com esse nome.
+       */
       const { data, error } = await supabase
         .from("clientes")
         .insert(dadosCliente)
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       return data.id as string;
     },
 
     onSuccess: (clienteId) => {
-      qc.invalidateQueries({ queryKey: ["clientes"] });
-      qc.invalidateQueries({ queryKey: ["cliente", clienteId] });
+      qc.invalidateQueries({
+        queryKey: ["clientes"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["cliente", clienteId],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["pedidos"],
+      });
     },
   });
 }
 
+/* ==========================================================================
+   EXCLUIR CLIENTE
+   ========================================================================== */
+
 export function useDeleteCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();
+
   return useMutation({
     mutationFn: async (id: string) => {
-      if (!user) throw new Error("Usuário não autenticado");
-      // Bloqueia se houver pedidos vinculados
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { count, error: cErr } = await supabase
         .from("pedidos")
-        .select("id", { count: "exact", head: true })
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
         .eq("cliente_id", id)
         .eq("user_id", user.id);
-      if (cErr) throw cErr;
+
+      if (cErr) {
+        throw cErr;
+      }
+
       if ((count ?? 0) > 0) {
         throw new Error(
-          `Cliente possui ${count} pedido(s) vinculado(s). Remova os pedidos antes.`,
+          `Cliente possui ${count} pedido(s) vinculado(s). Remova os pedidos antes.`
         );
       }
-      const { error } = await supabase.from("clientes").delete().eq("id", id).eq("user_id", user.id);
-      if (error) throw error;
+
+      const { error } = await supabase
+        .from("clientes")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw error;
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clientes"] }),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["clientes"],
+      });
+    },
   });
 }

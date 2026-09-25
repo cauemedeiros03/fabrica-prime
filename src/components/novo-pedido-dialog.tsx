@@ -6,6 +6,7 @@ import { ETAPAS, PRIORIDADE_LABEL, moeda, type StatusEtapa } from "@/lib/mock-da
 import { useCreatePedido, useUpdatePedido, type NovoPedidoInput } from "@/hooks/use-pedidos";
 import { ClienteAutocomplete } from "@/components/cliente-autocomplete";
 import { ClienteDialog } from "@/components/cliente-dialog";
+import { useSalvarClienteAutomaticamente } from "@/hooks/use-clientes";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Funções puras fora do componente — não são recriadas a cada render ───────
@@ -154,6 +155,7 @@ export function NovoPedidoDialog({
   const isEdit = !!initial && !!initial.id;
   const create = useCreatePedido();
   const update = useUpdatePedido();
+  const salvarClienteAutomaticamente = useSalvarClienteAutomaticamente();
 
   const initialForm = useMemo<NovoPedidoInput>(
     () => {
@@ -267,32 +269,18 @@ export function NovoPedidoDialog({
       setProductSuggestions([]);
       return;
     }
-
     const query = items[activeItemSuggestIndex]?.searchQuery || "";
     let active = true;
 
     const timer = setTimeout(async () => {
       setLoadingSuggestions(true);
-
       try {
-        let qBuilder = supabase
-          .from("catalogo_produtos")
-          .select("*");
-
-        const term = query.trim();
-
-        if (term) {
-          qBuilder = qBuilder.or(
-            `nome.ilike.%${term}%,tipo_movel.ilike.%${term}%,material.ilike.%${term}%`
-          );
+        let qBuilder = supabase.from("catalogo_produtos").select("*");
+        if (query.trim()) {
+          qBuilder = qBuilder.ilike("nome", `%${query.trim()}%`);
         }
-
-        const { data, error } = await qBuilder
-          .order("nome")
-          .limit(5);
-
+        const { data, error } = await qBuilder.order("nome").limit(5);
         if (error) throw error;
-
         if (active) {
           setProductSuggestions(data || []);
         }
@@ -307,13 +295,21 @@ export function NovoPedidoDialog({
       active = false;
       clearTimeout(timer);
     };
-  }, [
-    activeItemSuggestIndex,
-    items,
-    activeItemSuggestIndex !== null
-      ? items[activeItemSuggestIndex]?.searchQuery
-      : null,
-  ]);
+  }, [activeItemSuggestIndex, items, activeItemSuggestIndex !== null ? items[activeItemSuggestIndex]?.searchQuery : null]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-product-suggest-portal="true"]') &&
+        !target.closest('input[placeholder="Buscar por produto..."]')
+      ) {
+        setActiveItemSuggestIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
 
   useEffect(() => {
     if (activeItemSuggestIndex === null) return;
@@ -650,29 +646,20 @@ export function NovoPedidoDialog({
       let finalClienteId = form.cliente_id;
 
       if (!finalClienteId && form.cliente_nome?.trim()) {
-        const { data: newCliente, error: clienteError } = await supabase
-          .from("clientes")
-          .insert({
-            nome: form.cliente_nome.trim(),
-            telefone: form.telefone,
-            email: form.email,
-            cidade: form.cidade,
-            cpf: form.cpf,
-            cep: form.cep,
-            endereco: form.endereco,
-            numero: form.numero_endereco,
-            complemento: form.complemento,
-            bairro: form.bairro,
-            instagram: form.instagram,
-            origem: form.origem,
-          })
-          .select("id")
-          .single();
-
-        if (clienteError) {
-          throw new Error(`Erro ao cadastrar cliente: ${clienteError.message}`);
-        }
-        finalClienteId = newCliente.id;
+        finalClienteId = await salvarClienteAutomaticamente.mutateAsync({
+          nome: form.cliente_nome.trim(),
+          telefone: form.telefone || "",
+          email: form.email || "",
+          cidade: form.cidade || "",
+          cpf: form.cpf || "",
+          cep: form.cep || "",
+          endereco: form.endereco || "",
+          numero: form.numero_endereco || "",
+          complemento: form.complemento || "",
+          bairro: form.bairro || "",
+          instagram: form.instagram || "",
+          origem: form.origem || "",
+        });
         set("cliente_id", finalClienteId);
       } else if (!finalClienteId && !form.cliente_nome?.trim()) {
         toast.error("Por favor, selecione ou informe o nome de um cliente.");
@@ -851,32 +838,30 @@ export function NovoPedidoDialog({
         <form onSubmit={onSubmit} className="px-5 py-3.5 space-y-3 flex-1 overflow-y-auto pr-2.5">
           {currentStep === 1 && (
             <Section title="Cliente">
-              {!isEdit && (
-                <div className="md:col-span-2">
-                  <ClienteAutocomplete
-                    value={form.cliente_id ?? undefined}
-                    onSelect={(c) =>
-                      setForm((s) => ({
-                        ...s,
-                        cliente_id: c?.id,
-                        cliente_nome: c?.nome ?? "",
-                        telefone: c?.telefone ? applyPhoneMask(c.telefone) : "",
-                        email: c?.email ?? "",
-                        cidade: c?.cidade ?? "",
-                        cpf: c?.cpf ?? "",
-                        cep: c?.cep ?? "",
-                        endereco: c?.endereco ?? "",
-                        numero_endereco: c?.numero ?? "",
-                        complemento: c?.complemento ?? "",
-                        bairro: c?.bairro ?? "",
-                        instagram: c?.instagram ?? "",
-                        origem: c?.origem ?? "",
-                      }))
-                    }
-                    onCreateNew={(nome) => setNovoCliente(nome)}
-                  />
-                </div>
-              )}
+              <div className="md:col-span-2">
+                <ClienteAutocomplete
+                  value={form.cliente_id ?? undefined}
+                  onSelect={(c) =>
+                    setForm((s) => ({
+                      ...s,
+                      cliente_id: c?.id,
+                      cliente_nome: c?.nome ?? "",
+                      telefone: c?.telefone ? applyPhoneMask(c.telefone) : "",
+                      email: c?.email ?? "",
+                      cidade: c?.cidade ?? "",
+                      cpf: c?.cpf ?? "",
+                      cep: c?.cep ?? "",
+                      endereco: c?.endereco ?? "",
+                      numero_endereco: c?.numero ?? "",
+                      complemento: c?.complemento ?? "",
+                      bairro: c?.bairro ?? "",
+                      instagram: c?.instagram ?? "",
+                      origem: c?.origem ?? "",
+                    }))
+                  }
+                  onCreateNew={(nome) => setNovoCliente(nome)}
+                />
+              </div>
 
               <div className="md:col-span-2 space-y-2.5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
