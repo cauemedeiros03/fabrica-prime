@@ -291,44 +291,86 @@ function OrcamentosPage() {
 
   // Busca e mescla orçamentos
   const fetchOrcamentos = async () => {
-    let list: Orcamento[] = [];
+  if (!user) {
+    return [];
+  }
 
-    // 1. LocalStorage
-    try {
-      const local = JSON.parse(localStorage.getItem("orcamentos_salvos") || "[]");
-      list = local.map((row: any) => mapDbRowToOrcamento(row));
-    } catch (e) {
-      console.error("Erro ao ler localStorage:", e);
+  let dbList: OrcamentoComItens[] = [];
+
+  // =========================================================
+  // 1. BUSCAR ORÇAMENTOS DO SUPABASE
+  // =========================================================
+
+  try {
+    const { data, error } = await (supabase as any)
+      .from("orcamentos_salvos")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
     }
 
-    // 2. Supabase
-    if (user) {
-      try {
-        const { data, error } = await (supabase as any)
-          .from("orcamentos_salvos")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+    dbList = (data || []).map((row: any) =>
+      mapDbRowToOrcamento(row)
+    );
+  } catch (error) {
+    console.error(
+      "Erro ao buscar orçamentos no Supabase:",
+      error
+    );
+  }
 
-        if (!error && data) {
-          const dbList = data.map((row: any) => mapDbRowToOrcamento(row));
-          const dbIds = new Set(dbList.map((o: Orcamento) => o.id));
-          const uniqueLocal = list.filter((o: Orcamento) => !dbIds.has(o.id));
-          list = [...dbList, ...uniqueLocal];
-        }
-      } catch (dbErr) {
-        console.warn("Falha ao buscar orçamentos no Supabase, usando localStorage", dbErr);
-      }
-    }
+  // =========================================================
+  // 2. LER LOCALSTORAGE APENAS COMO APOIO
+  // =========================================================
 
-    list.sort((a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime());
-    return list;
-  };
+  try {
+    const local = JSON.parse(
+      localStorage.getItem("orcamentos_salvos") || "[]"
+    );
+
+    const localList: OrcamentoComItens[] = local.map(
+      (row: any) => mapDbRowToOrcamento(row)
+    );
+
+    // Adiciona somente orçamentos locais que ainda não
+    // existem no Supabase.
+    const dbIds = new Set(
+      dbList.map((orcamento) => orcamento.id)
+    );
+
+    const apenasLocais = localList.filter(
+      (orcamento) => !dbIds.has(orcamento.id)
+    );
+
+    dbList = [...dbList, ...apenasLocais];
+  } catch (error) {
+    console.error(
+      "Erro ao ler orçamentos locais:",
+      error
+    );
+  }
+
+  // =========================================================
+  // 3. ORDENAR POR DATA
+  // =========================================================
+
+  dbList.sort(
+    (a, b) =>
+      new Date(b.criadoEm).getTime() -
+      new Date(a.criadoEm).getTime()
+  );
+
+  return dbList;
+};
 
   const { data: orcamentos = [], isLoading, refetch } = useQuery({
-    queryKey: ["orcamentos"],
-    queryFn: fetchOrcamentos,
-  });
+  queryKey: ["orcamentos", user?.id],
+  queryFn: fetchOrcamentos,
+  enabled: !!user,
+});
 
   // Atualiza listagem ao disparar evento global
   useEffect(() => {

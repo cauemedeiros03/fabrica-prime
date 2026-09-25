@@ -502,6 +502,15 @@ useEffect(() => {
       return;
     }
 
+    if (!user) {
+  toast.error(
+    "Sua sessão ainda não foi carregada. Aguarde alguns segundos e tente novamente."
+  );
+  return;
+}
+
+setSalvando(true);
+
     setSalvando(true);
     const isEdit = !!initialData;
     const budgetId = isEdit ? initialData.id : window.crypto.randomUUID();
@@ -575,44 +584,54 @@ useEffect(() => {
       }
       localStorage.setItem("orcamentos_salvos", JSON.stringify(localList));
 
-      // 2. Tentar salvar no Supabase
-      if (user) {
-        if (isEdit) {
-          const { error } = await (supabase as any).from("orcamentos_salvos").update({
-            cliente_nome: form.clienteNome,
-            cliente_telefone: form.clienteTelefone,
-            cliente_cidade: form.clienteCidade,
-            prospecto_nome: form.clienteNome,
-            prospecto_telefone: form.clienteTelefone,
-            prospecto_cidade: form.clienteCidade,
-            produto_descricao: finalProdutoDescricao,
-            produto_material: materialString,
-            produto_medidas: medidasString,
-            valor_sugerido: finalValue,
-            validade_dias: Number(form.validadeDias),
-            status: statusVal,
-          }).eq("id", budgetId).eq("user_id", user.id);
-          if (error) throw error;
-        } else {
-          const { error } = await (supabase as any).from("orcamentos_salvos").insert({
-            id: budgetId,
-            cliente_nome: form.clienteNome,
-            cliente_telefone: form.clienteTelefone,
-            cliente_cidade: form.clienteCidade,
-            prospecto_nome: form.clienteNome,
-            prospecto_telefone: form.clienteTelefone,
-            prospecto_cidade: form.clienteCidade,
-            produto_descricao: finalProdutoDescricao,
-            produto_material: materialString,
-            produto_medidas: medidasString,
-            valor_sugerido: finalValue,
-            validade_dias: Number(form.validadeDias),
-            status: "Pendente",
-            user_id: user.id,
-          });
-          if (error) throw error;
-        }
-      }
+      // 2. Salvar no Supabase
+if (isEdit) {
+  const { error } = await (supabase as any)
+    .from("orcamentos_salvos")
+    .update({
+      cliente_nome: form.clienteNome,
+      cliente_telefone: form.clienteTelefone,
+      cliente_cidade: form.clienteCidade,
+      prospecto_nome: form.clienteNome,
+      prospecto_telefone: form.clienteTelefone,
+      prospecto_cidade: form.clienteCidade,
+      produto_descricao: finalProdutoDescricao,
+      produto_material: materialString,
+      produto_medidas: medidasString,
+      valor_sugerido: finalValue,
+      validade_dias: Number(form.validadeDias),
+      status: statusVal,
+    })
+    .eq("id", budgetId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    throw error;
+  }
+} else {
+  const { error } = await (supabase as any)
+    .from("orcamentos_salvos")
+    .insert({
+      id: budgetId,
+      cliente_nome: form.clienteNome,
+      cliente_telefone: form.clienteTelefone,
+      cliente_cidade: form.clienteCidade,
+      prospecto_nome: form.clienteNome,
+      prospecto_telefone: form.clienteTelefone,
+      prospecto_cidade: form.clienteCidade,
+      produto_descricao: finalProdutoDescricao,
+      produto_material: materialString,
+      produto_medidas: medidasString,
+      valor_sugerido: finalValue,
+      validade_dias: Number(form.validadeDias),
+      status: "Pendente",
+      user_id: user.id,
+    });
+
+  if (error) {
+    throw error;
+  }
+}
 
       window.dispatchEvent(new Event("orcamentos_updated"));
       toast.success(
@@ -726,6 +745,13 @@ useEffect(() => {
         localList.unshift(novoOrcamento);
       }
       localStorage.setItem("orcamentos_salvos", JSON.stringify(localList));
+
+      if (!user) {
+  toast.error(
+    "Sua sessão ainda não foi carregada. Aguarde alguns segundos e tente novamente."
+  );
+  return;
+}
 
       // 2. Tentar salvar no Supabase
       if (user) {
