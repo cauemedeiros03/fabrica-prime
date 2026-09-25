@@ -1213,303 +1213,635 @@ export interface PrintableOrcamentoProps {
   config: any;
 }
 
-export const PrintableOrcamento = forwardRef<HTMLDivElement, PrintableOrcamentoProps>(
-  ({ orcamento, config }, ref) => {
-    if (!orcamento) return null;
+export const PrintableOrcamento = forwardRef<
+  HTMLDivElement,
+  PrintableOrcamentoProps
+>(({ orcamento, config }, ref) => {
+  if (!orcamento) return null;
 
-    const dataEmissao = new Date(orcamento.criadoEm).toLocaleDateString("pt-BR");
-    const dataValidade = new Date(
-      new Date(orcamento.criadoEm).getTime() + orcamento.validadeDias * 24 * 60 * 60 * 1000
-    ).toLocaleDateString("pt-BR");
+  const dataEmissao = new Date(orcamento.criadoEm).toLocaleDateString(
+    "pt-BR"
+  );
 
-    const formatMoeda = (val: number) =>
-      val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const dataValidade = new Date(
+    new Date(orcamento.criadoEm).getTime() +
+      orcamento.validadeDias * 24 * 60 * 60 * 1000
+  ).toLocaleDateString("pt-BR");
 
-    const cleanLatexMedidas = (medidas: string): string => {
-      if (!medidas) return "";
-      let clean = medidas.replace(/\$/g, "");
-      clean = clean.replace(/\\times/gi, " x ");
-      clean = clean.replace(/\s+/g, " ");
-      clean = clean.replace(/\\/g, "");
-      return clean.trim();
+  const formatMoeda = (val: number) =>
+    Number(val || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+
+  const cleanLatexMedidas = (medidas: string): string => {
+    if (!medidas) return "";
+
+    let clean = medidas.replace(/\$/g, "");
+    clean = clean.replace(/\\times/gi, " x ");
+    clean = clean.replace(/\s+/g, " ");
+    clean = clean.replace(/\\/g, "");
+
+    return clean.trim();
+  };
+
+  /* METADADOS */
+  const meta = useMemo(() => {
+    let clienteCpfCnpj = orcamento.clienteCpfCnpj || "";
+    let formaPagamento =
+      orcamento.formaPagamento || "À vista (Pix / Dinheiro)";
+
+    const desc = orcamento.produtoDescricao || "";
+
+    if (desc.includes("===METADATA===")) {
+      try {
+        const parts = desc.split("===METADATA===\n");
+
+        if (parts.length > 1) {
+          const jsonPart =
+            parts[1].split("\n===END_METADATA===")[0];
+
+          const parsed = JSON.parse(jsonPart);
+
+          if (parsed.clienteCpfCnpj) {
+            clienteCpfCnpj = parsed.clienteCpfCnpj;
+          }
+
+          if (parsed.formaPagamento) {
+            formaPagamento = parsed.formaPagamento;
+          }
+        }
+      } catch {
+        // Mantém os valores originais caso o metadata não seja válido.
+      }
+    }
+
+    return {
+      clienteCpfCnpj,
+      formaPagamento,
     };
+  }, [orcamento]);
 
-    const meta = useMemo(() => {
-      let clienteCpfCnpj = orcamento.clienteCpfCnpj || "";
-      let formaPagamento = orcamento.formaPagamento || "À vista (Pix / Dinheiro)";
-      const desc = orcamento.produtoDescricao || "";
-      if (desc.includes("===METADATA===")) {
-        try {
-          const parts = desc.split("===METADATA===\n");
-          if (parts.length > 1) {
-            const jsonPart = parts[1].split("\n===END_METADATA===")[0];
-            const parsed = JSON.parse(jsonPart);
-            if (parsed.clienteCpfCnpj) clienteCpfCnpj = parsed.clienteCpfCnpj;
-            if (parsed.formaPagamento) formaPagamento = parsed.formaPagamento;
-          }
-        } catch { }
-      }
-      return { clienteCpfCnpj, formaPagamento };
-    }, [orcamento]);
+  /* ITENS */
+  const parsedItems = useMemo<ItemRow[]>(() => {
+    const desc = orcamento.produtoDescricao || "";
 
-    const parsedItems = useMemo<ItemRow[]>(() => {
-      const desc = orcamento.produtoDescricao || "";
-      let itemsList: ItemRow[] = [];
-      if (desc.includes("===JSON_ITENS===")) {
-        try {
-          const parts = desc.split("===JSON_ITENS===\n");
-          if (parts.length > 1) {
-            const jsonPart = parts[1].split("\n===END_JSON_ITENS===")[0];
-            itemsList = JSON.parse(jsonPart);
-          }
-        } catch { }
+    let itemsList: ItemRow[] = [];
+
+    if (desc.includes("===JSON_ITENS===")) {
+      try {
+        const parts = desc.split("===JSON_ITENS===\n");
+
+        if (parts.length > 1) {
+          const jsonPart =
+            parts[1].split("\n===END_JSON_ITENS===")[0];
+
+          itemsList = JSON.parse(jsonPart);
+        }
+      } catch {
+        // Usa o item principal abaixo caso o JSON não seja válido.
       }
-      if (itemsList.length === 0) {
-        itemsList = [{
+    }
+
+    if (itemsList.length === 0) {
+      itemsList = [
+        {
           descricao: orcamento.produtoDescricao || "",
           material: orcamento.produtoMaterial || "",
           medidas: orcamento.produtoMedidas || "",
           valor: orcamento.valorSugerido || 0,
           quantidade: 1,
-        }];
-      }
-      return itemsList;
-    }, [orcamento]);
+        },
+      ];
+    }
 
-    return (
+    return itemsList;
+  }, [orcamento]);
+
+  const valorOriginal = parsedItems.reduce((total, item) => {
+    const quantidade = Number(item.quantidade || 1);
+    const valor = Number(item.valor || 0);
+
+    return total + quantidade * valor;
+  }, 0);
+
+  const desconto = Number(orcamento.desconto || 0);
+
+  const valorFinal =
+    desconto > 0
+      ? Math.max(0, valorOriginal - desconto)
+      : Number(
+          orcamento.valorSugerido || valorOriginal || 0
+        );
+
+  const enderecoCliente =
+    orcamento.clienteEndereco || "";
+
+  const status = orcamento.status || "Pendente";
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        width: "100%",
+        maxWidth: "760px",
+        padding: "32px",
+        backgroundColor: "#fff",
+        color: "#334155",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        fontSize: "11px",
+        lineHeight: "1.4",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* CABEÇALHO */}
+      <div className="flex flex-row justify-between items-center gap-4 pb-6 border-b-2 border-slate-200">
+        <div className="flex items-center gap-4">
+          {config?.logo_url ? (
+            <div className="h-16 w-16 rounded-xl border bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center">
+              <img
+                src={config.logo_url}
+                alt="Logo Marcenaria"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="h-16 w-16 rounded-xl bg-slate-900 text-white shrink-0 flex items-center justify-center font-bold text-xl">
+              M
+            </div>
+          )}
+
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
+              {config?.nome_marcenaria || "Sua bancada"}
+            </h1>
+
+            <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">
+              Gestão de Marcenaria
+            </p>
+          </div>
+        </div>
+
+        <div className="text-right text-xs text-slate-500 space-y-1">
+          {config?.endereco && (
+            <p className="max-w-[250px] leading-tight">
+              {config.endereco}
+            </p>
+          )}
+
+          {config?.telefone && (
+            <p className="font-semibold text-slate-800">
+              WhatsApp: {config.telefone}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* TÍTULO */}
+      <div className="mt-8 flex justify-between items-end border-b border-slate-100 pb-4">
+        <div>
+          <span className="text-xs font-semibold tracking-wider text-primary uppercase">
+            Documento Comercial
+          </span>
+
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            PROPOSTA DE ORÇAMENTO
+          </h2>
+
+          <p className="mt-1 text-xs text-slate-500">
+            Nº {orcamento.id}
+          </p>
+        </div>
+
+        <div className="text-right text-xs text-slate-500 space-y-1">
+          <p>
+            Emissão:{" "}
+            <span className="font-semibold text-slate-800">
+              {dataEmissao}
+            </span>
+          </p>
+
+          <p>
+            Válido até:{" "}
+            <span className="font-semibold text-slate-800">
+              {dataValidade}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {/* STATUS */}
       <div
-        ref={ref}
+        className="mt-6 grid grid-cols-2 gap-3 break-inside-avoid"
         style={{
-          width: "100%",
-          maxWidth: "760px",
-          padding: "24px",
-          backgroundColor: "#ffffff",
-          color: "#334155",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          fontSize: "11px",
-          lineHeight: "1.4",
-          boxSizing: "border-box"
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
         }}
       >
-        {/* BLOCK 1: COMPANY HEADER */}
-        <table style={{ width: "100%", borderCollapse: "collapse", borderBottom: "2px solid #cbd5e1", marginBottom: "12px" }}>
-          <tbody>
-            <tr>
-              <td style={{ verticalAlign: "middle", paddingBottom: "8px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  {config?.logo_url ? (
-                    <img
-                      src={config.logo_url}
-                      alt="Logo"
-                      style={{ height: "44px", width: "44px", objectFit: "contain", borderRadius: "6px", border: "1px solid #e2e8f0" }}
-                    />
-                  ) : (
-                    <div style={{ height: "44px", width: "44px", backgroundColor: "#d97706", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "18px", borderRadius: "6px", textTransform: "uppercase" }}>
-                      {(config?.nome_marcenaria || "Gravatá Móveis Rústicos").slice(0, 1)}
-                    </div>
-                  )}
-                  <div>
-                    <h1 style={{ fontSize: "15px", fontWeight: "bold", color: "#1e293b", margin: 0, lineHeight: "1.2" }}>
-                      {config?.nome_marcenaria || "Gravatá Móveis Rústicos"}
-                    </h1>
-                    <p style={{ fontSize: "8px", color: "#64748b", textTransform: "uppercase", fontWeight: "bold", margin: "2px 0 0 0", letterSpacing: "0.05em" }}>
-                      Proposta Comercial de Marcenaria
-                    </p>
-                  </div>
-                </div>
-              </td>
-              <td style={{ verticalAlign: "middle", textAlign: "right", paddingBottom: "8px", fontSize: "9px", color: "#64748b", lineHeight: "1.3" }}>
-                <p style={{ margin: 0, fontWeight: 500 }}>
-                  {config?.endereco || "Av. Comendador Leão 180, Maceió - AL"}
-                </p>
-                {config?.telefone && (
-                  <p style={{ margin: "2px 0 0 0", fontWeight: "bold", color: "#1e293b" }}>
-                    WhatsApp: {config.telefone}
-                  </p>
-                )}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* TÍTULO DO DOCUMENTO */}
-        <div style={{ display: "block", clear: "both", marginBottom: "12px", borderBottom: "1px solid #f1f5f9", paddingBottom: "4px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={{ textAlign: "left" }}>
-                  <span style={{ fontSize: "8px", fontWeight: "bold", color: "#d97706", textTransform: "uppercase", display: "block", letterSpacing: "0.05em" }}>
-                    Orçamento Informativo
-                  </span>
-                  <h2 style={{ fontSize: "13px", fontWeight: "800", color: "#0f172a", margin: "2px 0 0 0", letterSpacing: "-0.02em" }}>
-                    PROPOSTA DE ORÇAMENTO
-                  </h2>
-                </td>
-                <td style={{ textAlign: "right", verticalAlign: "bottom", fontSize: "9px", color: "#64748b" }}>
-                  Data de Emissão: <span style={{ fontWeight: "600", color: "#334155" }}>{dataEmissao}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* BLOCK 2: DADOS DO CLIENTE */}
-        <div style={{ display: "block", clear: "both", marginBottom: "12px" }}>
-          <h3 style={{ fontSize: "8px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
-            Dados do Cliente
-          </h3>
-          <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", fontSize: "10px" }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: "6px 8px", width: "25%", verticalAlign: "top", borderRight: "1px solid #e2e8f0" }}>
-                  <span style={{ fontSize: "7px", color: "#94a3b8", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Nome</span>
-                  <strong style={{ color: "#0f172a", display: "block", marginTop: "2px" }}>{orcamento.clienteNome}</strong>
-                </td>
-                <td style={{ padding: "6px 8px", width: "25%", verticalAlign: "top", borderRight: "1px solid #e2e8f0" }}>
-                  <span style={{ fontSize: "7px", color: "#94a3b8", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>CPF / CNPJ</span>
-                  <strong style={{ color: "#0f172a", display: "block", marginTop: "2px" }}>{meta.clienteCpfCnpj || "Não informado"}</strong>
-                </td>
-                <td style={{ padding: "6px 8px", width: "25%", verticalAlign: "top", borderRight: "1px solid #e2e8f0" }}>
-                  <span style={{ fontSize: "7px", color: "#94a3b8", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Telefone / Celular</span>
-                  <strong style={{ color: "#334155", fontWeight: "600", display: "block", marginTop: "2px" }}>{orcamento.clienteTelefone || "Não informado"}</strong>
-                </td>
-                <td style={{ padding: "6px 8px", width: "25%", verticalAlign: "top" }}>
-                  <span style={{ fontSize: "7px", color: "#94a3b8", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Cidade / Localidade</span>
-                  <strong style={{ color: "#475569", display: "block", marginTop: "2px" }}>{orcamento.clienteCidade || "Não informado"}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* BLOCK 3: ESPECIFICAÇÕES DO PROJETO */}
-        <div style={{ display: "block", clear: "both", marginBottom: "12px" }}>
-          <h3 style={{ fontSize: "8px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
-            Especificações do Projeto
-          </h3>
-          <div style={{ border: "1px solid #e2e8f0", borderRadius: "6px", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
-              <thead>
-                <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: "8px", color: "#64748b", textTransform: "uppercase", fontWeight: "bold" }}>
-                  <th style={{ padding: "5px 8px", textAlign: "left", width: "30px" }}>#</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left" }}>Móvel / Descrição</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left", width: "150px" }}>Material</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left", width: "110px" }}>Medidas</th>
-                  <th style={{ padding: "5px 8px", textAlign: "center", width: "45px" }}>Qtd</th>
-                  <th style={{ padding: "5px 8px", textAlign: "right", width: "90px" }}>Valor Unit.</th>
-                  <th style={{ padding: "5px 8px", textAlign: "right", width: "95px" }}>Subtotal</th>
-                </tr>
-              </thead>
-              <tbody style={{ color: "#334155" }}>
-                {parsedItems.map((item, index) => (
-                  <tr key={index} style={{ borderBottom: index < parsedItems.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                    <td style={{ padding: "5px 8px", color: "#94a3b8" }}>{index + 1}</td>
-                    <td style={{ padding: "5px 8px", fontWeight: "600", color: "#0f172a" }}>{item.descricao}</td>
-                    <td style={{ padding: "5px 8px" }}>{item.material || "—"}</td>
-                    <td style={{ padding: "5px 8px" }}>{cleanLatexMedidas(item.medidas || "") || "—"}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "center", color: "#0f172a" }}>{item.quantidade || 1}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: "monospace" }}>{formatMoeda(item.valor || 0)}</td>
-                    <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: "600", color: "#0f172a", fontFamily: "monospace" }}>
-                      {formatMoeda((item.quantidade || 1) * (item.valor || 0))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* BLOCK 4: CONDIÇÕES COMERCIAIS */}
-        <div style={{ display: "block", clear: "both", marginBottom: "12px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-          <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: "6px", padding: "8px 10px" }}>
-            <h3 style={{ fontSize: "8px", fontWeight: "bold", color: "#92400e", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px 0" }}>
-              Condições Comerciais
-            </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
-              <tbody>
-                <tr>
-                  <td style={{ width: "20%", verticalAlign: "top" }}>
-                    <span style={{ fontSize: "7px", color: "#b45309", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Emissão</span>
-                    <strong style={{ color: "#1e293b", display: "block", marginTop: "1px" }}>{dataEmissao}</strong>
-                  </td>
-                  <td style={{ width: "20%", verticalAlign: "top" }}>
-                    <span style={{ fontSize: "7px", color: "#b45309", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Válido até</span>
-                    <strong style={{ color: "#b45309", display: "block", marginTop: "1px" }}>{dataValidade}</strong>
-                  </td>
-                  <td style={{ width: "20%", verticalAlign: "top" }}>
-                    <span style={{ fontSize: "7px", color: "#b45309", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Valor Original</span>
-                    <strong style={{ color: "#1e293b", display: "block", marginTop: "1px", fontFamily: "monospace" }}>{formatMoeda(orcamento.valorSugerido)}</strong>
-                  </td>
-                  <td style={{ width: "20%", verticalAlign: "top" }}>
-                    <span style={{ fontSize: "7px", color: "#b45309", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>
-                      {Number(orcamento.desconto || 0) > 0 ? "Com Desconto" : "Valor Final"}
-                    </span>
-                    <strong style={{ color: "#451a03", fontSize: "11px", display: "block", marginTop: "1px", fontFamily: "monospace" }}>
-                      {formatMoeda(Math.max(0, orcamento.valorSugerido - Number(orcamento.desconto || 0)))}
-                    </strong>
-                  </td>
-                  <td style={{ width: "20%", verticalAlign: "top" }}>
-                    <span style={{ fontSize: "7px", color: "#b45309", display: "block", textTransform: "uppercase", fontWeight: "bold" }}>Pagamento</span>
-                    <strong style={{ color: "#1e293b", display: "block", marginTop: "1px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "120px" }} title={meta.formaPagamento}>
-                      {meta.formaPagamento}
-                    </strong>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            {Number(orcamento.desconto || 0) > 0 && (
-              <p style={{ margin: "4px 0 0 0", fontSize: "8px", color: "#047857", fontWeight: "bold" }}>
-                * Desconto Especial de {formatMoeda(Number(orcamento.desconto))} aplicado.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* BLOCK 5: DISCLAIMERS */}
-        <div style={{ display: "block", clear: "both", marginBottom: "16px", textAlign: "center", fontSize: "8px", color: "#64748b", lineHeight: "1.2" }}>
-          <p style={{ margin: 0 }}>
-            * Este orçamento é meramente informativo e está sujeito a alterações com base na medição final no local.
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+            Status
           </p>
-          <p style={{ margin: "2px 0 0 0", color: "#94a3b8" }}>
-            Esta proposta foi gerada no dia {dataEmissao} e é válida por {orcamento.validadeDias} dias corridos.
+
+          <p className="mt-1 text-sm font-semibold text-slate-900">
+            {status}
           </p>
         </div>
 
-        {/* BLOCK 6: SIGNATURES */}
-        <div style={{ display: "block", clear: "both", marginTop: "20px", pageBreakInside: "avoid", breakInside: "avoid" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px", textAlign: "center" }}>
-            <tbody>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+            Validade
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-slate-900">
+            {orcamento.validadeDias} dias
+          </p>
+        </div>
+      </div>
+
+      {/* DADOS DO CLIENTE */}
+      <div
+        className="mt-8 break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+          Dados do Cliente
+        </h3>
+
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm border-collapse">
+            <tbody className="divide-y divide-slate-100">
               <tr>
-                <td style={{ width: "50%", padding: "0 15px", verticalAlign: "bottom" }}>
-                  <div style={{ color: "#cbd5e1", fontSize: "11px", letterSpacing: "-0.5px", marginBottom: "4px" }}>
-                    _________________________________
-                  </div>
-                  <strong style={{ color: "#0f172a", display: "block", textTransform: "uppercase", fontSize: "9px", lineHeight: "1.2" }}>
-                    {(orcamento.clienteNome || "").toUpperCase()}
-                  </strong>
-                  <span style={{ fontSize: "8px", color: "#94a3b8", display: "block", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "2px" }}>
-                    DE ACORDO
-                  </span>
+                <td className="py-3 px-4 font-semibold text-slate-950 w-1/3">
+                  Nome
                 </td>
-                <td style={{ width: "50%", padding: "0 15px", verticalAlign: "bottom" }}>
-                  <div style={{ color: "#cbd5e1", fontSize: "11px", letterSpacing: "-0.5px", marginBottom: "4px" }}>
-                    _________________________________
-                  </div>
-                  <strong style={{ color: "#0f172a", display: "block", textTransform: "uppercase", fontSize: "9px", lineHeight: "1.2" }}>
-                    {(config?.nome_marcenaria || "GRAVATÁ MÓVEIS RÚSTICOS MACEIÓ").toUpperCase()}
-                  </strong>
-                  <span style={{ fontSize: "8px", color: "#94a3b8", display: "block", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "2px" }}>
-                    RESPONSÁVEL
-                  </span>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {orcamento.clienteNome || "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  CPF / CNPJ
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {meta.clienteCpfCnpj || "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Telefone / Celular
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {orcamento.clienteTelefone || "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  E-mail
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {orcamento.clienteEmail || "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Cidade / Localidade
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {orcamento.clienteCidade || "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Endereço
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {enderecoCliente || "Não informado"}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-    );
-  }
-);
+
+      {/* PROJETO / ITENS */}
+      <div
+        className="mt-8 break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+          Itens e Especificações
+        </h3>
+
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase">
+                <th className="py-2.5 px-3 text-left w-8">
+                  #
+                </th>
+
+                <th className="py-2.5 px-3 text-left">
+                  Móvel / Projeto
+                </th>
+
+                <th className="py-2.5 px-3 text-left">
+                  Material
+                </th>
+
+                <th className="py-2.5 px-3 text-left">
+                  Medidas
+                </th>
+
+                <th className="py-2.5 px-3 text-center w-12">
+                  Qtd.
+                </th>
+
+                <th className="py-2.5 px-3 text-right">
+                  Valor Unit.
+                </th>
+
+                <th className="py-2.5 px-3 text-right">
+                  Subtotal
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100">
+              {parsedItems.map((item, index) => {
+                const quantidade = Number(
+                  item.quantidade || 1
+                );
+
+                const valor = Number(
+                  item.valor ??
+                    item.preco_unitario ??
+                    0
+                );
+
+                const subtotal =
+                  quantidade * valor;
+
+                return (
+                  <tr
+                    key={index}
+                    className="break-inside-avoid"
+                    style={{
+                      pageBreakInside: "avoid",
+                      breakInside: "avoid",
+                    }}
+                  >
+                    <td className="py-3 px-3 text-slate-400 font-medium">
+                      {index + 1}
+                    </td>
+
+                    <td className="py-3 px-3 text-slate-900 font-semibold">
+                      {item.descricao ||
+                        item.nome ||
+                        "Não informado"}
+                    </td>
+
+                    <td className="py-3 px-3 text-slate-600">
+                      {item.material || "—"}
+                    </td>
+
+                    <td className="py-3 px-3 text-slate-600 font-mono text-xs">
+                      {cleanLatexMedidas(
+                        item.medidas || ""
+                      ) || "—"}
+                    </td>
+
+                    <td className="py-3 px-3 text-center text-slate-800">
+                      {quantidade}
+                    </td>
+
+                    <td className="py-3 px-3 text-right text-slate-800 tabular-nums">
+                      {formatMoeda(valor)}
+                    </td>
+
+                    <td className="py-3 px-3 text-right text-slate-900 font-semibold tabular-nums">
+                      {formatMoeda(subtotal)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* OBSERVAÇÕES */}
+      {orcamento.observacoes && (
+        <div
+          className="mt-8 break-inside-avoid"
+          style={{
+            pageBreakInside: "avoid",
+            breakInside: "avoid",
+          }}
+        >
+          <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-2">
+            Observações
+          </h3>
+
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+            {orcamento.observacoes}
+          </div>
+        </div>
+      )}
+
+      {/* CONDIÇÕES COMERCIAIS */}
+      <div
+        className="mt-8 break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <h3 className="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">
+          Condições Comerciais
+        </h3>
+
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm border-collapse">
+            <tbody className="divide-y divide-slate-100">
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500 w-1/3">
+                  Data de Emissão
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {dataEmissao}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Validade
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {orcamento.validadeDias} dias — até{" "}
+                  {dataValidade}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Forma de Pagamento
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {meta.formaPagamento ||
+                    "Não informado"}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Valor Original
+                </td>
+
+                <td className="py-3 px-4 text-slate-800 font-semibold">
+                  {formatMoeda(valorOriginal)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-medium text-slate-500">
+                  Desconto
+                </td>
+
+                <td className="py-3 px-4 text-slate-800">
+                  {formatMoeda(desconto)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* TOTAL */}
+      <div
+        className="mt-8 bg-slate-950 text-white rounded-2xl p-6 break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
+              Valor Final do Orçamento
+            </p>
+
+            {desconto > 0 && (
+              <p className="text-xs text-slate-400 mt-1">
+                Desconto aplicado:{" "}
+                {formatMoeda(desconto)}
+              </p>
+            )}
+          </div>
+
+          <p className="text-2xl font-bold text-white">
+            {formatMoeda(valorFinal)}
+          </p>
+        </div>
+      </div>
+
+      {/* AVISOS */}
+      <div
+        className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 leading-relaxed break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <p className="font-semibold text-slate-800 mb-1">
+          Informações importantes
+        </p>
+
+        <p>
+          Este documento é uma proposta de orçamento e
+          serve como referência comercial para o projeto.
+        </p>
+
+        <p className="mt-1">
+          O orçamento é válido por{" "}
+          <strong>{orcamento.validadeDias} dias</strong>,
+          contados a partir da data de emissão.
+        </p>
+
+        <p className="mt-1">
+          Medidas, materiais, valores e demais
+          especificações poderão ser ajustados mediante
+          aprovação entre as partes.
+        </p>
+      </div>
+
+      {/* LOCAL E DATA */}
+      <div
+        className="mt-12 text-sm font-medium text-slate-700 break-inside-avoid"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        Maceió - AL, _____ de __________________ de 20___
+      </div>
+
+      {/* ASSINATURAS */}
+      <div
+        className="mt-16 grid grid-cols-2 gap-12 break-inside-avoid pt-4"
+        style={{
+          pageBreakInside: "avoid",
+          breakInside: "avoid",
+        }}
+      >
+        <div className="flex flex-col items-center justify-end">
+          <div className="w-full border-b border-slate-300 mb-2" />
+
+          <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
+            {orcamento.clienteNome || "Cliente"}
+          </span>
+
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+            Cliente
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center justify-end">
+          <div className="w-full border-b border-slate-300 mb-2" />
+
+          <span className="text-xs text-slate-800 uppercase font-bold tracking-wider text-center">
+            {config?.nome_marcenaria || "Marcenaria"}
+          </span>
+
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">
+            Responsável
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 PrintableOrcamento.displayName = "PrintableOrcamento";
 
